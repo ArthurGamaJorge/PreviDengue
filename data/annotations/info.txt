@@ -1,0 +1,49 @@
+LabelImg: Uma das ferramentas mais utilizadas para rotulação manual de imagens. Permite desenhar caixas delimitadoras ao redor dos objetos e exportá-las para formatos como XML (PASCAL VOC) ou TXT (YOLO).
+
+VGG Image Annotator (VIA): Uma ferramenta de anotação simples e eficiente, com exportação para o formato JSON.
+
+RectLabel: Outra ferramenta de anotação que oferece suporte para exportação de anotações no formato necessário para PyTorch.
+
+
+
+
+
+
+{
+    "images": [
+        {
+            "id": 1,
+            "file_name": "image1.jpg",
+            "height": 1024,
+            "width": 1024
+        }
+    ],
+    "annotations": [
+        {
+            "id": 1,
+            "image_id": 1,
+            "category_id": 1,
+            "bbox": [xmin, ymin, width, height],
+            "area": area_of_bbox,
+            "iscrowd": 0
+        }
+    ],
+    "categories": [
+        {
+            "id": 1,
+            "name": "vaso"
+        },
+        {
+            "id": 2,
+            "name": "piscina"
+        },
+        {
+            "id": 3,
+            "name": "calha"
+        },
+        {
+            "id": 4,
+            "name": "pneu"
+        }
+    ]
+}
