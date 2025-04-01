@@ -8,9 +8,10 @@ def rename_images(folder_path):
     images = [f for f in os.listdir(folder_path) if f.lower().endswith(('png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff', 'webp'))]
     images.sort()
     
+    i = 0
     for index, image in enumerate(images):
         ext = os.path.splitext(image)[1]  # Obtém a extensão do arquivo
-        new_name = f"image-{index}{ext}"
+        new_name = f"img-{i}{ext}"
         old_path = os.path.join(folder_path, image)
         new_path = os.path.join(folder_path, new_name)
         
@@ -20,6 +21,8 @@ def rename_images(folder_path):
         except Exception as e:
             print(f"Erro ao renomear {image}: {e}")
 
+        i+=1
+
 # Caminho da pasta
-directory = "/Users/u23124/Documents/tcc/tcc/data/images"
+directory = "/Users/u23135/Documents/TCC/tcc/data/images"
 rename_images(directory)
