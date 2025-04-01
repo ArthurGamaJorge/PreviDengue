@@ -21,5 +21,5 @@ def rename_images(folder_path):
             print(f"Erro ao renomear {image}: {e}")
 
 # Caminho da pasta
-directory = "/Users/u23578/Documents/tcc/data/images"
+directory = "/Users/u23124/Documents/tcc/tcc/data/images"
 rename_images(directory)
