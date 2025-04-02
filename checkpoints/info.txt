@@ -1,2 +1,0 @@
-├── checkpoints/               # Modelos salvos durante o treinamento
-│   └── model_v1.pth           # Arquivos de pesos do modelo

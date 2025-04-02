@@ -1,4 +1,0 @@
-├── logs/                       # Logs de treinamento e experimentos
-│   ├── train_logs/            # Logs detalhados do treinamento
-│   ├── validation_logs/       # Logs de validação
-│   └── experiment_results/    # Resultados dos experimentos
