@@ -1,6 +1,9 @@
 #   vicorn main:app --reload
 
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
+from fastapi.responses import JSONResponse
+from PIL import Image, ImageOps
+import os
 
 app = FastAPI()
 
@@ -8,43 +11,15 @@ app = FastAPI()
 def read_root():
     return {"message": "Hello!"}
 
-
-def receiveImage():
-    pass
-
-
-def detectObjects():
-    pass
-
-
-def sendImage():
-    pass
-
-
-
-'''
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
-import os
-
-app = FastAPI()
-
-@app.get("/ver-imagem")
-def ver_imagem():
-    caminho = os.path.abspath("../data/images/img-0.png")
-    return FileResponse(caminho, media_type="image/png")
-
-'''
-
-
-'''
-from fastapi import UploadFile, File
-
-@app.post("/upload")
-async def upload(file: UploadFile = File(...)):
+@app.post("/upload/")
+async def upload_image(file: UploadFile = File(...)):
     contents = await file.read()
-    with open(f"uploads/{file.filename}", "wb") as f:
+    with open("received.png", "wb") as f:
         f.write(contents)
-    return {"filename": file.filename}
 
-'''
+    # Abrir imagem, inverter e salvar
+    img = Image.open("received.png")
+    inverted_img = ImageOps.invert(img.convert("RGB"))
+    inverted_img.save("inverted.png")
+
+    return JSONResponse(content={"message": "Imagem invertida com sucesso!"})
