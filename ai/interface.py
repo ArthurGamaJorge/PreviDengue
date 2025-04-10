@@ -1,48 +1,67 @@
 import streamlit as st
-import random
-from PIL import Image, ImageDraw
+from PIL import Image
+from ultralytics import YOLO
+from collections import Counter
+import tempfile
+import cv2
+import numpy as np
 
 st.set_page_config(page_title="Simulador de Detecção por Drone", layout="wide")
-
 st.title("Singularidade")
 
-# Upload da imagem
-imagem = st.file_uploader("Envie uma imagem do drone", type=["png", "jpg", "jpeg"])
+model_path = "./model/best2.pt"
+model = YOLO(model_path)
+names = model.names
 
-if imagem:
-    img_original = Image.open(imagem).convert("RGB")
+cores_por_classe = {
+    "carro": (155, 0, 0),
+    "piscina": (0, 0, 155),
+    "caixa_agua": (0, 155, 0)
+}
 
-    # Simula imagem com detecção (desenha caixas aleatórias)
-    img_detectada = img_original.copy()
-    draw = ImageDraw.Draw(img_detectada)
-    for _ in range(random.randint(2, 5)):
-        x1 = random.randint(0, img_detectada.width // 2)
-        y1 = random.randint(0, img_detectada.height // 2)
-        x2 = x1 + random.randint(50, 150)
-        y2 = y1 + random.randint(50, 150)
-        conf = round(random.uniform(50, 99), 1)
-        label = random.choice(["Carro", "Piscina", "Caixa d'água"])
-        draw.rectangle([x1, y1, x2, y2], outline="red", width=3)
-        draw.text((x1 + 5, y1 + 5), f"{label} {conf}%", fill="white")
+imagens = st.file_uploader("Envie imagens do drone", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
+conf_min = st.slider("Confiabilidade mínima", 0.0, 1.0, 0.5, 0.01)
+somente_caixa = st.checkbox("Somente caixa (sem texto)")
 
-    st.markdown("### Imagens")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.image(img_original, caption="📷 Imagem Original", use_container_width=True)
-    with col2:
-        st.image(img_detectada, caption="✅ Imagem com Detecção Simulada", use_container_width=True)
+if imagens:
+    total_contagem = Counter()
+    for imagem in imagens:
+        img = Image.open(imagem).convert("RGB")
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp:
+            img.save(temp.name)
+            results = model(temp.name)
+
+        boxes = results[0].boxes
+        class_ids = boxes.cls.tolist()
+        confidences = boxes.conf.tolist()
+        coords = boxes.xyxy.tolist()
+        filtrados = [(cls, conf, coord) for cls, conf, coord in zip(class_ids, confidences, coords) if conf >= conf_min]
+        class_names = [names[int(cls)] for cls, _, _ in filtrados]
+        counts = Counter(class_names)
+        total_contagem.update(class_names)
+
+        image_np = np.array(img)
+        for cls, conf, (x1, y1, x2, y2) in filtrados:
+            label = names[int(cls)].lower()
+            color = cores_por_classe.get(label, (255, 255, 255))
+            x1, y1, x2, y2 = map(int, (x1, y1, x2, y2))
+            cv2.rectangle(image_np, (x1, y1), (x2, y2), color, 2)
+            if not somente_caixa:
+                text = f"{label} {conf:.2f}"
+                (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
+                cv2.rectangle(image_np, (x1, y1 - th - 4), (x1 + tw, y1), color, -1)
+                cv2.putText(image_np, text, (x1, y1 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+
+        with st.container():
+            st.markdown("### Imagem processada")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.image(img, caption="📷 Original", use_container_width=True, channels="RGB")
+            with col2:
+                st.image(image_np, caption="✅ Detecção", use_container_width=True, channels="RGB")
 
     st.markdown("---")
-    st.subheader("📊 Estatísticas simuladas de detecção")
-
-    def gerar_estatisticas():
-        return sorted([round(random.uniform(30, 100), 1) for _ in range(random.randint(1, 4))], reverse=True)
-
-    objetos = {
-        "Carros": gerar_estatisticas(),
-        "Piscinas": gerar_estatisticas(),
-        "Caixas d'água": gerar_estatisticas()
-    }
-
-    for nome, confiancas in objetos.items():
-        st.markdown(f"**{nome}**: " + ", ".join([f"{c}%" for c in confiancas]))
+    st.subheader("📊 Estatísticas totais de detecção")
+    st.markdown(f"**Total de objetos detectados**: {sum(total_contagem.values())}")
+    for cls, count in total_contagem.items():
+        st.markdown(f"- **{cls.capitalize()}**: {count}")
