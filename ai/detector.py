@@ -6,7 +6,7 @@ from collections import Counter
 model_path = "./model/best2.pt"
 model = YOLO(model_path)
 
-image_path = "../data/images/img-76.png"
+image_path = "../data/images/img-189.png"
 
 results = model(image_path)
 

@@ -45,7 +45,7 @@ export default function Detectar() {
   return (
     <div className="min-h-screen font-sans bg-zinc-950 text-white px-8 py-12">
       <header className="fixed top-0 left-0 w-full z-50 bg-zinc-900 bg-opacity-90 backdrop-blur-sm shadow-md flex justify-between items-center px-8 py-4 text-white">
-        <h1 className="text-3xl font-bold tracking-tight">Undengue-Vision</h1>
+        <a href="/"><h1 className="text-3xl font-bold tracking-tight">Undengue-Vision</h1></a>
         <nav className="flex gap-8 text-base font-medium">
           <a href="/" className="hover:underline">
             Home
@@ -115,7 +115,7 @@ export default function Detectar() {
 
         {/* Imagens e resultados */}
         <section className="flex-1">
-          <h2 className="text-4xl font-bold text-center mb-12">Idenffificação</h2>
+          <h2 className="text-4xl font-bold text-center mb-12">Identificação</h2>
 
           {images.map((img, index) => (
             <div key={index} className="flex flex-row items-start gap-8 mb-6">

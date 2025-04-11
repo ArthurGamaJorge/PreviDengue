@@ -9,18 +9,15 @@ export default function Home() {
       <header className="fixed top-0 left-0 w-full z-50 bg-zinc-900 bg-opacity-90 backdrop-blur-sm shadow-md flex justify-between items-center px-8 py-4 text-white">
         <h1 className="text-3xl font-bold tracking-tight">Undengue-Vision</h1>
         <nav className="flex gap-8 text-base font-medium">
-          <a href="#" className="hover:underline">Home</a>
-          <a href="#sobre" className="hover:underline">Sobre</a>
-          <a href="#testar" className="hover:underline">Testar</a>
-          <a href="#mais" className="hover:underline">Mais</a>
+          <a href="" className="hover:underline text-blue-400">Home</a>
+          <a href="./sobre" className="hover:underline">Sobre</a>
+          <a href="./detect" className="hover:underline">Testar</a>
         </nav>
       </header>
 
       <main className="pt-28">
         <section className="text-center flex flex-col items-center justify-center gap-6 mb-32">
-          <span className="bg-zinc-800 px-4 py-1 rounded-full text-xs uppercase tracking-widest text-zinc-400">
-            YOLO AI
-          </span>
+          
           <h2 className="text-5xl sm:text-6xl font-bold leading-tight">
             Detecte
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-green-400"> focos de dengue</span> com IA
@@ -48,27 +45,27 @@ export default function Home() {
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-16">
             <div className="rounded-2xl overflow-hidden">
-              <Image src="http://picsum.photos/1000" alt="Ilustração 1" width={1000} height={600} className="w-full h-auto object-cover" />
+              <img src="/images/img-4.png" alt="Ilustração 1" width={1000} height={600} className="w-full h-auto object-cover" />
             </div>
             <div className="rounded-2xl overflow-hidden">
-              <Image src="http://picsum.photos/2000" alt="Ilustração 2" width={1000} height={600} className="w-full h-auto object-cover" />
+              <img src="/images/detected1.png" alt="Ilustração 1" width={1000} height={600} className="w-full h-auto object-cover" />
             </div>
           </div>
           <div id="mais" className="bg-zinc-800 bg-opacity-40 p-8 rounded-xl">
             <h4 className="text-2xl font-semibold mb-4">Aspectos Técnicos</h4>
-            <p className="text-zinc-400 mb-4">O modelo YOLO foi treinado com mais de 1000 imagens rotuladas manualmente. Abaixo, mostramos uma amostra das estatísticas de detecção:</p>
+            <p className="text-zinc-400 mb-4">O modelo YOLO foi treinado com mais de 250 imagens rotuladas manualmente, transformadas em 1500+ imagens augmentadas. Abaixo, mostramos uma amostra das estatísticas de detecção:</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <div className="bg-zinc-900 p-4 rounded-lg shadow">
                 <h5 className="text-lg font-bold mb-1">Precisão</h5>
-                <p className="text-green-400 text-2xl font-mono">91.3%</p>
+                <p className="text-green-400 text-2xl font-mono">0.0%</p>
               </div>
               <div className="bg-zinc-900 p-4 rounded-lg shadow">
                 <h5 className="text-lg font-bold mb-1">Recall</h5>
-                <p className="text-blue-400 text-2xl font-mono">87.5%</p>
+                <p className="text-blue-400 text-2xl font-mono">0.0%</p>
               </div>
               <div className="bg-zinc-900 p-4 rounded-lg shadow">
                 <h5 className="text-lg font-bold mb-1">F1 Score</h5>
-                <p className="text-yellow-400 text-2xl font-mono">89.3%</p>
+                <p className="text-yellow-400 text-2xl font-mono">0.0%</p>
               </div>
             </div>
           </div>
