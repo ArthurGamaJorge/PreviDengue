@@ -9,7 +9,7 @@ import numpy as np
 st.set_page_config(page_title="Simulador de Detecção por Drone", layout="wide")
 st.title("Singularidade")
 
-model_path = "./model/best2.pt"
+model_path = "./model/smallTest1.pt"
 model = YOLO(model_path)
 names = model.names
 

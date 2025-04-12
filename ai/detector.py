@@ -3,7 +3,7 @@ import cv2
 from matplotlib import pyplot as plt
 from collections import Counter
 
-model_path = "./model/best2.pt"
+model_path = "./model/smallTest1.pt"
 model = YOLO(model_path)
 
 image_path = "../data/images/img-76.png"
