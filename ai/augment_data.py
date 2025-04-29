@@ -5,9 +5,9 @@ import shutil
 import random
 
 # === VARIÁVEIS DE CAMINHO ===
-CAMINHO_IMAGENS_ORIGINAIS = "/Users/u23135/Documents/TCC/tcc/data/images"
-CAMINHO_LABELS_ORIGINAIS = "/Users/u23135/Documents/TCC/tcc/data/annotations"
-CAMINHO_DATASET_FINAL = "/Users/u23135/Documents/TCC/tcc/data/splited_dataset"
+CAMINHO_IMAGENS_ORIGINAIS = "../data/images"
+CAMINHO_LABELS_ORIGINAIS = "../data/annotations"
+CAMINHO_DATASET_FINAL = "./data/splitted_dataset"
 
 # === CRIA AS PASTAS DE DESTINO ===
 paths = {
@@ -76,13 +76,20 @@ def processar_e_dividir(porc_teste=0.2):
     imagens = [f for f in os.listdir(CAMINHO_IMAGENS_ORIGINAIS) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
     imagens.sort()
     random.seed(42)
-    random.shuffle(imagens)
 
-    qtd_teste = int(len(imagens) * porc_teste)
-    imagens_teste = set(imagens[:qtd_teste])
+    imagens_teste = set()
+    base_para_teste = set()
 
     for nome_img in imagens:
         nome_base, _ = os.path.splitext(nome_img)
+
+        # Decide o conjunto da família baseada no nome_base
+        if nome_base not in base_para_teste:
+            if random.random() < porc_teste:
+                base_para_teste.add(nome_base)
+
+        destino = "val" if nome_base in base_para_teste else "train"
+
         caminho_img = os.path.join(CAMINHO_IMAGENS_ORIGINAIS, nome_img)
         caminho_label = os.path.join(CAMINHO_LABELS_ORIGINAIS, nome_base + ".txt")
 
@@ -91,7 +98,6 @@ def processar_e_dividir(porc_teste=0.2):
             continue
 
         try:
-            destino = "val" if nome_img in imagens_teste else "train"
             imagem = load_image(caminho_img)
             augmentadas = apply_augmentations(imagem)
 
