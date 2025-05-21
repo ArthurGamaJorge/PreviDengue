@@ -15,3 +15,8 @@ Este projeto utiliza um modelo de inteligência artificial com YOLO para identif
 - **Ion Mateus Nunes Oprea** – [cc23135@g.unicamp.br](mailto:cc23135@g.unicamp.br)  
 
 ---
+
+artigo cientifico https://docs.google.com/document/d/1CDxza6HEWbK4VhqNCCs9xMZiANQn-zw8wCtr05T8FhU/edit?tab=t.0
+
+diario de bordo https://docs.google.com/document/d/1x1OEKNFzSjyDYdlkpBtMp3Y9OrEk9uxrJUWFDLCoOwM/edit?tab=t.0#heading=h.nlk486x5fh5u 
+

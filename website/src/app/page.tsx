@@ -10,8 +10,9 @@ export default function Home() {
         <h1 className="text-3xl font-bold tracking-tight">Undengue-Vision</h1>
         <nav className="flex gap-8 text-base font-medium">
           <a href="" className="hover:underline text-blue-400">Home</a>
-          <a href="./sobre" className="hover:underline">Sobre</a>
-          <a href="./detect" className="hover:underline">Testar</a>
+          <a href="./sobre" className="hover:underline">Artigo</a>
+          <a href="./map" className="hover:underline">Mapa</a>
+          <a href="./detect" className="hover:underline">Identificar</a>
         </nav>
       </header>
 
