@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -18,14 +18,6 @@ const MapWithNoSSR = dynamic(() => import("../../components/HeatMap"), { ssr: fa
 
 type Point = [number, number, number];
 
-const initialPoints: Point[] = [
-  [-23.5505, -46.6333, 5],
-  [-23.5510, -46.6340, 8],
-  [-23.5515, -46.6343, 3],
-  [-23.5490, -46.6332, 3],
-  [65, 2, 6],
-];
-
 const chartData = [
   { month: "Jan", AnáliseA: 30, AnáliseB: 20 },
   { month: "Fev", AnáliseA: 45, AnáliseB: 35 },
@@ -35,9 +27,16 @@ const chartData = [
 ];
 
 export default function Mapa() {
-  const [points, setPoints] = useState<Point[]>(initialPoints);
+  const [points, setPoints] = useState<Point[]>([]);
   const [selectedCoords, setSelectedCoords] = useState<[number, number] | null>(null);
   const [intensityInput, setIntensityInput] = useState("");
+
+  useEffect(() => {
+    fetch("/data/points.json")
+      .then((res) => res.json())
+      .then((data) => setPoints(data))
+      .catch((err) => console.error("Erro ao carregar pontos:", err));
+  }, []);
 
   function handleMapClick(lat: number, lng: number) {
     setSelectedCoords([lat, lng]);

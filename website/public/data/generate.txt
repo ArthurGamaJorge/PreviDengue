@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gerador de Pontos JSON</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #111;
+      color: #fff;
+      padding: 2rem;
+    }
+    label {
+      display: block;
+      margin: 1rem 0 0.3rem;
+    }
+    select, input {
+      padding: 0.5rem;
+      font-size: 1rem;
+      width: 100%;
+      max-width: 300px;
+      margin-bottom: 1rem;
+      background: #222;
+      border: 1px solid #444;
+      color: #fff;
+    }
+    button {
+      padding: 0.75rem 1.5rem;
+      background: #3b82f6;
+      border: none;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-top: 1rem;
+    }
+    pre {
+      background: #222;
+      padding: 1rem;
+      white-space: pre-wrap;
+      margin-top: 2rem;
+      border: 1px solid #444;
+    }
+  </style>
+</head>
+<body>
+  <h1>Gerador de Pontos JSON</h1>
+
+  <label for="qtd">Quantidade de pontos:</label>
+  <input type="number" id="qtd" value="10" min="1" />
+
+  <label for="pais">País:</label>
+  <select id="pais">
+    <option value="brasil">Brasil</option>
+    <option value="china">China</option>
+  </select>
+
+  <label for="padrao">Padrão de espalhamento:</label>
+  <select id="padrao">
+    <option value="aleatorio">Aleatório</option>
+    <option value="cluster">Clusterizado</option>
+  </select>
+
+  <label for="minInt">Intensidade mínima:</label>
+  <input type="number" id="minInt" value="1" min="0" max="10" />
+
+  <label for="maxInt">Intensidade máxima:</label>
+  <input type="number" id="maxInt" value="10" min="0" max="10" />
+
+  <button onclick="gerar()">Gerar e Copiar</button>
+
+  <pre id="output"></pre>
+
+  <script>
+    const coords = {
+      brasil: { lat: -23.5505, lng: -46.6333 },
+      china: { lat: 39.9042, lng: 116.4074 }
+    };
+
+    function gerar() {
+      const qtd = parseInt(document.getElementById("qtd").value);
+      const pais = document.getElementById("pais").value;
+      const padrao = document.getElementById("padrao").value;
+      const minInt = parseInt(document.getElementById("minInt").value);
+      const maxInt = parseInt(document.getElementById("maxInt").value);
+
+      const base = coords[pais];
+      const pontos = [];
+
+      for (let i = 0; i < qtd; i++) {
+        const intensity = Math.floor(Math.random() * (maxInt - minInt + 1)) + minInt;
+
+        range = 0.4
+        let latOffset, lngOffset;
+        if (padrao === "aleatorio") {
+          latOffset = (Math.random() - 0.5) * range
+          lngOffset = (Math.random() - 0.5) * range;
+        } else {
+          latOffset = (Math.random() - 0.5) * range;
+          lngOffset = (Math.random() - 0.5) * range;
+        }
+
+        const lat = +(base.lat + latOffset).toFixed(6);
+        const lng = +(base.lng + lngOffset).toFixed(6);
+        pontos.push([lat, lng, intensity]);
+      }
+
+      const json = JSON.stringify(pontos, null, 2);
+      document.getElementById("output").textContent = json;
+
+      // Copiar
+      navigator.clipboard.writeText(json).then(() => {
+        alert("JSON copiado para a área de transferência!");
+      });
+    }
+  </script>
+</body>
+</html>

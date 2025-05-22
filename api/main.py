@@ -28,6 +28,20 @@ model = YOLO(model_path)
 def read_root():
     return {"message": "Hello!"}
 
+
+def caculateIntensity(objetos):
+    count_piscina = sum(1 for o in objetos if o["class"] == "piscina")
+    count_caixa = sum(1 for o in objetos if o["class"] == "caixa_agua")
+    count_carro = sum(1 for o in objetos if o["class"] == "carro")
+
+    w_piscina = 9
+    w_caixa = 4
+    w_carro = 1
+
+    score = count_piscina * w_piscina + count_caixa * w_caixa + count_carro * w_carro
+    return score
+
+
 @app.post("/detect/")
 async def upload_image(file: UploadFile = File(...)):
     print("-" * 50)
@@ -73,10 +87,13 @@ async def upload_image(file: UploadFile = File(...)):
                 })
         os.remove(image_path)
 
+        intensity_score = caculateIntensity(detections)
+
         return JSONResponse(content={
             "total": len(class_ids),
             "contagem": counts,
-            "objetos": detections
+            "objetos": detections,
+            "intensity_score": intensity_score
         })
 
     except Exception as e:

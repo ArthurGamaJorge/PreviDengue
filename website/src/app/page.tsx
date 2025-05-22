@@ -13,6 +13,8 @@ export default function Home() {
           <a href="./sobre" className="hover:underline">Artigo</a>
           <a href="./map" className="hover:underline">Mapa</a>
           <a href="./detect" className="hover:underline">Identificar</a>
+          <a href="./predict" className="hover:underline">Prever</a>
+          <a href="./all" className="hover:underline">All</a>
         </nav>
       </header>
 
