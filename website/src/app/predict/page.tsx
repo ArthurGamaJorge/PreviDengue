@@ -10,13 +10,17 @@ export default function Home() {
         <a href="../"><h1 className="text-3xl font-bold tracking-tight">Undengue-Vision</h1></a>
         <nav className="flex gap-8 text-base font-medium">
           <a href="../" className="hover:underline">Home</a>
+          <a href="" className="hover:underline text-blue-400">Sobre</a>
+          <a href="" className="hover:underline">Testar</a>
         </nav>
       </header>
 
       <main className="pt-28">
         <section className="text-center flex flex-col items-center justify-center gap-6 mb-32">
-          <h2 className="text-5xl sm:text-6xl font-bold leading-tight">Previsão</h2>
-          <p className="max-w-xl text-zinc-300 text-base sm:text-lg">Lorem Ipsum</p>
+          <h2 className="text-5xl sm:text-6xl font-bold leading-tight">Sobre</h2>
+          <p className="max-w-xl text-zinc-300 text-base sm:text-lg">
+            Um projeto de inteligência artificial para auxiliar na identificação de possíveis criadouros do mosquito da dengue.
+          </p>
 
         </section>
 
