@@ -34,8 +34,8 @@ state_coords = {
 
 
 parameters = "T2M,T2M_MAX,PRECTOTCORR,RH2M,ALLSKY_SFC_SW_DWN"
-start_date = "20240101"
-end_date = "20250520"
+start_date = "20140101"
+end_date = "20250527"
 
 def fetch_point_data(state, lat, lon, session):
     url = (
@@ -46,14 +46,22 @@ def fetch_point_data(state, lat, lon, session):
         response = session.get(url, timeout=20)
         response.raise_for_status()
     except requests.RequestException as e:
-        print(f"Error fetching data for {state} at ({lat},{lon}): {e}")
+        print(f"[ERROR] {state} ({lat:.2f},{lon:.2f}): {e}", flush=True)
         return pd.DataFrame()
 
     data = response.json()
     daily_data = data['properties']['parameter']
 
+    dates = list(daily_data['T2M'].keys())
+    if not dates:
+        print(f"[WARNING] {state} ({lat:.2f},{lon:.2f}): No data returned", flush=True)
+        return pd.DataFrame()
+
+    last_date = pd.to_datetime(dates[-1], format="%Y%m%d")
+    print(f"[INFO] {state} ({lat:.2f},{lon:.2f}) — last date fetched: {last_date.strftime('%Y-%m')}", flush=True)
+
     df = pd.DataFrame({
-        'date': daily_data['T2M'].keys(),
+        'date': dates,
         'T2M': daily_data['T2M'].values(),
         'T2M_MAX': daily_data['T2M_MAX'].values(),
         'PRECTOTCORR': daily_data['PRECTOTCORR'].values(),
@@ -94,7 +102,7 @@ def fetch_state_data(state, coords, session):
     return weekly_state
 
 with requests.Session() as session:
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=40) as executor:
         results = list(executor.map(lambda sc: fetch_state_data(sc[0], sc[1], session), state_coords.items()))
 
 # Concatenar todos os estados

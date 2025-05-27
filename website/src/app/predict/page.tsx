@@ -13,7 +13,9 @@ type DataJsonType = {
   };
 };
 
-function buildTimeline(data: DataJsonType): { entries: { year: string; week: string }[] } {
+function buildTimeline(data: DataJsonType): {
+  entries: { year: string; week: string }[];
+} {
   const entries: { year: string; week: string }[] = [];
   const years = Object.keys(data).sort();
   for (const year of years) {
@@ -51,7 +53,9 @@ export default function BrazilMap() {
 
   const { year: selectedYear, week: selectedWeek } = useMemo(() => {
     if (timeline.entries.length === 0) return { year: "2024", week: "1" };
-    return timeline.entries[Math.min(timelineIndex, timeline.entries.length - 1)];
+    return timeline.entries[
+      Math.min(timelineIndex, timeline.entries.length - 1)
+    ];
   }, [timeline, timelineIndex]);
 
   const casesByState = useMemo(() => {
@@ -97,10 +101,10 @@ export default function BrazilMap() {
     const uf = feature.properties.sigla;
     const cases = casesByState[uf] || 0;
 
-    layer.bindTooltip(
-      `${uf}: ${cases} ${cases === 1 ? "caso" : "casos"}`,
-      { sticky: true, className: "bg-black text-white px-2 py-1 rounded shadow-lg" }
-    );
+    layer.bindTooltip(`${uf}: ${cases} ${cases === 1 ? "caso" : "casos"}`, {
+      sticky: true,
+      className: "bg-black text-white px-2 py-1 rounded shadow-lg",
+    });
 
     layer.on({
       mouseover: (e) => {
@@ -136,29 +140,18 @@ export default function BrazilMap() {
     );
 
   return (
-    <div className="min-h-screen font-sans bg-[radial-gradient(ellipse_at_top,_#0b0b0b_0%,_#111111_40%,_#1a1a1a_70%,_#0f1115_100%)] text-white px-8 py-12">
-      <header className="fixed top-0 left-0 w-full z-50 bg-zinc-900 bg-opacity-90 backdrop-blur-sm shadow-md flex justify-between items-center px-8 py-4 text-white">
-        <a href="../"><h1 className="text-3xl font-bold tracking-tight">Undengue-Vision</h1></a>
-        <nav className="flex gap-8 text-base font-medium">
-          <a href="../" className="hover:underline">Home</a>
-          <a href="" className="hover:underline text-blue-400">Sobre</a>
-          <a href="" className="hover:underline">Testar</a>
-        </nav>
-      </header>
-
-      <main className="pt-28">
-        <section className="text-center flex flex-col items-center justify-center gap-6 mb-32">
-          <h2 className="text-5xl sm:text-6xl font-bold leading-tight">Sobre</h2>
-          <p className="max-w-xl text-zinc-300 text-base sm:text-lg">
-            Um projeto de inteligência artificial para auxiliar na identificação de possíveis criadouros do mosquito da dengue.
-          </p>
-
     <div className="min-h-screen bg-black text-white font-sans px-6 py-12 flex flex-col items-center">
       <header className="fixed top-0 left-0 w-full bg-black bg-opacity-90 backdrop-blur-md shadow-md z-50 py-4 px-8 flex justify-between items-center">
-        <h1 className="text-3xl font-extrabold tracking-tight select-none">Mapa de Casos no Brasil</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight select-none">
+          Mapa de Casos no Brasil
+        </h1>
         <nav className="text-gray-300 space-x-6">
-          <a href="/" className="hover:text-red-500 transition">Home</a>
-          <a href="/sobre" className="hover:text-red-500 transition">Sobre</a>
+          <a href="/" className="hover:text-red-500 transition">
+            Home
+          </a>
+          <a href="/sobre" className="hover:text-red-500 transition">
+            Sobre
+          </a>
         </nav>
       </header>
 
@@ -179,7 +172,11 @@ export default function BrazilMap() {
             value={timelineIndex}
             onChange={(e) => setTimelineIndex(Number(e.target.value))}
             className="w-full h-3 rounded-lg accent-red-600 cursor-pointer"
-            style={{ backgroundSize: `${(timelineIndex / (timeline.entries.length - 1)) * 100}% 100%` }}
+            style={{
+              backgroundSize: `${
+                (timelineIndex / (timeline.entries.length - 1)) * 100
+              }% 100%`,
+            }}
           />
           <p className="mt-2 text-center text-red-400 font-semibold">
             Total de casos: {totalCases}
@@ -187,43 +184,31 @@ export default function BrazilMap() {
         </div>
 
         <div className="w-full max-w-6xl rounded-lg shadow-lg border border-gray-800 overflow-hidden">
-        <MapContainer
-  center={[-15, -55]}
-  zoom={4}
-  style={{
-    height: "600px",
-    width: "100%",
-    backgroundColor: "black",
-    border: "none",
-    boxShadow: "none",
-  }}
-  zoomControl={false}
-  dragging={false}
-  doubleClickZoom={false}
-  scrollWheelZoom={false}
-  attributionControl={false}
-  keyboard={false}
-  boxZoom={false}
-  touchZoom={false}
->
-  {/* Sem TileLayer pra não ter fundo */}
+          <MapContainer
+            center={[-15, -55]}
+            zoom={4}
+            style={{
+              height: "600px",
+              width: "100%",
+              backgroundColor: "black",
+              border: "none",
+              boxShadow: "none",
+            }}
+            zoomControl={false} dragging={false} doubleClickZoom={false} scrollWheelZoom={false} attributionControl={false} keyboard={false} boxZoom={false} touchZoom={false}>
+            <GeoJSON
+              data={geojson}
+              style={(feature) => {
+                if (!feature || !feature.properties) {
+                  return {fillColor: "#eee",weight: 1,color: "#444",fillOpacity: 0.9};
+                }
 
-  <GeoJSON
-    data={geojson}
-    style={(feature) => {
-      const uf = feature.properties.sigla;
-      const cases = casesByState[uf] || 0;
-      return {
-        fillColor: getColor(cases),
-        weight: 1,
-        color: "#444", // borda dos estados
-        fillOpacity: 0.9,
-      };
-    }}
-    onEachFeature={onEachFeature}
-  />
-</MapContainer>
-
+                const uf = feature.properties.sigla;
+                const cases = casesByState[uf] || 0;
+                return {fillColor: getColor(cases),weight: 1,color: "#444",fillOpacity: 0.9};
+              }}
+              onEachFeature={onEachFeature}
+            />
+          </MapContainer>
         </div>
       </main>
 

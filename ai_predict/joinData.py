@@ -9,7 +9,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 # Load once
 dengue = pd.read_csv('ai_predict/dengue.csv')
-climate = pd.read_csv('ai_predict/dados_nasa_semanal.csv').rename(columns={'state': 'estado'})
+climate = pd.read_csv('ai_predict/data/dados_nasa_semanal.csv').rename(columns={'state': 'estado'})
 
 # Prepare dengue_long (melt dengue cases by state and week/year)
 dengue_long = dengue.melt(id_vars='estado', var_name='year_week', value_name='cases')
