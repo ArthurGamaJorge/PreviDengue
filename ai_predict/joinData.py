@@ -1,157 +1,111 @@
-import pandas as pd
-import numpy as np
-import lightgbm as lgb
-from sklearn.metrics import mean_squared_error
-import matplotlib.pyplot as plt
-import tkinter as tk
-from tkinter import ttk
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import csv
+import json
+import os
+from glob import glob
 
-# Load once
-dengue = pd.read_csv('ai_predict/dengue.csv')
-climate = pd.read_csv('ai_predict/data/dados_nasa_semanal.csv').rename(columns={'state': 'estado'})
+def load_estados(filename):
+    with open(filename, 'r', encoding='utf-8') as f:
+        estados = json.load(f)
+    # Criar um dict: codigo_uf -> uf (sigla)
+    return {e['codigo_uf']: e['uf'] for e in estados}
 
-# Prepare dengue_long (melt dengue cases by state and week/year)
-dengue_long = dengue.melt(id_vars='estado', var_name='year_week', value_name='cases')
-dengue_long[['year', 'week']] = dengue_long['year_week'].str.split('/', expand=True).astype(int)
-dengue_long.drop(columns='year_week', inplace=True)
+def load_municipios(filename):
+    with open(filename, 'r', encoding='utf-8') as f:
+        municipios = json.load(f)
+    # Criar dict codigo_ibge -> dados municipio
+    return {m['codigo_ibge']: m for m in municipios}
 
-# Merge dengue and climate data
-data_all = pd.merge(dengue_long, climate, on=['estado', 'year', 'week'], how='left').sort_values(['estado','year','week'])
-estados = sorted(data_all['estado'].unique())
+def wide_to_long(csv_filename, municipios_dict, estados_dict):
+    # Extrair ano do nome do arquivo, ex: mun2016.csv -> 2016
+    basename = os.path.basename(csv_filename)
+    year_part = ''.join(filter(str.isdigit, basename))
+    ano = int(year_part)
 
-def create_lags_and_features(df):
-    df = df.sort_values(['estado', 'year', 'week']).copy()
+    with open(csv_filename, newline='', encoding='utf-8') as csvfile:
+        reader = csv.reader(csvfile, delimiter=';')
+        rows_long = []
+        for row in reader:
+            # Exemplo linha:
+            # "110002 ARIQUEMES";-;4;1;2;2;1;-;-;2;1;2;1;...
+            # Primeira coluna tem código e nome juntos, separados por espaço
+            cod_nome = row[0].strip('"')
+            parts = cod_nome.split(' ', 1)
+            if len(parts) < 2:
+                continue  # linha inválida
+            codigo_ibge_str, municipio_nome = parts[0], parts[1]
+            try:
+                codigo_ibge = int(codigo_ibge_str)
+            except:
+                continue
 
-    # Create case lags (1 to 6 weeks)
-    for lag in range(1, 7):
-        df[f'cases_lag_{lag}'] = df.groupby('estado')['cases'].shift(lag)
+            if codigo_ibge not in municipios_dict:
+                # Sem dados para esse município no json, pula
+                continue
+            
+            municipio_info = municipios_dict[codigo_ibge]
+            latitude = municipio_info['latitude']
+            longitude = municipio_info['longitude']
+            codigo_uf = municipio_info['codigo_uf']
+            estado = estados_dict.get(codigo_uf, 'NA')
 
-    # Create lags for climate features with different windows
-    for lag in range(4, 10):
-        for col in ['T2M', 'T2M_MAX', 'RH2M']:
-            df[f'{col}_lag_{lag}'] = df.groupby('estado')[col].shift(lag)
-    for lag in range(6, 14):
-        for col in ['PRECTOTCORR', 'ALLSKY_SFC_SW_DWN']:
-            df[f'{col}_lag_{lag}'] = df.groupby('estado')[col].shift(lag)
+            # Dados semanais começam na coluna 1 até 52 (ou o que tiver)
+            # Considerando que tem 52 semanas, index 1 a 52
+            for semana in range(1, 53):
+                # Evitar index error
+                if semana >= len(row):
+                    break
+                valor = row[semana].strip()
+                if valor == '-' or valor == '':
+                    numero_casos = 0
+                else:
+                    try:
+                        numero_casos = int(valor)
+                    except:
+                        numero_casos = 0
+                notificacao = 1 if numero_casos > 0 else 0
 
-    # Rolling means (4 and 8 week windows) for cases and climate vars
-    for window in [4, 8]:
-        df[f'cases_rollmean_{window}'] = df.groupby('estado')['cases'].transform(lambda x: x.rolling(window).mean())
-        for col in ['T2M', 'T2M_MAX', 'RH2M', 'PRECTOTCORR', 'ALLSKY_SFC_SW_DWN']:
-            df[f'{col}_rollmean_{window}'] = df.groupby('estado')[col].transform(lambda x: x.rolling(window).mean())
+                rows_long.append({
+                    'codigo_ibge': codigo_ibge,
+                    'municipio': municipio_nome,
+                    'estado': estado,
+                    'latitude': latitude,
+                    'longitude': longitude,
+                    'semana': semana,
+                    'ano': ano,
+                    'numero_casos': numero_casos,
+                    'notificacao': notificacao
+                })
 
-    # Add temporal features: month and quarter derived from week number
-    df['month'] = ((df['week'] - 1) // 4) + 1
-    df['quarter'] = ((df['month'] - 1) // 3) + 1
+    return rows_long
 
-    return df.dropna()
+def process_all_files(mun_files_pattern, estados_json, municipios_json):
+    estados_dict = load_estados(estados_json)
+    municipios_dict = load_municipios(municipios_json)
 
-def next_week(year, week):
-    week += 1
-    if week > 52:
-        week = 1
-        year += 1
-    return year, week
+    all_data = []
+    files = sorted(glob(mun_files_pattern))
+    for f in files:
+        print(f'Processing {f}...')
+        data_long = wide_to_long(f, municipios_dict, estados_dict)
+        all_data.extend(data_long)
+    return all_data
 
-def train_and_plot(estado, test_pct):
-    # Data with lags and features (dropna)
-    data = create_lags_and_features(data_all[data_all['estado'] == estado].copy())
-    data = data.sort_values(['year', 'week']).reset_index(drop=True)
+def save_to_csv(data, output_filename):
+    keys = ['codigo_ibge','municipio','estado','latitude','longitude','semana','ano','numero_casos','notificacao']
+    with open(output_filename, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=keys)
+        writer.writeheader()
+        for row in data:
+            writer.writerow(row)
 
-    # Original data without dropping rows, for plotting all cases
-    original_data = data_all[data_all['estado'] == estado].sort_values(['year', 'week']).reset_index(drop=True)
+# --- Usage example ---
+if __name__ == '__main__':
+    # Ajuste o path para seus arquivos
+    mun_files_pattern = 'mun*.csv'  # todos os mun*.csv na pasta atual
+    estados_json = './data/prev/estados.json'
+    municipios_json = './data/prev/municipios.json'
+    output_csv = 'dataDengue.csv'
 
-    features = [c for c in data.columns if c not in ['estado','year','week','cases']]
-
-    split_index = int(len(data) * (1 - test_pct / 100))
-    X_train = data.iloc[:split_index][features]
-    y_train = data.iloc[:split_index]['cases']
-    X_test = data.iloc[split_index:][features]
-    y_test = data.iloc[split_index:]['cases']
-
-    train_data = lgb.Dataset(X_train, label=y_train)
-    valid_data = lgb.Dataset(X_test, label=y_test)
-
-    # More complex parameters for better precision (may increase training time)
-    params = {
-        'objective': 'regression',
-        'metric': 'rmse',
-        'boosting_type': 'gbdt',
-        'learning_rate': 0.01,
-        'num_leaves': 64,
-        'max_depth': 10,
-        'min_child_samples': 20,
-        'feature_fraction': 0.8,
-        'bagging_fraction': 0.8,
-        'bagging_freq': 5,
-        'lambda_l1': 0.5,
-        'lambda_l2': 1.0,
-        'verbose': -1,
-        'seed': 42
-    }
-
-    model = lgb.train(
-        params, train_data, num_boost_round=3000,
-        valid_sets=[train_data, valid_data],
-        callbacks=[lgb.early_stopping(100), lgb.log_evaluation(period=100)]
-    )
-
-    y_pred = model.predict(X_test, num_iteration=model.best_iteration)
-    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-
-    fig, axs = plt.subplots(1, 2, figsize=(14, 5))
-
-    # Scatter plot as before
-    axs[0].scatter(y_test, y_pred, alpha=0.6, edgecolors='k')
-    axs[0].plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--')
-    axs[0].set(xlabel='Actual Cases', ylabel='Predicted Cases', title=f'Actual vs Predicted (RMSE: {rmse:.2f})')
-    axs[0].grid(True)
-
-    # Time series plot — now usando original_data para a linha completa
-    x_full = np.arange(len(original_data))
-    x_test = np.arange(split_index, len(data)) + (len(original_data) - len(data))  # Ajusta índice para o teste
-
-    axs[1].plot(x_full, original_data['cases'], label='All Cases', linestyle='--', color='gray')
-    axs[1].plot(x_test, y_test.values, label='Actual (Test)', marker='o')
-    axs[1].plot(x_test, y_pred, label='Predicted', marker='x')
-    axs[1].tick_params(axis='x', rotation=45)
-    axs[1].legend()
-    axs[1].grid(True)
-
-    plt.tight_layout()
-    return fig, rmse
-
-class DengueApp(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("Dengue Cases Prediction")
-        self.geometry("900x700")
-
-        ttk.Label(self, text="Select State:").pack(pady=5)
-        self.estado_var = tk.StringVar(value=estados[0])
-        ttk.Combobox(self, values=estados, textvariable=self.estado_var, state='readonly').pack(pady=5)
-
-        ttk.Label(self, text="Test Set Percentage (%):").pack(pady=5)
-        self.test_pct_var = tk.IntVar(value=20)
-        ttk.Spinbox(self, from_=5, to=50, increment=5, textvariable=self.test_pct_var).pack(pady=5)
-
-        ttk.Button(self, text="Train & Plot", command=self.train_and_show).pack(pady=10)
-
-        self.rmse_label = ttk.Label(self, text="")
-        self.rmse_label.pack()
-        self.canvas = None
-
-    def train_and_show(self):
-        estado = self.estado_var.get()
-        test_pct = self.test_pct_var.get()
-        fig, rmse = train_and_plot(estado, test_pct)
-        self.rmse_label.config(text=f"RMSE: {rmse:.2f}")
-        if self.canvas:
-            self.canvas.get_tk_widget().destroy()
-        self.canvas = FigureCanvasTkAgg(fig, master=self)
-        self.canvas.draw()
-        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-
-if __name__ == "__main__":
-    DengueApp().mainloop()
+    dataset = process_all_files(mun_files_pattern, estados_json, municipios_json)
+    save_to_csv(dataset, output_csv)
+    print(f'Data saved to {output_csv}')
