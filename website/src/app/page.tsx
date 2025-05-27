@@ -10,11 +10,11 @@ export default function Home() {
         <h1 className="text-3xl font-bold tracking-tight">Undengue-Vision</h1>
         <nav className="flex gap-8 text-base font-medium">
           <a href="" className="hover:underline text-blue-400">Home</a>
-          <a href="./sobre" className="hover:underline">Artigo</a>
-          <a href="./map" className="hover:underline">Mapa</a>
-          <a href="./detect" className="hover:underline">Identificar</a>
-          <a href="./predict" className="hover:underline">Prever</a>
-          <a href="./all" className="hover:underline">All</a>
+          <a href="./sobre" className="hover:underline">Sobre o projeto</a>
+          <a href="./sobre" className="hover:underline">Previsão</a>
+          <a href="./sobre" className="hover:underline">Conscientização</a>
+          <a href="./sobre" className="hover:underline">Detecção</a>
+          <a href="./sobre" className="hover:underline">Futuro</a>
         </nav>
       </header>
 
@@ -38,6 +38,75 @@ export default function Home() {
           </a>
 
         </section>
+
+        
+        <hr className="border-zinc-700 mb-32" />
+
+        <section id="ferramentas" className="max-w-6xl mx-auto text-center mb-32 px-4">
+  <h3 className="text-3xl font-bold mb-12 text-white">Ferramentas do Sistema</h3>
+  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-10">
+
+    {[
+      {
+        href: "/dashboard",
+        title: "Dashboard",
+        description: "Detecte e acompanhe focos de dengue em tempo real.",
+        color: "text-purple-300",
+        image: "https://s1.ppllstatics.com/lasprovincias/www/multimedia/2024/07/18/calor-ola-kn4C-U220752169970dsC-1200x840@Las%20Provincias.JPG"
+      },
+      {
+        href: "/predict",
+        title: "Previsão",
+        description: "Gráficos com previsões baseadas em dados históricos.",
+        color: "text-yellow-300",
+        image: "https://buzzmonitor.com.br/wp-content/uploads/from-pyro-cms/graficos-bm-editada.jpg"
+      },
+      {
+        href: "/conscientizacao",
+        title: "Conscientização",
+        description: "Educação e prevenção contra a dengue.",
+        color: "text-red-300",
+        image: "https://www.qualicorp.com.br/wp-content/uploads/2024/01/1200x580_QUALIBLOG_Felicidade_Trabalho-1024x495.jpg"
+      },
+      {
+        href: "/futuro",
+        title: "Futuro do Projeto",
+        description: "Sustentabilidade e próximos passos da plataforma.",
+        color: "text-green-300",
+        image: "https://mundogeo.com/wp-content/uploads/2024/03/04145437/Agricultura-5.0-como-os-Drones-est%C3%A3o-moldando-o-futuro-do-setor.jpg"
+      },
+      {
+        href: "/sobre",
+        title: "Sobre o Projeto",
+        description: "Tecnologia, desenvolvimento e arquitetura do sistema.",
+        color: "text-blue-300",
+        image: "https://blog.portalpos.com.br/wp-content/uploads/2024/05/como-fazer-um-bom-relatorio.jpg"
+      },
+    ].map((tool, index) => (
+      <a
+        key={index}
+        href={tool.href}
+        className="relative overflow-hidden rounded-2xl shadow-lg border border-zinc-800 hover:scale-[1.02] transition transform h-60 flex items-end"
+      >
+        {/* Imagem de fundo com gradiente escurecido */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: `linear-gradient(to top, rgba(0,0,0), rgba(0,0,0,0.2)), url('${tool.image}')`,
+          }}
+        ></div>
+
+        {/* Conteúdo */}
+        <div className="relative z-10 p-5 text-left">
+          <h4 className={`text-xl font-bold mb-2 ${tool.color}`}>{tool.title}</h4>
+          <p className="text-zinc-100 text-sm">{tool.description}</p>
+        </div>
+      </a>
+    ))}
+
+  </div>
+</section>
+
 
         <hr className="border-zinc-700 mb-32" />
 
