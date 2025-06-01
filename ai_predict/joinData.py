@@ -1,111 +1,145 @@
-import csv
-import json
 import os
-from glob import glob
+import re
+import json
+import unicodedata
+import pandas as pd
 
-def load_estados(filename):
-    with open(filename, 'r', encoding='utf-8') as f:
-        estados = json.load(f)
-    # Criar um dict: codigo_uf -> uf (sigla)
-    return {e['codigo_uf']: e['uf'] for e in estados}
+DATA_PREV_PATH = "ai_predict/data/prev"
+CLIMATE_PATH = "ai_predict/data/dadosClimaticos.parquet"
+STATES_JSON_PATH = "ai_predict/data/prev/estados.json"
+MUNICIPIOS_JSON_PATH = "ai_predict/data/prev/municipios.json"
+OUTPUT_PATH = "ai_predict/data/final_training_data.parquet"
 
-def load_municipios(filename):
-    with open(filename, 'r', encoding='utf-8') as f:
+def load_states(states_json_path):
+    with open(states_json_path, "r", encoding="utf-8-sig") as f:
+        states = json.load(f)
+    states_dict = {str(state["codigo_uf"]).zfill(2): state for state in states}
+    return states_dict
+
+def load_municipios(municipios_json_path):
+    with open(municipios_json_path, "r", encoding="utf-8-sig") as f:
         municipios = json.load(f)
-    # Criar dict codigo_ibge -> dados municipio
-    return {m['codigo_ibge']: m for m in municipios}
+    return municipios  # List of dicts
 
-def wide_to_long(csv_filename, municipios_dict, estados_dict):
-    # Extrair ano do nome do arquivo, ex: mun2016.csv -> 2016
-    basename = os.path.basename(csv_filename)
-    year_part = ''.join(filter(str.isdigit, basename))
-    ano = int(year_part)
+def read_and_process_prev_file(file_path, is_notification):
+    df_raw = pd.read_csv(file_path, sep=';', encoding='latin1', skiprows=3, header=0, quotechar='"')
+    first_col = df_raw.columns[0]
+    df_raw[first_col] = df_raw[first_col].str.strip()
+    df_raw = df_raw[~df_raw[first_col].str.contains("IGNORADO|EXTERIOR|TOTAL", case=False, na=False)]
 
-    with open(csv_filename, newline='', encoding='utf-8') as csvfile:
-        reader = csv.reader(csvfile, delimiter=';')
-        rows_long = []
-        for row in reader:
-            # Exemplo linha:
-            # "110002 ARIQUEMES";-;4;1;2;2;1;-;-;2;1;2;1;...
-            # Primeira coluna tem código e nome juntos, separados por espaço
-            cod_nome = row[0].strip('"')
-            parts = cod_nome.split(' ', 1)
-            if len(parts) < 2:
-                continue  # linha inválida
-            codigo_ibge_str, municipio_nome = parts[0], parts[1]
-            try:
-                codigo_ibge = int(codigo_ibge_str)
-            except:
-                continue
+    def parse_municipio_code_and_name(value):
+        parts = str(value).split(' ', 1)
+        if len(parts) == 2 and parts[0].isdigit() and len(parts[0]) == 6:
+            return parts[0], parts[1]
+        else:
+            return pd.NA, pd.NA
 
-            if codigo_ibge not in municipios_dict:
-                # Sem dados para esse município no json, pula
-                continue
-            
-            municipio_info = municipios_dict[codigo_ibge]
-            latitude = municipio_info['latitude']
-            longitude = municipio_info['longitude']
-            codigo_uf = municipio_info['codigo_uf']
-            estado = estados_dict.get(codigo_uf, 'NA')
+    df_raw[['codigo_ibge', 'municipio']] = df_raw[first_col].apply(lambda x: pd.Series(parse_municipio_code_and_name(x)))
+    df_raw = df_raw.dropna(subset=['codigo_ibge'])
 
-            # Dados semanais começam na coluna 1 até 52 (ou o que tiver)
-            # Considerando que tem 52 semanas, index 1 a 52
-            for semana in range(1, 53):
-                # Evitar index error
-                if semana >= len(row):
-                    break
-                valor = row[semana].strip()
-                if valor == '-' or valor == '':
-                    numero_casos = 0
-                else:
-                    try:
-                        numero_casos = int(valor)
-                    except:
-                        numero_casos = 0
-                notificacao = 1 if numero_casos > 0 else 0
+    week_cols = [col for col in df_raw.columns if col.lower().startswith('semana')]
+    df_raw[week_cols] = df_raw[week_cols].replace('-', 0).apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
 
-                rows_long.append({
-                    'codigo_ibge': codigo_ibge,
-                    'municipio': municipio_nome,
-                    'estado': estado,
-                    'latitude': latitude,
-                    'longitude': longitude,
-                    'semana': semana,
-                    'ano': ano,
-                    'numero_casos': numero_casos,
-                    'notificacao': notificacao
-                })
+    df_long = df_raw.melt(id_vars=['codigo_ibge', 'municipio'], value_vars=week_cols,
+                          var_name='semana_str', value_name='numero_casos')
+    df_long['semana'] = df_long['semana_str'].str.extract(r'Semana (\d+)').astype(int)
+    df_long = df_long.drop(columns=['semana_str'])
 
-    return rows_long
+    filename = os.path.basename(file_path)
+    year_match = re.search(r'(\d{4})', filename)
+    year = int(year_match.group(1)) if year_match else pd.NA
+    df_long['ano'] = year
+    df_long['notificacao'] = 1 if is_notification else 0
 
-def process_all_files(mun_files_pattern, estados_json, municipios_json):
-    estados_dict = load_estados(estados_json)
-    municipios_dict = load_municipios(municipios_json)
+    return df_long
 
-    all_data = []
-    files = sorted(glob(mun_files_pattern))
-    for f in files:
-        print(f'Processing {f}...')
-        data_long = wide_to_long(f, municipios_dict, estados_dict)
-        all_data.extend(data_long)
-    return all_data
+def load_all_prev_files(data_prev_path):
+    all_dfs = []
+    for fname in os.listdir(data_prev_path):
+        if fname.endswith(".csv") and fname.startswith("mun"):
+            full_path = os.path.join(data_prev_path, fname)
+            is_notification = "Not" in fname
+            print(f"Processing {fname} (notification={is_notification})")
+            df = read_and_process_prev_file(full_path, is_notification)
+            all_dfs.append(df)
+    return pd.concat(all_dfs, ignore_index=True)
 
-def save_to_csv(data, output_filename):
-    keys = ['codigo_ibge','municipio','estado','latitude','longitude','semana','ano','numero_casos','notificacao']
-    with open(output_filename, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=keys)
-        writer.writeheader()
-        for row in data:
-            writer.writerow(row)
+def add_geo_info_and_fix_ibge(df, states_dict, municipios_list):
+    # Pad 6 digits (from CSV)
+    df["codigo_ibge_6"] = df["codigo_ibge"].astype(str).str.zfill(6)
+    df["uf_code"] = df["codigo_ibge_6"].str[:2]
+    df["estado_sigla"] = df["uf_code"].map(lambda x: states_dict.get(x, {}).get("uf"))
+    df["regiao"] = df["uf_code"].map(lambda x: states_dict.get(x, {}).get("regiao"))
 
-# --- Usage example ---
-if __name__ == '__main__':
-    # Ajuste o path para seus arquivos
-    mun_files_pattern = 'mun*.csv'  # todos os mun*.csv na pasta atual
-    estados_json = './data/prev/estados.json'
-    municipios_json = './data/prev/municipios.json'
-    output_csv = 'dataDengue.csv'
+    # Map 6-digit code prefix to municipio dict with full 7-digit code
+    ibge6_to_mun = {}
+    for mun in municipios_list:
+        key = str(mun["codigo_ibge"])[:6]  # first 6 digits
+        ibge6_to_mun[key] = mun
 
-    dataset = process_all_files(mun_files_pattern, estados_json, municipios_json)
-    save_to_csv(dataset, output_csv)
-    print(f'Data saved to {output_csv}')
+    def get_codigo_ibge_completo(codigo6):
+        mun = ibge6_to_mun.get(codigo6)
+        if mun:
+            return str(mun["codigo_ibge"])
+        return None
+
+    def get_lat(codigo6):
+        mun = ibge6_to_mun.get(codigo6)
+        if mun:
+            return mun.get("latitude")
+        return None
+
+    def get_lon(codigo6):
+        mun = ibge6_to_mun.get(codigo6)
+        if mun:
+            return mun.get("longitude")
+        return None
+
+    df["codigo_ibge"] = df["codigo_ibge_6"].map(get_codigo_ibge_completo)
+    df["latitude"] = df["codigo_ibge_6"].map(get_lat)
+    df["longitude"] = df["codigo_ibge_6"].map(get_lon)
+
+    df.drop(columns=["codigo_ibge_6"], inplace=True)
+    return df
+
+def load_climate_data(climate_path):
+    return pd.read_parquet(climate_path)
+
+def normalize_name(name):
+    nfkd_form = unicodedata.normalize('NFKD', name)
+    only_ascii = nfkd_form.encode('ASCII', 'ignore').decode('ASCII')
+    return re.sub(r'\s+', ' ', only_ascii).strip().lower()
+
+def merge_climate_with_prev(df_prev, df_clim):
+    df_prev["municipio_norm"] = df_prev["municipio"].apply(normalize_name)
+    df_clim["municipio_norm"] = df_clim["municipio"].apply(normalize_name)
+
+    df_prev["ano_semana"] = df_prev["ano"].astype(str) + "/" + df_prev["semana"].apply(lambda x: f"{x:02d}")
+    df_clim["ano_semana"] = df_clim["ano_semana"].astype(str)
+
+    merged_df = df_prev.merge(
+        df_clim,
+        how="left",
+        on=["municipio_norm", "ano_semana"],
+        suffixes=('', '_clim')
+    )
+
+    merged_df.drop(columns=["municipio_norm", "municipio_clim", "ano_semana"], inplace=True, errors='ignore')
+
+    return merged_df
+
+def main():
+    states_dict = load_states(STATES_JSON_PATH)
+    municipios_list = load_municipios(MUNICIPIOS_JSON_PATH)
+
+    df_prev = load_all_prev_files(DATA_PREV_PATH)
+    df_prev = add_geo_info_and_fix_ibge(df_prev, states_dict, municipios_list)
+
+    df_climate = load_climate_data(CLIMATE_PATH)
+    df_final = merge_climate_with_prev(df_prev, df_climate)
+
+    df_final.to_parquet(OUTPUT_PATH, index=False)
+    print(f"Final training data saved to {OUTPUT_PATH}")
+
+if __name__ == "__main__":
+    main()
