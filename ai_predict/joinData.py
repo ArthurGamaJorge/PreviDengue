@@ -13,133 +13,149 @@ OUTPUT_PATH = "ai_predict/data/final_training_data.parquet"
 def load_states(states_json_path):
     with open(states_json_path, "r", encoding="utf-8-sig") as f:
         states = json.load(f)
-    states_dict = {str(state["codigo_uf"]).zfill(2): state for state in states}
-    return states_dict
+    return {str(s["codigo_uf"]).zfill(2): s for s in states}
 
 def load_municipios(municipios_json_path):
     with open(municipios_json_path, "r", encoding="utf-8-sig") as f:
-        municipios = json.load(f)
-    return municipios  # List of dicts
+        return json.load(f)  # list of dicts
 
-def read_and_process_prev_file(file_path, is_notification):
-    df_raw = pd.read_csv(file_path, sep=';', encoding='latin1', skiprows=3, header=0, quotechar='"')
-    first_col = df_raw.columns[0]
-    df_raw[first_col] = df_raw[first_col].str.strip()
-    df_raw = df_raw[~df_raw[first_col].str.contains("IGNORADO|EXTERIOR|TOTAL", case=False, na=False)]
+def read_and_process_prev_file(file_path):
+    df = pd.read_csv(file_path, sep=';', encoding='latin1', skiprows=3, header=0, quotechar='"')
+    first_col = df.columns[0]
+    df[first_col] = df[first_col].str.strip()
+    df = df[~df[first_col].str.contains("IGNORADO|EXTERIOR|TOTAL", case=False, na=False)]
 
-    def parse_municipio_code_and_name(value):
+    def parse(value):
         parts = str(value).split(' ', 1)
-        if len(parts) == 2 and parts[0].isdigit() and len(parts[0]) == 6:
-            return parts[0], parts[1]
-        else:
-            return pd.NA, pd.NA
+        return parts if len(parts) == 2 and parts[0].isdigit() else (None, None)
 
-    df_raw[['codigo_ibge', 'municipio']] = df_raw[first_col].apply(lambda x: pd.Series(parse_municipio_code_and_name(x)))
-    df_raw = df_raw.dropna(subset=['codigo_ibge'])
+    df[['codigo_ibge_6', 'municipio']] = df[first_col].apply(lambda x: pd.Series(parse(x)))
+    df = df.dropna(subset=['codigo_ibge_6'])
 
-    week_cols = [col for col in df_raw.columns if col.lower().startswith('semana')]
-    df_raw[week_cols] = df_raw[week_cols].replace('-', 0).apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+    week_cols = [col for col in df.columns if col.lower().startswith("semana")]
+    df[week_cols] = df[week_cols].replace("-", 0).apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
 
-    df_long = df_raw.melt(id_vars=['codigo_ibge', 'municipio'], value_vars=week_cols,
-                          var_name='semana_str', value_name='numero_casos')
-    df_long['semana'] = df_long['semana_str'].str.extract(r'Semana (\d+)').astype(int)
-    df_long = df_long.drop(columns=['semana_str'])
+    df_long = df.melt(id_vars=['codigo_ibge_6', 'municipio'], value_vars=week_cols,
+                      var_name='semana_str', value_name='numero_casos')
+    df_long['semana'] = df_long['semana_str'].str.extract(r'(\d+)').astype(int)
+    df_long.drop(columns='semana_str', inplace=True)
 
-    filename = os.path.basename(file_path)
-    year_match = re.search(r'(\d{4})', filename)
-    year = int(year_match.group(1)) if year_match else pd.NA
+    year = int(re.search(r'(\d{4})', os.path.basename(file_path)).group(1))
     df_long['ano'] = year
-    df_long['notificacao'] = 1 if is_notification else 0
+    df_long['notificacao'] = 1 if year in [2021, 2022] else 0
 
     return df_long
 
-def load_all_prev_files(data_prev_path):
-    all_dfs = []
-    for fname in os.listdir(data_prev_path):
-        if fname.endswith(".csv") and fname.startswith("mun"):
-            full_path = os.path.join(data_prev_path, fname)
-            is_notification = "Not" in fname
-            print(f"Processing {fname} (notification={is_notification})")
-            df = read_and_process_prev_file(full_path, is_notification)
-            all_dfs.append(df)
-    return pd.concat(all_dfs, ignore_index=True)
+def load_all_prev_files(path):
+    dfs = []
+    for fname in os.listdir(path):
+        if fname.endswith('.csv') and fname.startswith('mun'):
+            print(f"Processing {fname}")
+            dfs.append(read_and_process_prev_file(os.path.join(path, fname)))
+    return pd.concat(dfs, ignore_index=True)
 
-def add_geo_info_and_fix_ibge(df, states_dict, municipios_list):
-    # Pad 6 digits (from CSV)
-    df["codigo_ibge_6"] = df["codigo_ibge"].astype(str).str.zfill(6)
+def add_geo_info(df, states_dict, municipios_list):
+    ibge_map = {str(m["codigo_ibge"])[:6]: m for m in municipios_list}
+    df["codigo_ibge"] = df["codigo_ibge_6"].map(lambda x: str(ibge_map.get(x, {}).get("codigo_ibge", "")))
+    df["latitude"] = df["codigo_ibge_6"].map(lambda x: ibge_map.get(x, {}).get("latitude"))
+    df["longitude"] = df["codigo_ibge_6"].map(lambda x: ibge_map.get(x, {}).get("longitude"))
     df["uf_code"] = df["codigo_ibge_6"].str[:2]
     df["estado_sigla"] = df["uf_code"].map(lambda x: states_dict.get(x, {}).get("uf"))
     df["regiao"] = df["uf_code"].map(lambda x: states_dict.get(x, {}).get("regiao"))
-
-    # Map 6-digit code prefix to municipio dict with full 7-digit code
-    ibge6_to_mun = {}
-    for mun in municipios_list:
-        key = str(mun["codigo_ibge"])[:6]  # first 6 digits
-        ibge6_to_mun[key] = mun
-
-    def get_codigo_ibge_completo(codigo6):
-        mun = ibge6_to_mun.get(codigo6)
-        if mun:
-            return str(mun["codigo_ibge"])
-        return None
-
-    def get_lat(codigo6):
-        mun = ibge6_to_mun.get(codigo6)
-        if mun:
-            return mun.get("latitude")
-        return None
-
-    def get_lon(codigo6):
-        mun = ibge6_to_mun.get(codigo6)
-        if mun:
-            return mun.get("longitude")
-        return None
-
-    df["codigo_ibge"] = df["codigo_ibge_6"].map(get_codigo_ibge_completo)
-    df["latitude"] = df["codigo_ibge_6"].map(get_lat)
-    df["longitude"] = df["codigo_ibge_6"].map(get_lon)
-
-    df.drop(columns=["codigo_ibge_6"], inplace=True)
+    df.drop(columns=["codigo_ibge_6", "uf_code"], inplace=True)
     return df
 
-def load_climate_data(climate_path):
-    return pd.read_parquet(climate_path)
-
 def normalize_name(name):
-    nfkd_form = unicodedata.normalize('NFKD', name)
-    only_ascii = nfkd_form.encode('ASCII', 'ignore').decode('ASCII')
-    return re.sub(r'\s+', ' ', only_ascii).strip().lower()
+    norm = unicodedata.normalize('NFKD', name)
+    return re.sub(r'\s+', ' ', norm.encode('ASCII', 'ignore').decode()).lower().strip()
 
-def merge_climate_with_prev(df_prev, df_clim):
-    df_prev["municipio_norm"] = df_prev["municipio"].apply(normalize_name)
-    df_clim["municipio_norm"] = df_clim["municipio"].apply(normalize_name)
+def load_climate_data(path):
+    df = pd.read_parquet(path)
+    df["municipio_norm"] = df["municipio"].apply(normalize_name)
+    df[["ano", "semana"]] = df["ano_semana"].str.extract(r"(\d{4})/(\d{2})").astype(int)
 
-    df_prev["ano_semana"] = df_prev["ano"].astype(str) + "/" + df_prev["semana"].apply(lambda x: f"{x:02d}")
-    df_clim["ano_semana"] = df_clim["ano_semana"].astype(str)
+    return df
 
-    merged_df = df_prev.merge(
-        df_clim,
-        how="left",
-        on=["municipio_norm", "ano_semana"],
-        suffixes=('', '_clim')
+def merge_and_fill(df_prev, df_climate, municipios_list):
+    # Mapeia código IBGE para nome oficial
+    municipio_ibge_map = {
+        str(m["codigo_ibge"])[:6]: m["nome"] for m in municipios_list
+    }
+
+    # Garante código ibge com 6 dígitos
+    df_prev["codigo_ibge_6"] = df_prev["codigo_ibge"].astype(str).str[:6]
+    df_prev["municipio"] = df_prev["codigo_ibge_6"].map(municipio_ibge_map)
+
+    # Junta clima
+    df_climate = df_climate.drop(columns=["ano_semana"])
+    df_merged = df_prev.merge(
+        df_climate,
+        on=["municipio", "ano", "semana"],
+        how="left"
     )
 
-    merged_df.drop(columns=["municipio_norm", "municipio_clim", "ano_semana"], inplace=True, errors='ignore')
+    # Todas combinações possíveis
+    all_year_week = df_merged[["ano", "semana"]].drop_duplicates()
+    all_municipios = pd.DataFrame(municipios_list)
 
-    return merged_df
+    all_municipios["key"] = 1
+    all_year_week["key"] = 1
+    base = all_municipios.merge(all_year_week, on="key").drop("key", axis=1)
+
+    base["numero_casos"] = 0
+    base["notificacao"] = base["ano"].apply(lambda y: 1 if y in [2021, 2022] else 0)
+
+    base = base.rename(columns={
+        "nome": "municipio",
+        "codigo_ibge": "codigo_ibge",
+        "latitude": "latitude",
+        "longitude": "longitude"
+    })
+
+    base["uf_code"] = base["codigo_ibge"].astype(str).str[:2]
+    states_dict = load_states(STATES_JSON_PATH)
+    base["estado_sigla"] = base["uf_code"].map(lambda x: states_dict.get(x, {}).get("uf"))
+    base["regiao"] = base["uf_code"].map(lambda x: states_dict.get(x, {}).get("regiao"))
+    base = base.drop(columns=["uf_code"])
+
+    merged_keys = df_merged[["codigo_ibge", "ano", "semana"]].drop_duplicates()
+    merged_keys["codigo_ibge"] = merged_keys["codigo_ibge"].astype("int64") 
+    base = base.merge(
+        merged_keys,
+        on=["codigo_ibge", "ano", "semana"],
+        how="left",
+        indicator=True
+    )
+    base = base[base["_merge"] == "left_only"].drop(columns="_merge")
+
+    base = base.merge(df_climate, on=["municipio", "ano", "semana"], how="left")
+
+    df_final = pd.concat([df_merged, base], ignore_index=True)
+
+    df_final = df_final.sort_values(by=["municipio", "ano", "semana"]).reset_index(drop=True)
+
+    final_columns = [
+        "municipio", "numero_casos", "semana", "ano", "notificacao", "codigo_ibge",
+        "latitude", "longitude", "estado_sigla", "regiao",
+        "T2M", "T2M_MAX", "T2M_MIN", "PRECTOTCORR", "RH2M", "ALLSKY_SFC_SW_DWN"
+    ]
+    df_final = df_final[final_columns]
+
+    return df_final
 
 def main():
     states_dict = load_states(STATES_JSON_PATH)
     municipios_list = load_municipios(MUNICIPIOS_JSON_PATH)
 
     df_prev = load_all_prev_files(DATA_PREV_PATH)
-    df_prev = add_geo_info_and_fix_ibge(df_prev, states_dict, municipios_list)
-
+    df_prev = add_geo_info(df_prev, states_dict, municipios_list)
     df_climate = load_climate_data(CLIMATE_PATH)
-    df_final = merge_climate_with_prev(df_prev, df_climate)
 
+    df_final = merge_and_fill(df_prev, df_climate, municipios_list)
+
+    df_final["codigo_ibge"] = df_final["codigo_ibge"].astype(str)
     df_final.to_parquet(OUTPUT_PATH, index=False)
-    print(f"Final training data saved to {OUTPUT_PATH}")
+
 
 if __name__ == "__main__":
     main()
