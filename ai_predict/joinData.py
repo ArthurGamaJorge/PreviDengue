@@ -3,6 +3,20 @@ import re
 import json
 import unicodedata
 import pandas as pd
+from epiweeks import Week
+import datetime
+
+def max_epi_week(year):
+    # Começa do último dia do ano
+    day = datetime.date(year, 12, 31)
+    # Vai retrocedendo até encontrar um dia cuja semana epidemiológica seja do ano correto
+    while day.year >= year - 1:  # limite para evitar loop infinito, pode ajustar
+        week = Week.fromdate(day)
+        if week.year == year:
+            return week.week
+        day -= datetime.timedelta(days=1)
+    # fallback caso algo dê errado
+    return 52
 
 DATA_PREV_PATH = "ai_predict/data/prev"
 CLIMATE_PATH = "ai_predict/data/dadosClimaticos.parquet"
@@ -32,15 +46,23 @@ def read_and_process_prev_file(file_path):
     df[['codigo_ibge_6', 'municipio']] = df[first_col].apply(lambda x: pd.Series(parse(x)))
     df = df.dropna(subset=['codigo_ibge_6'])
 
-    week_cols = [col for col in df.columns if col.lower().startswith("semana")]
-    df[week_cols] = df[week_cols].replace("-", 0).apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+    year = int(re.search(r'(\d{4})', os.path.basename(file_path)).group(1))
+    max_week = max_epi_week(year)
 
-    df_long = df.melt(id_vars=['codigo_ibge_6', 'municipio'], value_vars=week_cols,
+    week_cols = [col for col in df.columns if col.lower().startswith("semana")]
+    week_cols_filtered = []
+    for col in week_cols:
+        m = re.search(r'(\d+)', col)
+        if m and int(m.group(1)) <= max_week:
+            week_cols_filtered.append(col)
+
+    df[week_cols_filtered] = df[week_cols_filtered].replace("-", 0).apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+
+    df_long = df.melt(id_vars=['codigo_ibge_6', 'municipio'], value_vars=week_cols_filtered,
                       var_name='semana_str', value_name='numero_casos')
     df_long['semana'] = df_long['semana_str'].str.extract(r'(\d+)').astype(int)
     df_long.drop(columns='semana_str', inplace=True)
 
-    year = int(re.search(r'(\d{4})', os.path.basename(file_path)).group(1))
     df_long['ano'] = year
     df_long['notificacao'] = 1 if year in [2021, 2022] else 0
 
@@ -77,24 +99,21 @@ def load_climate_data(path):
     return df
 
 def merge_and_fill(df_prev, df_climate, municipios_list):
-    # Mapeia código IBGE para nome oficial
-    municipio_ibge_map = {
-        str(m["codigo_ibge"])[:6]: m["nome"] for m in municipios_list
-    }
+    # Garante código ibge 6 dígitos como string
+    df_prev["codigo_ibge"] = df_prev["codigo_ibge"].astype(str).str.zfill(6)
+    df_climate["codigo_ibge"] = df_climate["codigo_ibge"].astype(str).str.zfill(6)
 
-    # Garante código ibge com 6 dígitos
-    df_prev["codigo_ibge_6"] = df_prev["codigo_ibge"].astype(str).str[:6]
-    df_prev["municipio"] = df_prev["codigo_ibge_6"].map(municipio_ibge_map)
+    if "ano_semana" in df_climate.columns:
+        df_climate = df_climate.drop(columns=["ano_semana"])
 
-    # Junta clima
-    df_climate = df_climate.drop(columns=["ano_semana"])
+    # Faz merge principal pelo codigo_ibge, ano e semana
     df_merged = df_prev.merge(
         df_climate,
-        on=["municipio", "ano", "semana"],
+        on=["codigo_ibge", "ano", "semana"],
         how="left"
     )
 
-    # Todas combinações possíveis
+    # Cria base com todas combinações municipio x ano x semana para completar dados faltantes
     all_year_week = df_merged[["ano", "semana"]].drop_duplicates()
     all_municipios = pd.DataFrame(municipios_list)
 
@@ -104,22 +123,18 @@ def merge_and_fill(df_prev, df_climate, municipios_list):
 
     base["numero_casos"] = 0
     base["notificacao"] = base["ano"].apply(lambda y: 1 if y in [2021, 2022] else 0)
+    base["codigo_ibge"] = base["codigo_ibge"].astype(str).str.zfill(6)
 
-    base = base.rename(columns={
-        "nome": "municipio",
-        "codigo_ibge": "codigo_ibge",
-        "latitude": "latitude",
-        "longitude": "longitude"
-    })
-
-    base["uf_code"] = base["codigo_ibge"].astype(str).str[:2]
+    base["uf_code"] = base["codigo_ibge"].str[:2]
     states_dict = load_states(STATES_JSON_PATH)
     base["estado_sigla"] = base["uf_code"].map(lambda x: states_dict.get(x, {}).get("uf"))
     base["regiao"] = base["uf_code"].map(lambda x: states_dict.get(x, {}).get("regiao"))
     base = base.drop(columns=["uf_code"])
 
+    # Remove combinações que já existem em df_merged
     merged_keys = df_merged[["codigo_ibge", "ano", "semana"]].drop_duplicates()
-    merged_keys["codigo_ibge"] = merged_keys["codigo_ibge"].astype("int64") 
+    merged_keys["codigo_ibge"] = merged_keys["codigo_ibge"].astype(str).str.zfill(6)
+
     base = base.merge(
         merged_keys,
         on=["codigo_ibge", "ano", "semana"],
@@ -128,17 +143,25 @@ def merge_and_fill(df_prev, df_climate, municipios_list):
     )
     base = base[base["_merge"] == "left_only"].drop(columns="_merge")
 
-    base = base.merge(df_climate, on=["municipio", "ano", "semana"], how="left")
+    # Adiciona dados climáticos aos registros faltantes
+    base = base.merge(df_climate, on=["codigo_ibge", "ano", "semana"], how="left")
 
+    # Junta tudo
     df_final = pd.concat([df_merged, base], ignore_index=True)
 
-    df_final = df_final.sort_values(by=["municipio", "ano", "semana"]).reset_index(drop=True)
+    # Mapeia código ibge para nome do município no df_final, garantindo preenchimento do campo
+    municipio_map = {str(m["codigo_ibge"]).zfill(6): m["nome"] for m in municipios_list}
+    df_final["municipio"] = df_final["codigo_ibge"].map(municipio_map)
+
+    # Ordena e reseta índice
+    df_final = df_final.sort_values(by=["codigo_ibge", "municipio", "ano", "semana"]).reset_index(drop=True)
 
     final_columns = [
         "municipio", "numero_casos", "semana", "ano", "notificacao", "codigo_ibge",
         "latitude", "longitude", "estado_sigla", "regiao",
         "T2M", "T2M_MAX", "T2M_MIN", "PRECTOTCORR", "RH2M", "ALLSKY_SFC_SW_DWN"
     ]
+
     df_final = df_final[final_columns]
 
     return df_final
