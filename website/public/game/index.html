@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Jogo de Combate à Dengue</title>
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(to bottom, #a8e6cf, #dcedc1);
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+  }
+  #mainContainer {
+    display: flex;
+    margin: 20px;
+  }
+  #gameArea {
+    position: relative;
+    width: 800px;
+    height: 600px;
+    background: #d0f4ea;
+    border: 4px solid #05386b;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+  }
+  #infoBar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 800px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 10px;
+    background-color: rgba(55,150,131,0.9);
+    color: #ffffff;
+    z-index: 10;
+  }
+  #infoBar div, #infoBar label {
+    font-size: 16px;
+  }
+  #freeContainer {
+    display: flex;
+    align-items: center;
+    font-size: 20px;
+  }
+  #freeContainer .freeMosquito {
+    font-size: 14px;
+    margin-right: 2px;
+  }
+  .pot {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    bottom: 0;
+    background-color: #8d6e63;
+    border-radius: 0 0 10px 10px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+  }
+  .pot:before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 10px;
+    width: 40px;
+    height: 30px;
+    background-color: #4caf50;
+    border-radius: 5px;
+  }
+  .egg {
+    position: absolute;
+    font-size: 16px;
+  }
+  .larva {
+    position: absolute;
+    font-size: 20px;
+  }
+  .mosquito, .greenMosquito {
+    position: absolute;
+    font-size: 30px;
+  }
+  .greenMosquito {
+    filter: hue-rotate(90deg);
+  }
+  .explosion {
+    position: absolute;
+    font-size: 36px;
+    pointer-events: none;
+  }
+  .npc {
+    position: absolute;
+    width: 50px;
+    height: 60px;
+    background-color: #ffeb3b;
+    border: 2px solid #f57f17;
+    border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    z-index: 5;
+  }
+  .npc:before {
+    content: '👤';
+    font-size: 40px;
+  }
+  .healthBar {
+    position: absolute;
+    width: 50px;
+    height: 6px;
+    background-color: #ff0000;
+    border: 1px solid #000000;
+    border-radius: 3px;
+  }
+  .healthFill {
+    position: absolute;
+    height: 100%;
+    background-color: #00ff00;
+    border-radius: 2px;
+  }
+  .lidOverlay {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    bottom: 0;
+    background-color: rgba(0,0,0,0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 3;
+  }
+  .lidTimer {
+    position: absolute;
+    bottom: 65px;
+    width: 60px;
+    height: 6px;
+    background-color: #ffffff;
+    border: 1px solid #000000;
+    border-radius: 3px;
+    overflow: hidden;
+    z-index: 4;
+  }
+  .lidFill {
+    position: absolute;
+    height: 100%;
+    background-color: #00bfa5;
+    left: 0;
+    top: 0;
+  }
+  #player {
+    position: absolute;
+    width: 50px;
+    height: 60px;
+    bottom: 0;
+    left: 375px;
+    background-color: #ffe57f;
+    border: 2px solid #f9a825;
+    border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    z-index: 5;
+  }
+  #player:before {
+    content: '🏃';
+    font-size: 40px;
+  }
+  #racket {
+    position: absolute;
+    width: 40px;
+    height: 60px;
+    background-color: transparent;
+    z-index: 6;
+  }
+  /* Sidebar/shop */
+  #shop {
+    width: 200px;
+    margin-left: 10px;
+  }
+  #shop h3 {
+    margin-top: 0;
+    font-size: 18px;
+    color: #05386b;
+  }
+  #coinContainer {
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+  #potButtons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .potButton {
+    padding: 8px;
+    background-color: #379683;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .potButton:disabled {
+    background-color: #9e9e9e;
+    cursor: not-allowed;
+  }
+</style>
+</head>
+<body>
+  <div id="mainContainer">
+    <div style="position: relative;">
+      <div id="infoBar">
+        <div id="score">Mosquitos Eliminados: <span id="coinCount">0</span> 🪙</div>
+        <div id="freeContainer"></div>
+        <div id="eggs">Ovos de Dengue: 0</div>
+        <label>Spawn (ms):
+          <input id="spawnRateInput" type="number" value="1000" min="200" style="width:70px;">
+        </label>
+      </div>
+      <div id="gameArea">
+        <div id="player"></div>
+        <div id="racket"></div>
+        <div class="pot" id="pot1" style="left: 100px;"></div>
+        <div class="pot" id="pot2" style="left: 370px;"></div>
+        <div class="pot" id="pot3" style="left: 640px;"></div>
+      </div>
+    </div>
+    <div id="shop">
+      <h3>Loja de Tampas</h3>
+      <div id="coinContainer">🪙: <span id="coinCountShop">0</span></div>
+      <div id="potButtons">
+        <button class="potButton" data-pot="0">Comprar Tampa Vaso 1 (1 🪙)</button>
+        <button class="potButton" data-pot="1">Comprar Tampa Vaso 2 (1 🪙)</button>
+        <button class="potButton" data-pot="2">Comprar Tampa Vaso 3 (1 🪙)</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+
+window.addEventListener("keydown", function (e) {
+  const keysToPrevent = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "];
+  if (keysToPrevent.includes(e.key)) {
+    e.preventDefault();
+  }
+}, { passive: false }); // ← importante: permite o uso de preventDefault
+
+
+  const gameArea = document.getElementById('gameArea');
+  const player = document.getElementById('player');
+  const racket = document.getElementById('racket');
+  const coinCountDisplay = document.getElementById('coinCount');
+  const coinCountShop = document.getElementById('coinCountShop');
+  const freeContainer = document.getElementById('freeContainer');
+  const eggsDisplay = document.getElementById('eggs');
+  const spawnInput = document.getElementById('spawnRateInput');
+  const potButtons = document.querySelectorAll('.potButton');
+
+  const pots = [
+    { el: document.getElementById('pot1'), x: 100, y: 540, width: 60, height: 60, eggs: 0, locked: false, lidEnd: 0, lidEl: null, lidTimerEl: null },
+    { el: document.getElementById('pot2'), x: 370, y: 540, width: 60, height: 60, eggs: 0, locked: false, lidEnd: 0, lidEl: null, lidTimerEl: null },
+    { el: document.getElementById('pot3'), x: 640, y: 540, width: 60, height: 60, eggs: 0, locked: false, lidEnd: 0, lidEl: null, lidTimerEl: null }
+  ];
+
+  let coins = 0;
+  let freeCount = 0;
+  let eggsCount = 0;
+  let keys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false };
+  let playerX = 375, playerY = 540, playerW = 50, playerH = 60;
+  let velocityX = 0, velocityY = 0;
+  const gravity = 0.8, speed = 5, jumpPower = 15;
+
+  const mosquitoes = [];
+  const eggsArr = [];
+  const npcs = [];
+
+  let spawnRate = parseInt(spawnInput.value);
+  let spawnInterval;
+
+  function updateRacket() {
+    racket.style.left = (playerX + 35) + 'px';
+    racket.style.top = (playerY + 5) + 'px';
+    racket.style.width = '40px';
+    racket.style.height = '60px';
+  }
+
+  function spawnMosquito() {
+    const m = document.createElement('div');
+    m.classList.add('mosquito');
+    m.textContent = '🦟';
+    const spawnX = Math.random() * (gameArea.clientWidth - 30);
+    m.style.left = spawnX + 'px';
+    m.style.top = '0px';
+    // escolher vaso não trancado
+    const availablePots = pots.filter(p => !p.locked);
+    if (availablePots.length === 0) {
+      // nenhum disponível: virar mosquito livre diretamente
+      gameArea.appendChild(m);
+      mosquitoes.push({ el: m, x: spawnX, y: 0, vx: 0, vy: -2, type: 'free' });
+      return;
+    }
+    const targetPot = availablePots[Math.floor(Math.random() * availablePots.length)];
+    const targetX = targetPot.x + targetPot.width / 2 - 15;
+    const targetY = targetPot.y + targetPot.height / 2 - 15;
+    const dx = targetX - spawnX, dy = targetY - 0;
+    const dist = Math.hypot(dx, dy);
+    const speedFactor = 2;
+    const vx = (dx / dist) * speedFactor, vy = (dy / dist) * speedFactor;
+    gameArea.appendChild(m);
+    mosquitoes.push({ el: m, x: spawnX, y: 0, vx: vx, vy: vy, target: targetPot, type: 'normal' });
+  }
+
+  function criarEgg(pot) {
+    pot.eggs++;
+    eggsCount++;
+    eggsDisplay.textContent = 'Ovos de Dengue: ' + eggsCount;
+    const index = pot.eggs - 1;
+    const egg = document.createElement('div');
+    egg.classList.add('egg');
+    egg.textContent = '🥚';
+    const eggWidth = 15;
+    const maxSlots = Math.floor(pot.width / eggWidth);
+    const col = index % maxSlots;
+    const ex = pot.x + col * eggWidth + 5;
+    const ey = pot.y - 20;
+    egg.style.left = ex + 'px';
+    egg.style.top = ey + 'px';
+    gameArea.appendChild(egg);
+    eggsArr.push({ el: egg, x: ex, y: ey, state: 'egg', created: Date.now(), pot: pot });
+  }
+
+  function criarNPC(xPosition) {
+    const npcEl = document.createElement('div');
+    npcEl.classList.add('npc');
+    npcEl.style.left = xPosition + 'px';
+    npcEl.style.top = '540px';
+    gameArea.appendChild(npcEl);
+    const healthBar = document.createElement('div');
+    healthBar.classList.add('healthBar');
+    healthBar.style.left = xPosition + 'px';
+    healthBar.style.top = '530px';
+    const healthFill = document.createElement('div');
+    healthFill.classList.add('healthFill');
+    healthFill.style.width = '50px';
+    healthBar.appendChild(healthFill);
+    gameArea.appendChild(healthBar);
+    return {
+      el: npcEl,
+      x: xPosition,
+      y: 540,
+      width: 50,
+      height: 60,
+      hp: 10,
+      direction: Math.random() < 0.5 ? -1 : 1,
+      nextChange: Date.now() + Math.random() * 2000 + 1000,
+      healthBar,
+      healthFill,
+      alive: true
+    };
+  }
+
+  function atualizarNPCs() {
+    const now = Date.now();
+    for (const npc of npcs) {
+      if (!npc.alive) continue;
+      if (now >= npc.nextChange) {
+        npc.direction = Math.random() < 0.5 ? -1 : 1;
+        npc.nextChange = now + Math.random() * 2000 + 1000;
+      }
+      npc.x += npc.direction * 1.5;
+      if (npc.x < 0) { npc.x = 0; npc.direction = 1; }
+      if (npc.x + npc.width > gameArea.clientWidth) { npc.x = gameArea.clientWidth - npc.width; npc.direction = -1; }
+      npc.el.style.left = npc.x + 'px';
+      npc.healthBar.style.left = npc.x + 'px';
+      const percent = (npc.hp / 10) * 50;
+      npc.healthFill.style.width = percent + 'px';
+      if (npc.hp <= 0) {
+        npc.alive = false;
+        npc.el.textContent = '💀';
+        npc.el.style.fontSize = '40px';
+        npc.el.style.background = 'none';
+        npc.el.style.border = 'none';
+        // remover barra de vida
+        if (gameArea.contains(npc.healthBar)) gameArea.removeChild(npc.healthBar);
+      }
+    }
+  }
+
+  function updateMosquitoes() {
+    for (let i = mosquitoes.length - 1; i >= 0; i--) {
+      const mos = mosquitoes[i];
+      mos.x += mos.vx;
+      mos.y += mos.vy;
+      mos.el.style.left = mos.x + 'px';
+      mos.el.style.top = mos.y + 'px';
+      const mRect = mos.el.getBoundingClientRect();
+      const rRect = racket.getBoundingClientRect();
+
+      if (mos.type === 'normal' && !(rRect.right < mRect.left || rRect.left > mRect.right || rRect.bottom < mRect.top || rRect.top > mRect.bottom)) {
+        mostrarExplosao(mos.x, mos.y);
+        gameArea.removeChild(mos.el);
+        mosquitoes.splice(i, 1);
+        coins++;
+        coinCountDisplay.textContent = coins;
+        coinCountShop.textContent = coins;
+        continue;
+      }
+
+      if (mos.type === 'normal') {
+        const pot = mos.target;
+        const potRect = pot.el.getBoundingClientRect();
+        if (!(mRect.right < potRect.left || mRect.left > potRect.right || mRect.bottom < potRect.top || mRect.top > potRect.bottom)) {
+          gameArea.removeChild(mos.el);
+          mosquitoes.splice(i, 1);
+          criarEgg(pot);
+          continue;
+        }
+      } else if (mos.type === 'green') {
+        let hitNPC = null;
+        for (const npc of npcs) {
+          if (!npc.alive) continue;
+          const npcRect = npc.el.getBoundingClientRect();
+          if (!(npcRect.right < mRect.left || npcRect.left > mRect.right || npcRect.bottom < mRect.top || npcRect.top > mRect.bottom)) {
+            hitNPC = npc;
+            break;
+          }
+        }
+        if (hitNPC) {
+          hitNPC.hp--;
+          mos.vx = 0;
+          mos.vy = -2;
+          mos.type = 'free';
+          continue;
+        }
+        const anyAlive = npcs.some(n => n.alive);
+        if (!anyAlive && mos.y + 30 < 0) {
+          gameArea.removeChild(mos.el);
+          mosquitoes.splice(i, 1);
+          // conta como livre
+          addFreeMosquitoVisual();
+          continue;
+        }
+      } else if (mos.type === 'free') {
+        if (mos.y + 30 < 0) {
+          gameArea.removeChild(mos.el);
+          mosquitoes.splice(i, 1);
+          addFreeMosquitoVisual();
+          continue;
+        }
+      }
+    }
+  }
+
+  function addFreeMosquitoVisual() {
+    freeCount++;
+    const fm = document.createElement('span');
+    fm.classList.add('freeMosquito');
+    fm.textContent = '🦟';
+    //freeContainer.appendChild(fm);
+  }
+
+  function updateEggs() {
+    const now = Date.now();
+    for (let i = eggsArr.length - 1; i >= 0; i--) {
+      const eg = eggsArr[i];
+      const diff = now - eg.created;
+      if (eg.state === 'egg' && diff >= 10000) {
+        eg.el.textContent = '🐛';
+        eg.el.classList.add('larva');
+        eg.state = 'larva';
+      } else if (eg.state === 'larva' && diff >= 20000) {
+        const gm = document.createElement('div');
+        gm.classList.add('greenMosquito');
+        gm.textContent = '🦟';
+        gm.style.left = eg.x + 'px';
+        gm.style.top = eg.y + 'px';
+        gameArea.appendChild(gm);
+        const aliveNPCs = npcs.filter(n => n.alive);
+        if (aliveNPCs.length > 0) {
+          let closest = aliveNPCs[0];
+          let minDist = Math.hypot((closest.x + closest.width/2) - eg.x, (closest.y) - eg.y);
+          for (const npc of aliveNPCs) {
+            const dist = Math.hypot((npc.x + npc.width/2) - eg.x, (npc.y) - eg.y);
+            if (dist < minDist) {
+              closest = npc;
+              minDist = dist;
+            }
+          }
+          const targetX = closest.x + closest.width / 2 - 15;
+          const targetY = closest.y;
+          const dx = targetX - eg.x;
+          const dy = targetY - eg.y;
+          const dist = Math.hypot(dx, dy);
+          const speedFactor = 2;
+          const vx = (dx / dist) * speedFactor;
+          const vy = (dy / dist) * speedFactor;
+          mosquitoes.push({ el: gm, x: eg.x, y: eg.y, vx: vx, vy: vy, type: 'green' });
+        } else {
+          mosquitoes.push({ el: gm, x: eg.x, y: eg.y, vx: 0, vy: -2, type: 'free' });
+        }
+        gameArea.removeChild(eg.el);
+        eggsArr.splice(i, 1);
+      }
+    }
+  }
+
+  function mostrarExplosao(x, y) {
+    const exp = document.createElement('div');
+    exp.classList.add('explosion');
+    exp.textContent = '💥';
+    exp.style.left = x + 'px';
+    exp.style.top = y + 'px';
+    gameArea.appendChild(exp);
+    setTimeout(() => {
+      if (gameArea.contains(exp)) gameArea.removeChild(exp);
+    }, 500);
+  }
+
+  function updateLids() {
+    const now = Date.now();
+    for (const pot of pots) {
+      if (pot.locked) {
+        const remaining = pot.lidEnd - now;
+        if (remaining <= 0) {
+          // remover tampa
+          pot.locked = false;
+          if (pot.lidEl && gameArea.contains(pot.lidEl)) gameArea.removeChild(pot.lidEl);
+          if (pot.lidTimerEl && gameArea.contains(pot.lidTimerEl)) gameArea.removeChild(pot.lidTimerEl);
+          pot.lidEl = null;
+          pot.lidTimerEl = null;
+        } else {
+          // atualizar barra
+          const frac = remaining / 20000;
+          pot.lidFill.style.width = (frac * 60) + 'px';
+        }
+      }
+    }
+  }
+
+  function updatePlayer() {
+    if (keys.ArrowLeft) velocityX = -speed;
+    else if (keys.ArrowRight) velocityX = speed;
+    else velocityX = 0;
+    playerX += velocityX;
+    velocityY += gravity;
+    playerY += velocityY;
+    if (playerX < 0) playerX = 0;
+    if (playerX + playerW > gameArea.clientWidth) playerX = gameArea.clientWidth - playerW;
+    if (playerY + playerH > 600) {
+      playerY = 600 - playerH;
+      velocityY = 0;
+    }
+    player.style.left = playerX + 'px';
+    player.style.top = playerY + 'px';
+    updateRacket();
+  }
+
+  function gameLoop() {
+    updatePlayer();
+    atualizarNPCs();
+    updateMosquitoes();
+    updateEggs();
+    updateLids();
+    requestAnimationFrame(gameLoop);
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') keys[e.code] = true;
+    if (e.code === 'ArrowUp' && playerY + playerH >= 600) velocityY = -jumpPower;
+  });
+  document.addEventListener('keyup', e => {
+    if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') keys[e.code] = false;
+  });
+
+  function ajustarSpawn() {
+    clearInterval(spawnInterval);
+    spawnRate = parseInt(spawnInput.value);
+    spawnInterval = setInterval(spawnMosquito, spawnRate);
+  }
+
+  function comprarTampa(potIndex) {
+    if (coins < 1) return;
+    const pot = pots[potIndex];
+    if (pot.locked) return;
+    // gastar 1 coin
+    coins--;
+    coinCountDisplay.textContent = coins;
+    coinCountShop.textContent = coins;
+    // aplicar tampa
+    pot.locked = true;
+    pot.lidEnd = Date.now() + 20000;
+    // overlay visual
+    const lid = document.createElement('div');
+    lid.classList.add('lidOverlay');
+    lid.style.left = pot.x + 'px';
+    lid.style.top = pot.y + 'px';
+    gameArea.appendChild(lid);
+    pot.lidEl = lid;
+    // barra de duração
+    const lidTimer = document.createElement('div');
+    lidTimer.classList.add('lidTimer');
+    lidTimer.style.left = pot.x + 'px';
+    lidTimer.style.top = (pot.y - 10) + 'px';
+    const lidFill = document.createElement('div');
+    lidFill.classList.add('lidFill');
+    lidFill.style.width = '60px';
+    lidTimer.appendChild(lidFill);
+    gameArea.appendChild(lidTimer);
+    pot.lidTimerEl = lidTimer;
+    pot.lidFill = lidFill;
+  }
+
+  // Iniciar NPCs
+  npcs.push(criarNPC(200));
+  npcs.push(criarNPC(500));
+
+  // Iniciar jogo
+  player.style.left = playerX + 'px'; player.style.top = playerY + 'px';
+  updateRacket();
+  spawnInterval = setInterval(spawnMosquito, spawnRate);
+  spawnInput.addEventListener('change', ajustarSpawn);
+  potButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.pot);
+      comprarTampa(idx);
+    });
+  });
+
+  requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>

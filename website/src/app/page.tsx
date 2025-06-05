@@ -51,36 +51,43 @@ export default function Home() {
         href: "/dashboard",
         title: "Dashboard",
         description: "Detecte e acompanhe focos de dengue em tempo real.",
-        color: "text-purple-300",
-        image: "https://s1.ppllstatics.com/lasprovincias/www/multimedia/2024/07/18/calor-ola-kn4C-U220752169970dsC-1200x840@Las%20Provincias.JPG"
+        color: "text-blue-300",
+        image: "https://images.freeimages.com/365/images/previews/619/black-dashboard-interface-55341.jpg"
       },
       {
         href: "/predict",
         title: "Previsão",
         description: "Gráficos com previsões baseadas em dados históricos.",
-        color: "text-yellow-300",
-        image: "https://buzzmonitor.com.br/wp-content/uploads/from-pyro-cms/graficos-bm-editada.jpg"
+        color: "text-blue-300",
+        image: "https://img.freepik.com/vetores-premium/grafico-comercial-em-fundo-escuro-do-mapa_485157-123.jpg"
       },
       {
         href: "/conscientizacao",
         title: "Conscientização",
         description: "Educação e prevenção contra a dengue.",
-        color: "text-red-300",
-        image: "https://www.qualicorp.com.br/wp-content/uploads/2024/01/1200x580_QUALIBLOG_Felicidade_Trabalho-1024x495.jpg"
+        color: "text-blue-300",
+        image: "https://img.lovepik.com/bg/20240123/plant-with-pot-on-the-ground-with-dark-background_2879353_wh860.jpg!/fw/860"
+      },
+      {
+        href: "/game",
+        title: "Jogo",
+        description: "Melhor jogo do mundo.",
+        color: "text-blue-300",
+        image: "https://img.freepik.com/vetores-gratis/fundo-hexagonal-escuro-com-cor-gradiente_79603-1409.jpg?semt=ais_items_boosted&w=740"
       },
       {
         href: "/futuro",
         title: "Futuro do Projeto",
         description: "Sustentabilidade e próximos passos da plataforma.",
-        color: "text-green-300",
-        image: "https://mundogeo.com/wp-content/uploads/2024/03/04145437/Agricultura-5.0-como-os-Drones-est%C3%A3o-moldando-o-futuro-do-setor.jpg"
+        color: "text-blue-300",
+        image: "https://as1.ftcdn.net/v2/jpg/02/62/57/92/1000_F_262579234_ww6sZKUuZKGyQtAJx7jLBHoaUv9VEoB1.jpg"
       },
       {
         href: "/sobre",
         title: "Sobre o Projeto",
         description: "Tecnologia, desenvolvimento e arquitetura do sistema.",
         color: "text-blue-300",
-        image: "https://blog.portalpos.com.br/wp-content/uploads/2024/05/como-fazer-um-bom-relatorio.jpg"
+        image: "https://s2.glbimg.com/RYsebm-T0VuSjJtyMLnSRKK5Efk=/e.glbimg.com/og/ed/f/original/2021/08/18/rodion-kutsaev-xketd4stn0i-unsplash.jpg"
       },
     ].map((tool, index) => (
       <a
@@ -107,46 +114,10 @@ export default function Home() {
   </div>
 </section>
 
-
-        <hr className="border-zinc-700 mb-32" />
-
-        <section id="sobre" className="max-w-4xl mx-auto text-center mb-32">
-          <h3 className="text-3xl font-bold mb-6 text-white">Sobre o Projeto</h3>
-          <p className="text-zinc-300 mb-6">
-            Nosso projeto usa inteligência artificial para identificar criadouros do mosquito da dengue a partir de imagens. A detecção é feita com a tecnologia YOLO (You Only Look Once), com foco em caixas d'água, carros e piscinas.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-16">
-            <div className="rounded-2xl overflow-hidden">
-              <img src="/images/img-4.png" alt="Ilustração 1" width={1000} height={600} className="w-full h-auto object-cover" />
-            </div>
-            <div className="rounded-2xl overflow-hidden">
-              <img src="/images/detected1.png" alt="Ilustração 1" width={1000} height={600} className="w-full h-auto object-cover" />
-            </div>
-          </div>
-          <div id="mais" className="bg-zinc-800 bg-opacity-40 p-8 rounded-xl">
-            <h4 className="text-2xl font-semibold mb-4">Aspectos Técnicos</h4>
-            <p className="text-zinc-400 mb-4">O modelo YOLO foi treinado com mais de 250 imagens rotuladas manualmente, transformadas em 1500+ imagens augmentadas. Abaixo, mostramos uma amostra das estatísticas de detecção:</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <div className="bg-zinc-900 p-4 rounded-lg shadow">
-                <h5 className="text-lg font-bold mb-1">Precisão</h5>
-                <p className="text-green-400 text-2xl font-mono">0.0%</p>
-              </div>
-              <div className="bg-zinc-900 p-4 rounded-lg shadow">
-                <h5 className="text-lg font-bold mb-1">Recall</h5>
-                <p className="text-blue-400 text-2xl font-mono">0.0%</p>
-              </div>
-              <div className="bg-zinc-900 p-4 rounded-lg shadow">
-                <h5 className="text-lg font-bold mb-1">F1 Score</h5>
-                <p className="text-yellow-400 text-2xl font-mono">0.0%</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <hr className="border-zinc-700 mb-32" />
 
         <section id="contato" className="max-w-5xl mx-auto text-center mb-32">
-          <h3 className="text-3xl font-bold mb-8">Contato</h3>
+          <h3 className="text-3xl font-bold mb-8">Equipe</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="p-4 rounded-xl">
               <Image src="https://avatars.githubusercontent.com/u/129080603?v=4" alt="Perfil 1" width={100} height={100} className="rounded-full mx-auto mb-4" />
