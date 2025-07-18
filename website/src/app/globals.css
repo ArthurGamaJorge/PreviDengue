@@ -124,3 +124,22 @@
     @apply bg-background text-foreground;
   }
 }
+
+.leaflet-tile-container {
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.marker-wrapper {
+  display: inline-block;
+  transition: transform 0.3s ease, filter 0.3s ease;
+  transform-origin: center bottom;
+  filter: drop-shadow(0 0 0 rgba(0, 0, 0, 0));
+}
+
+.marker-wrapper:hover {
+  transform: scale(1.2);
+  filter: drop-shadow(0 0 6px rgba(255, 0, 0, 1));
+  cursor: pointer;
+}

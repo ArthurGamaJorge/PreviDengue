@@ -10,10 +10,11 @@ export default function Home() {
         <h1 className="text-3xl font-bold tracking-tight">Undengue-Vision</h1>
         <nav className="flex gap-8 text-base font-medium">
           <a href="" className="hover:underline text-blue-400">Home</a>
+          <a href="./dashboard" className="hover:underline">Dashboard</a>
           <a href="./sobre" className="hover:underline">Sobre o projeto</a>
-          <a href="./sobre" className="hover:underline">Previsão</a>
+          <a href="./predict" className="hover:underline">Previsão</a>
           <a href="./sobre" className="hover:underline">Conscientização</a>
-          <a href="./sobre" className="hover:underline">Detecção</a>
+          <a href="./detect" className="hover:underline">Detecção</a>
           <a href="./sobre" className="hover:underline">Futuro</a>
         </nav>
       </header>
