@@ -27,6 +27,7 @@ export default function IntensityForm({
       {/* Formulário flutuante centralizado */}
       <div className="fixed z-50 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-zinc-800 border border-zinc-700 p-6 rounded-xl shadow-2xl w-[90vw] max-w-md">
         <h3 className="text-white text-lg font-semibold mb-2">Adicionar ponto</h3>
+        
 
         <p className="text-sm text-zinc-400 mb-4">
           Lat: {selectedCoords[0].toFixed(4)}, Lng: {selectedCoords[1].toFixed(4)}

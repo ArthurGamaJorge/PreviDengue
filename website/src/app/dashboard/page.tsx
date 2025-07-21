@@ -30,56 +30,21 @@ export default function Home() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [jsonFile, setJsonFile] = useState<File | null>(null);
   const [imageFiles, setImageFiles] = useState<FileList | null>(null);
+  const [jsonImageFilenames, setJsonImageFilenames] = useState<Set<string>>(
+    new Set()
+  );
+  const [imageFileNames, setImageFileNames] = useState<Set<string>>(new Set());
+  const [importWarnings, setImportWarnings] = useState<string[]>([]);
 
-  const uploadImageAndGetDetection = async (
-    file: File
-  ): Promise<{ base64: string; intensity: number }> => {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const base64 = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject("Erro ao ler imagem");
-      reader.readAsDataURL(file);
-    });
-
-    const res = await fetch("http://localhost:8000/detect/", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!res.ok) throw new Error("Erro ao enviar imagem para o backend");
-
-    const data = await res.json();
-    const intensity = calculateIntensityFromCounts(data.contagem ?? {});
-    console.log(data);
-    return {
-      base64,
-      intensity,
-    };
-  };
-
-  const calculateIntensityFromCounts = (
-    counts: Record<string, number>
-  ): number => {
-    const weights: Record<string, number> = {
-      carro: 0.5,
-      piscina: 2,
-      caixa_agua: 3,
-    };
-
-    let score = 0;
-    for (const key in counts) {
-      score += (weights[key] || 0) * counts[key];
-    }
-
-    return Math.min(10, parseFloat(score.toFixed(2))); // normaliza entre 0 e 10
-  };
+  const totalIntensity = dataPoints.reduce((sum, p) => sum + p.intensity, 0);
+  const averageIntensity =
+    dataPoints.length > 0
+      ? (totalIntensity / dataPoints.length).toFixed(2)
+      : "0.00";
 
   const handleMapClick = (e: [number, number]) => setSelectedCoords(e);
 
-    const handleRemovePoint = (index: number) => {
+  const handleRemovePoint = (index: number) => {
     setDataPoints((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -110,7 +75,7 @@ export default function Home() {
       const newPoint: DataPoint = {
         lat: selectedCoords[0],
         lng: selectedCoords[1],
-        intensity: calculateIntensityFromCounts(data.contagem ?? {}),
+        intensity: data.intensity_score ?? 0,
         imageFilename: imageFile.name,
         imageBase64: base64,
         detectedObjects: data.contagem ?? {},
@@ -128,77 +93,191 @@ export default function Home() {
   };
 
   const handleExportJson = () => {
-  const exportData = dataPoints.map(
-    ({ lat, lng, intensity, imageFilename, detectedObjects }) => ({
-      lat,
-      lng,
-      intensity,
-      imageFilename,
-      detectedObjects, 
-    })
-  );
+    const exportData = dataPoints.map(
+      ({ lat, lng, intensity, imageFilename, detectedObjects }) => ({
+        lat,
+        lng,
+        intensity,
+        imageFilename,
+        detectedObjects,
+      })
+    );
 
-  const dataStr = JSON.stringify(exportData, null, 2);
-  const blob = new Blob([dataStr], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
 
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "map_data_points.json";
-  a.click();
-  URL.revokeObjectURL(url);
-};
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "map_data_points.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
-  const handleImport = () => {
-    if (!jsonFile || !imageFiles) return;
+  function validateImageJsonMatch(
+    jsonNames: Set<string>,
+    imageNames: Set<string>
+  ) {
+    const warnings: string[] = [];
+
+    const missingImages = [...jsonNames].filter(
+      (name) => !imageNames.has(name)
+    );
+    const extraImages = [...imageNames].filter((name) => !jsonNames.has(name));
+
+    if (missingImages.length > 0) {
+      warnings.push(
+        `Faltando imagens para o JSON: ${missingImages.join(", ")}`
+      );
+    }
+    if (extraImages.length > 0) {
+      warnings.push(
+        `Imagens selecionadas que não constam no JSON: ${extraImages.join(
+          ", "
+        )}`
+      );
+    }
+    setImportWarnings(warnings);
+  }
+
+  // No onChange do input JSON:
+  const handleJsonChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setJsonFile(file);
+
+    if (!file) {
+      setJsonImageFilenames(new Set());
+      validateImageJsonMatch(new Set(), imageFileNames);
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const importedData = JSON.parse(reader.result as string) as DataPoint[];
-        if (!Array.isArray(importedData)) throw new Error("JSON inválido");
+        const data = JSON.parse(reader.result as string) as DataPoint[];
+        if (!Array.isArray(data)) throw new Error("JSON inválido");
 
-        const cleanData = importedData.map((p) => ({
-          ...p,
-          imageBase64: "",
-          detectedObjects: p.detectedObjects ?? {},
-        }));
-
-        let loadedImagesCount = 0;
-        const updatedData = [...cleanData];
-
-        Array.from(imageFiles).forEach((file) => {
-          const imgReader = new FileReader();
-          imgReader.onload = () => {
-            const base64 = imgReader.result as string;
-            for (let i = 0; i < updatedData.length; i++) {
-              if (updatedData[i].imageFilename === file.name) {
-                updatedData[i].imageBase64 = base64;
-                break;
-              }
-            }
-            loadedImagesCount++;
-            if (loadedImagesCount === imageFiles.length) {
-              setDataPoints(updatedData);
-              setShowImportModal(false);
-              setJsonFile(null);
-              setImageFiles(null);
-            }
-          };
-          imgReader.readAsDataURL(file);
-        });
+        const filenames = new Set(
+          data.map((point) => point.imageFilename).filter(Boolean) as string[]
+        );
+        setJsonImageFilenames(filenames);
+        validateImageJsonMatch(filenames, imageFileNames);
       } catch {
-        alert("Erro ao ler JSON.");
+        setJsonImageFilenames(new Set());
+        setImportWarnings(["JSON inválido"]);
       }
     };
-    reader.readAsText(jsonFile);
+    reader.readAsText(file);
   };
 
-  const totalIntensity = dataPoints.reduce((sum, p) => sum + p.intensity, 0);
-  const averageIntensity =
-    dataPoints.length > 0
-      ? (totalIntensity / dataPoints.length).toFixed(2)
-      : "0.00";
+  // No onChange do input de imagens:
+  const handleImagesChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) {
+      setImageFileNames(new Set());
+      validateImageJsonMatch(jsonImageFilenames, new Set());
+      setImageFiles(null);
+      return;
+    }
+
+    const names = new Set(Array.from(files).map((f) => f.name));
+    setImageFileNames(names);
+    validateImageJsonMatch(jsonImageFilenames, names);
+    setImageFiles(files);
+  };
+
+  const handleImport = async () => {
+    if (!jsonFile || !imageFiles) return;
+
+    try {
+      const reader = new FileReader();
+
+      reader.onload = async () => {
+        try {
+          const importedData = JSON.parse(
+            reader.result as string
+          ) as DataPoint[];
+          if (!Array.isArray(importedData)) throw new Error("JSON inválido");
+
+          const imageMap = new Map<string, File>();
+          Array.from(imageFiles).forEach((file) => {
+            imageMap.set(file.name, file);
+          });
+
+          const updatedData: DataPoint[] = [];
+
+          for (const point of importedData) {
+            if (!point.imageFilename) continue;
+
+            const imageFile = imageMap.get(point.imageFilename);
+            if (!imageFile) continue;
+
+            const base64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = () => reject("Erro ao ler imagem");
+              reader.readAsDataURL(imageFile);
+            });
+
+            let detectedObjects = point.detectedObjects ?? null;
+            let intensity = point.intensity ?? null;
+
+            // Se faltar alguma das duas infos, faz a chamada à API
+            if (
+              !detectedObjects ||
+              intensity === null ||
+              intensity === undefined
+            ) {
+              const formData = new FormData();
+              formData.append("file", imageFile);
+
+              const res = await fetch("http://localhost:8000/detect/", {
+                method: "POST",
+                body: formData,
+              });
+
+              if (!res.ok) throw new Error("Erro ao processar imagem");
+
+              const data = await res.json();
+
+              detectedObjects = data.contagem ?? {};
+              intensity = data.intensity_score ?? 0;
+            }
+
+            updatedData.push({
+              lat: point.lat,
+              lng: point.lng,
+              imageFilename: point.imageFilename,
+              imageBase64: base64,
+              detectedObjects,
+              intensity,
+            });
+          }
+
+          setDataPoints(updatedData);
+          setShowImportModal(false);
+          setJsonFile(null);
+          setImageFiles(null);
+        } catch (err) {
+          console.error(err);
+          alert("Erro ao importar dados. Verifique o JSON e as imagens.");
+        }
+      };
+
+      reader.readAsText(jsonFile);
+    } catch {
+      alert("Erro ao processar arquivo.");
+    }
+  };
+
+  const closeModal = () => {
+  setShowImportModal(false);
+  setImportWarnings([]);
+  setJsonFile(null);
+  setImageFiles(null);
+  setJsonImageFilenames(new Set());
+  setImageFileNames(new Set());
+};
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-zinc-950 to-zinc-900 text-white pt-20 px-4 sm:px-8">
@@ -208,7 +287,10 @@ export default function Home() {
           Análise Inteligente de Focos
         </h2>
         <p className="text-zinc-400 text-lg">
-          Essa página tem como principal funcionalidade oferecer uma visão ampla das cidades e focos de possivel dengue. além disso, o upload de imagens e coordenadas possibilita a importacao de dados em massa, algo necessario para a avaliacao de uma cidade inteira.
+          Essa página tem como principal funcionalidade oferecer uma visão ampla
+          das cidades e focos de possivel dengue. além disso, o upload de
+          imagens e coordenadas possibilita a importacao de dados em massa, algo
+          necessario para a avaliacao de uma cidade inteira.
         </p>
       </section>
 
@@ -231,10 +313,14 @@ export default function Home() {
 
       {/* Modal de importação */}
       {showImportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-          <div className="bg-zinc-800 p-6 rounded-md w-full max-w-md relative">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"
+          onClick={closeModal} 
+        >
+          <div className="bg-zinc-800 p-6 rounded-md w-full max-w-md relative"
+          onClick={(e) => e.stopPropagation()}>
             <button
-              onClick={() => setShowImportModal(false)}
+              onClick={closeModal}
               className="absolute top-2 right-3 text-white text-xl hover:text-red-400"
             >
               ×
@@ -243,69 +329,139 @@ export default function Home() {
               Importar JSON + Imagens
             </h3>
 
-           <div className="mb-6">
-  <label
-    htmlFor="jsonFileInput"
-    className="flex items-center gap-2 mb-2 text-gray-200 font-semibold"
-  >
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      className="h-5 w-5 text-indigo-400"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M9 12h6m-3-3v6m-6 3h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v7a2 2 0 002 2z"
-      />
-    </svg>
-    Arquivo JSON
-  </label>
-  <input
-    id="jsonFileInput"
-    type="file"
-    accept=".json"
-    onChange={(e) => setJsonFile(e.target.files?.[0] || null)}
-    className="w-full rounded border border-gray-600 bg-gray-800 text-gray-100 p-2 cursor-pointer
+            <div className="mb-6">
+              <label
+                htmlFor="jsonFileInput"
+                className="flex items-center gap-2 mb-2 text-gray-200 font-semibold"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 text-indigo-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9 12h6m-3-3v6m-6 3h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v7a2 2 0 002 2z"
+                  />
+                </svg>
+                Arquivo JSON
+              </label>
+              <input
+                id="jsonFileInput"
+                type="file"
+                accept=".json"
+                onChange={handleJsonChange}
+                className="w-full rounded border border-gray-600 bg-gray-800 text-gray-100 p-2 cursor-pointer
       transition duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-  />
-</div>
+              />
+            </div>
 
-<div className="mb-6">
-  <label
-    htmlFor="imageFilesInput"
-    className="flex items-center gap-2 mb-2 text-gray-200 font-semibold"
-  >
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      className="h-5 w-5 text-green-400"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7M3 7l4-4h10l4 4M16 13l-3-3-2 2-3-3"
-      />
-    </svg>
-    Imagens (múltiplas)
-  </label>
-  <input
-    id="imageFilesInput"
-    type="file"
-    accept="image/*"
-    multiple
-    onChange={(e) => setImageFiles(e.target.files || null)}
-    className="w-full rounded border border-gray-600 bg-gray-800 text-gray-100 p-2 cursor-pointer
+            <div className="mb-6">
+              <label
+                htmlFor="imageFilesInput"
+                className="flex items-center gap-2 mb-2 text-gray-200 font-semibold"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 text-green-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7M3 7l4-4h10l4 4M16 13l-3-3-2 2-3-3"
+                  />
+                </svg>
+                Imagens (múltiplas)
+              </label>
+              <input
+                id="imageFilesInput"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImagesChange}
+                className="w-full rounded border border-gray-600 bg-gray-800 text-gray-100 p-2 cursor-pointer
       transition duration-200 focus:outline-none focus:ring-2 focus:ring-green-500"
-  />
-</div>
+              />
+            </div>
+            {jsonFile && imageFiles && importWarnings.length > 0 && (
+              <div className="mb-6 p-3 rounded bg-red-800 text-red-200 text-sm max-h-40 overflow-auto">
+                {importWarnings.map((msg, idx) => (
+                  <p key={idx}>{msg}</p>
+                ))}
+              </div>
+            )}
 
+            <details className="mb-6 bg-zinc-700 rounded p-4 text-sm text-gray-100">
+              <summary className="cursor-pointer font-semibold text-base mb-2 text-white">
+                📄 Ver modelo de JSON aceito
+              </summary>
+              <div className="mt-2 space-y-3">
+                <p>O arquivo JSON deve conter uma lista com as chaves:</p>
+                <ul className="list-disc list-inside space-y-2 text-gray-300">
+                  <li>
+                    <strong>lat</strong> e <strong>lng</strong>: coordenadas do
+                    ponto, no formato decimal.
+                  </li>
+                  <li>
+                    <strong>imageFilename</strong>: nome do arquivo da imagem
+                    correspondente. Este nome deve ser igual ao nome do arquivo
+                    enviado no campo de upload de imagens abaixo.
+                  </li>
+                  <li>
+                    <strong>intensity</strong> (opcional):
+                    <br />
+                    <span className="text-yellow-400">
+                      ⚠️ Se você estiver criando o JSON externamente, **não
+                      manipule esse campo**.
+                    </span>
+                  </li>
+                  <li>
+                    <strong>detectedObjects</strong> (opcional):
+                    <br />
+                    <span className="text-yellow-400">
+                      ⚠️ Se você estiver criando o JSON externamente, **não
+                      manipule esse campo**.
+                    </span>
+                  </li>
+                </ul>
+
+                <p className="text-gray-400">
+                  Caso algum campo opcional não esteja presente, a IA calculará
+                  os valores.
+                </p>
+
+                <pre className="whitespace-pre-wrap font-mono bg-zinc-800 p-3 rounded border border-zinc-600 overflow-auto text-gray-200 text-xs">
+                  {`[
+  {
+    "lat": -23.54395455873987,
+    "lng": -46.625904487997225,
+    "intensity": 9,
+    "imageFilename": "img-54.png",
+    "detectedObjects": {
+      "caixa_agua": 3
+    }
+  },
+  {
+    "lat": -23.555206120737367,
+    "lng": -46.66365382056169,
+    "imageFilename": "img-8.png",
+    "detectedObjects": {
+      "carro": 94,
+      "piscina": 9
+    }
+  }
+]`}
+                </pre>
+              </div>
+            </details>
 
             <button
               onClick={handleImport}
@@ -329,10 +485,10 @@ export default function Home() {
       />
 
       <div className="max-w-6xl mx-auto mb-12 rounded-xl overflow-hidden shadow-lg border border-zinc-800">
-          <DynamicMap
+        <DynamicMap
           points={dataPoints}
           onMapClick={handleMapClick}
-          onRemovePoint={handleRemovePoint} // passe a função aqui também
+          onRemovePoint={handleRemovePoint}
         />
       </div>
 
