@@ -1,5 +1,0 @@
-embeddings {
-tensor_name: "municipio:00018"
-tensor_path: "00018/municipio/tensors.tsv"
-metadata_path: "00018/municipio/metadata.tsv"
-}

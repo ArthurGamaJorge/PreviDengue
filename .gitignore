@@ -1,3 +1,5 @@
 .venv/
 dadosClimaticos.csv
 final_training_data.csv
+dadosClimaticos.parquet
+final_training_data.parquet

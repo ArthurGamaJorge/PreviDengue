@@ -1,10 +1,34 @@
-**Identificação de Focos de Dengue em Ambientes Residenciais: Uma Abordagem Baseada em Inteligência Artificial**
+# 🦟 PreviDengue
 
-Este projeto utiliza um modelo de inteligência artificial com YOLO para identificar possíveis focos do mosquito da dengue a partir de imagens. Ele é composto por:
+**Uma abordagem multidisciplinar com Inteligência Artificial para o monitoramento e prevenção da dengue.**
 
-- 💡 Um modelo de IA treinado (YOLO)
-- 🌐 Um site em Next.js para interação com usuários
-- ⚙️ Uma API em FastAPI para processar as imagens e retornar as detecções
+---
+
+## 🔍 Sobre o Projeto
+
+O **PreviDengue** é uma iniciativa que integra tecnologia, ciência de dados e ações educativas no combate à dengue. O projeto atua em **três frentes principais**:
+
+- **🛰️ Detecção de focos**: uso de IA (YOLO) para identificar possíveis criadouros em imagens aéreas.
+- **📈 Previsão de surtos**: modelos como TFT combinados a dados climáticos e históricos.
+- **🎮 Conscientização**: materiais informativos e um jogo interativo para educação da população.
+
+Tudo será disponibilizado em uma **plataforma gratuita** voltada a agentes públicos e cidadãos.
+
+---
+
+## 🎯 Objetivos
+
+- Criar ferramentas com IA para **prever surtos** e **identificar focos** de dengue.
+- **Informar** a população com conteúdo acessível e interativo.
+- Apoiar a **gestão pública** no planejamento de ações preventivas.
+
+---
+
+## 🌟 Diferenciais
+
+- Integração única de **detecção**, **previsão** e **educação** em um único sistema.
+- Uso de **dados abertos**, IA avançada e abordagem **multidisciplinar**.
+- Plataforma totalmente **livre e gratuita** para uso social.
 
 ---
 
@@ -16,7 +40,6 @@ Este projeto utiliza um modelo de inteligência artificial com YOLO para identif
 
 ---
 
-artigo cientifico https://docs.google.com/document/d/1CDxza6HEWbK4VhqNCCs9xMZiANQn-zw8wCtr05T8FhU/edit?tab=t.0
+## 🧠 Palavras-chave
 
-diario de bordo https://docs.google.com/document/d/1x1OEKNFzSjyDYdlkpBtMp3Y9OrEk9uxrJUWFDLCoOwM/edit?tab=t.0#heading=h.nlk486x5fh5u 
-
+**Inteligência Artificial** · **Previsão Epidemiológica** · **Conscientização**

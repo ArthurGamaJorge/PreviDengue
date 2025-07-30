@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import KPIs from "@/components/KPIs";
 import IntensityForm from "@/components/IntensityForm";
 import Footer from "@/components/Footer";
+import SimpleLineChart from "@/components/LineChart"; // <-- Adição aqui
 
 const DynamicMap = dynamic(() => import("@/components/HeatMap"), {
   ssr: false,
@@ -35,6 +36,66 @@ export default function Home() {
   );
   const [imageFileNames, setImageFileNames] = useState<Set<string>>(new Set());
   const [importWarnings, setImportWarnings] = useState<string[]>([]);
+
+  // --- Adições para o Gráfico de Linhas ---
+  const [selectedCity, setSelectedCity] = useState("Campinas");
+  const [predictionWeeks, setPredictionWeeks] = useState(12); // Padrão de 12 semanas
+
+  // Dados de exemplo para diferentes cidades
+  const chartData = {
+    Campinas: [
+      { month: "Jan", cases: 200 },
+      { month: "Fev", cases: 220 },
+      { month: "Mar", cases: 280 },
+      { month: "Abr", cases: 250 },
+      { month: "Mai", cases: 180 },
+      { month: "Jun", cases: 150 },
+      { month: "Jul", cases: 130 },
+      { month: "Ago", cases: 160 },
+      { month: "Set", cases: 210 },
+      { month: "Out", cases: 270 },
+      { month: "Nov", cases: 300 },
+      { month: "Dez", cases: 260 },
+    ],
+    SãoPaulo: [
+      { month: "Jan", cases: 800 },
+      { month: "Fev", cases: 950 },
+      { month: "Mar", cases: 1100 },
+      { month: "Abr", cases: 1000 },
+      { month: "Mai", cases: 700 },
+      { month: "Jun", cases: 600 },
+      { month: "Jul", cases: 550 },
+      { month: "Ago", cases: 680 },
+      { month: "Set", cases: 850 },
+      { month: "Out", cases: 1050 },
+      { month: "Nov", cases: 1200 },
+      { month: "Dez", cases: 980 },
+    ],
+    RioDeJaneiro: [
+      { month: "Jan", cases: 500 },
+      { month: "Fev", cases: 620 },
+      { month: "Mar", cases: 750 },
+      { month: "Abr", cases: 680 },
+      { month: "Mai", cases: 450 },
+      { month: "Jun", cases: 300 },
+      { month: "Jul", cases: 280 },
+      { month: "Ago", cases: 350 },
+      { month: "Set", cases: 480 },
+      { month: "Out", cases: 600 },
+      { month: "Nov", cases: 720 },
+      { month: "Dez", cases: 590 },
+    ],
+  };
+
+  const handleCityChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    setSelectedCity(e.target.value);
+  };
+
+  const handleWeeksChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    setPredictionWeeks(isNaN(value) ? 0 : value);
+  };
+  // --- Fim das Adições para o Gráfico de Linhas ---
 
   const totalIntensity = dataPoints.reduce((sum, p) => sum + p.intensity, 0);
   const averageIntensity =
@@ -271,26 +332,21 @@ export default function Home() {
   };
 
   const closeModal = () => {
-  setShowImportModal(false);
-  setImportWarnings([]);
-  setJsonFile(null);
-  setImageFiles(null);
-  setJsonImageFilenames(new Set());
-  setImageFileNames(new Set());
-};
+    setShowImportModal(false);
+    setImportWarnings([]);
+    setJsonFile(null);
+    setImageFiles(null);
+    setJsonImageFilenames(new Set());
+    setImageFileNames(new Set());
+  };
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-zinc-950 to-zinc-900 text-white pt-20 px-4 sm:px-8">
       <Header />
       <section className="text-center mt-8 mb-12 max-w-3xl mx-auto">
-        <h2 className="text-4xl font-bold mb-4">
-          Análise Inteligente de Focos
-        </h2>
+        <h2 className="text-4xl font-bold mb-4">Análise Inteligente de Focos</h2>
         <p className="text-zinc-400 text-lg">
-          Essa página tem como principal funcionalidade oferecer uma visão ampla
-          das cidades e focos de possivel dengue. além disso, o upload de
-          imagens e coordenadas possibilita a importacao de dados em massa, algo
-          necessario para a avaliacao de uma cidade inteira.
+          Essa página tem como principal funcionalidade oferecer uma visão ampla das cidades e focos de possível dengue. Além disso, o upload de imagens e coordenadas possibilita a importação de dados em massa, algo necessário para a avaliação de uma cidade inteira.
         </p>
       </section>
 
@@ -315,10 +371,9 @@ export default function Home() {
       {showImportModal && (
         <div
           className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"
-          onClick={closeModal} 
+          onClick={closeModal}
         >
-          <div className="bg-zinc-800 p-6 rounded-md w-full max-w-md relative"
-          onClick={(e) => e.stopPropagation()}>
+          <div className="bg-zinc-800 p-6 rounded-md w-full max-w-md relative" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={closeModal}
               className="absolute top-2 right-3 text-white text-xl hover:text-red-400"
@@ -491,6 +546,53 @@ export default function Home() {
           onRemovePoint={handleRemovePoint}
         />
       </div>
+
+      {/* --- Início da Seção do Gráfico de Linhas (Adição aqui) --- */}
+      <section className="max-w-6xl mx-auto mb-12 p-6 bg-zinc-900 rounded-xl shadow-lg border border-zinc-800">
+        <h3 className="text-2xl font-bold mb-6 text-white text-center">
+          Previsão de Casos de Dengue por Município
+        </h3>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+          <div className="flex items-center gap-2">
+            <label htmlFor="city-select" className="text-zinc-300">
+              Município:
+            </label>
+            <select
+              id="city-select"
+              value={selectedCity}
+              onChange={handleCityChange}
+              className="p-2 rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {Object.keys(chartData).map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label htmlFor="weeks-input" className="text-zinc-300">
+              Semanas a Prever:
+            </label>
+            <input
+              id="weeks-input"
+              type="number"
+              value={predictionWeeks}
+              onChange={handleWeeksChange}
+              min="0"
+              max="52" // Limite de 52 semanas (1 ano)
+              className="w-20 p-2 rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+
+        <SimpleLineChart
+          data={chartData[selectedCity as keyof typeof chartData]}
+          predictionWeeks={predictionWeeks}
+        />
+      </section>
+      {/* --- Fim da Seção do Gráfico de Linhas --- */}
 
       {selectedCoords && (
         <IntensityForm
