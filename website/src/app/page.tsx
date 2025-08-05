@@ -96,13 +96,13 @@ const toolCards = [
     title: "Detecção de Focos",
     description: "Utilize nossa IA para identificar potenciais criadouros do mosquito Aedes aegypti em imagens.",
     icon: <Gauge size={32} />,
-    link: "/detecao"
+    link: "/detect"
   },
   {
     title: "Previsão de Surtos",
     description: "Acesse modelos preditivos para antecipar áreas de maior risco de dengue.",
     icon: <FlaskConical size={32} />,
-    link: "/previsao"
+    link: "/predict"
   },
   {
     title: "Dashboard Interativo",
@@ -114,7 +114,7 @@ const toolCards = [
     title: "Jogo Educativo",
     description: "Aprenda sobre a prevenção da dengue de forma divertida e engajadora.",
     icon: <Gamepad2 size={32} />,
-    link: "/jogo"
+    link: "/game"
   },
   {
     title: "Campanhas de Conscientização",
@@ -126,7 +126,7 @@ const toolCards = [
     title: "Sobre o Projeto",
     description: "Conheça mais a fundo a nossa missão, visão e a equipe por trás do PreviDengue.",
     icon: <Lightbulb size={32} />,
-    link: "/about"
+    link: "/sobre"
   },
 ];
 
@@ -161,7 +161,7 @@ export default function About() {
               transition-all duration-300 /* Mantém a transição caso queira reintroduzir algum efeito depois */
               block text-center /* Garante que o texto fique centralizado */
               ">
-            Experimente a Plataforma
+            Experimente as Ferramentas
           </Link>
         </div>
 

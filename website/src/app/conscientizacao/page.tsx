@@ -17,7 +17,7 @@ export default function Home() {
       </header>
 
       <main className="pt-28 flex flex-col items-center">
-        <h2 className="text-4xl font-bold mb-8">Sobre</h2>
+        <h2 className="text-4xl font-bold mb-8">Conscientização</h2>
       </main>
 
     </div>

@@ -1,0 +1,85 @@
+--- Lendo o arquivo Parquet... ---
+
+--- Análise inicial concluída. ---
+
+--- Informações para Modelagem LSTM ---
+
+**1. Estrutura e tipos de dados:**
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 3308580 entries, 0 to 3308579
+Data columns (total 16 columns):
+ #   Column             Dtype  
+---  ------             -----  
+ 0   municipio          object 
+ 1   numero_casos       int64  
+ 2   semana             int64  
+ 3   ano                int64  
+ 4   notificacao        int64  
+ 5   codigo_ibge        object 
+ 6   latitude           float64
+ 7   longitude          float64
+ 8   estado_sigla       object 
+ 9   regiao             object 
+ 10  T2M                float64
+ 11  T2M_MAX            float64
+ 12  T2M_MIN            float64
+ 13  PRECTOTCORR        float64
+ 14  RH2M               float64
+ 15  ALLSKY_SFC_SW_DWN  float64
+dtypes: float64(8), int64(4), object(4)
+memory usage: 403.9+ MB
+
+**2. Amostra das primeiras 5 linhas:**
+               municipio  numero_casos  semana   ano  notificacao  ...    T2M_MAX    T2M_MIN  PRECTOTCORR       RH2M ALLSKY_SFC_SW_DWN
+0  Alta Floresta D'Oeste             0       1  2014            0  ...  27.414286  22.611430    22.910000  91.055720         19.351429
+1  Alta Floresta D'Oeste             0       2  2014            0  ...  26.605715  21.244287    86.850000  92.781425         17.184286
+2  Alta Floresta D'Oeste             0       3  2014            0  ...  27.350000  21.414286    77.040000  91.968575         17.770000
+3  Alta Floresta D'Oeste             0       4  2014            0  ...  26.712858  22.282856    59.430000  93.290000         16.028572
+4  Alta Floresta D'Oeste             0       5  2014            0  ...  25.869999  21.289999    62.280003  93.605710         15.895715
+
+[5 rows x 16 columns]
+
+**3. Contagem de valores únicos por coluna:**
+  - 'municipio': 5299 valores únicos
+  - 'numero_casos': 1936 valores únicos
+  - 'semana': 53 valores únicos
+  - 'ano': 12 valores únicos
+  - 'notificacao': 2 valores únicos
+  - 'codigo_ibge': 5570 valores únicos
+  - 'latitude': 5526 valores únicos
+  - 'longitude': 5476 valores únicos
+  - 'estado_sigla': 27 valores únicos
+  - 'regiao': 5 valores únicos
+  - 'T2M': 24597 valores únicos
+  - 'T2M_MAX': 26728 valores únicos
+  - 'T2M_MIN': 24304 valores únicos
+  - 'PRECTOTCORR': 28253 valores únicos
+  - 'RH2M': 64025 valores únicos
+  - 'ALLSKY_SFC_SW_DWN': 22850 valores únicos
+
+**4. Contagem de dados ausentes por coluna:**
+municipio            0
+numero_casos         0
+semana               0
+ano                  0
+notificacao          0
+codigo_ibge          0
+latitude             0
+longitude            0
+estado_sigla         0
+regiao               0
+T2M                  0
+T2M_MAX              0
+T2M_MIN              0
+PRECTOTCORR          0
+RH2M                 0
+ALLSKY_SFC_SW_DWN    0
+dtype: int64
+
+**5. Intervalo de dados temporais (Ano/Semana):**
+  - Coluna 'semana': Min: 1, Max: 53
+  - Coluna 'ano': Min: 2014, Max: 2025
+
+**6. Coluna 'casos' não encontrada.**
+
+**7. Nenhuma coluna climática identificada.**

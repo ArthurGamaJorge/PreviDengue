@@ -16,7 +16,7 @@ export default function Header() {
           Ferramentas
         </Link>
 
-        <Link href="/about" className="hover:underline">
+        <Link href="/sobre" className="hover:underline">
           Sobre o Projeto
         </Link>
       </nav>
