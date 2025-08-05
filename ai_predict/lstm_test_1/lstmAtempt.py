@@ -7,10 +7,6 @@ from tensorflow.keras.layers import LSTM, Dense
 from tensorflow.keras.callbacks import EarlyStopping
 import os
 
-# Adicione estas linhas para corrigir o problema de mutex
-os.environ['TF_NUM_INTEROP_THREADS'] = '1'
-os.environ['TF_NUM_INTRAOP_THREADS'] = '1'
-
 # Suas configurações
 DATA_PATH = "../data/final_training_data.parquet"
 TARGET_COLUMN = "numero_casos"
@@ -43,10 +39,14 @@ data_for_lstm = df[features]
 scaler = MinMaxScaler(feature_range=(0, 1))
 scaled_data = scaler.fit_transform(data_for_lstm)
 
-# 2. Criar sequências de dados para o LSTM (separado por município)
+# 2. Criar sequências de dados para o LSTM (separado por município) - 14min
 print("--- Passo 2: Criando sequências de dados para cada município... ---")
 X, y = [], []
-for municipio in df['municipio'].unique():
+municipios = df['municipio'].unique()
+total_municipios = len(municipios)
+
+for i, municipio in enumerate(municipios):
+    print(f"Processando município {i+1}/{total_municipios}: {municipio}")
     municipio_data = scaled_data[df['municipio'] == municipio]
     X_municipio, y_municipio = create_sequences(municipio_data, SEQUENCE_LENGTH)
     X.append(X_municipio)
@@ -74,6 +74,8 @@ model.add(Dense(units=1))
 model.compile(optimizer='adam', loss='mean_squared_error')
 
 # 5. Treinar o modelo
-history = model.fit(X_train, y_train, epochs=20, batch_size=64, validation_data=(X_test, y_test), callbacks=[EarlyStopping(monitor='val_loss', patience=3)])
+history = model.fit(X_train, y_train, epochs=2, batch_size=64, validation_data=(X_test, y_test), callbacks=[EarlyStopping(monitor='val_loss', patience=3)])
+
+model.save("modelo_lstm_casos_dengue.h5")
 
 print("\n--- Treinamento do modelo concluído. ---")
