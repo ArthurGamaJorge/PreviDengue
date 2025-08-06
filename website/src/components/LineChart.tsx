@@ -8,7 +8,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ReferenceArea
+  Legend
 } from 'recharts';
 
 interface ChartData {
@@ -38,26 +38,36 @@ const SimpleLineChart: React.FC<LineChartProps> = ({ data, predictionWeeks }) =>
 
   // Encontrar o último mês e o número de casos para iniciar a previsão
   const lastDataPoint = data[data.length - 1];
-  const lastMonthIndex = new Date(`2000-${lastDataPoint.month}-01`).getMonth(); // Pega o índice do mês
-  const lastMonthValue = lastDataPoint.cases;
-
+  // Ajuste para garantir que a previsão comece no mês seguinte,
+  // mesmo que o último mês do dataset seja "Dez"
+  const lastMonthIndex = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"].indexOf(lastDataPoint.month);
+  
   // Gerar dados de previsão
-  const predictionData: ChartData[] = [];
-  const startMonthForPrediction = (lastMonthIndex + 1) % 12; // Mês seguinte ao último dado
-  const futureMonthsNames = getFutureMonths(startMonthForPrediction, Math.ceil(predictionWeeks / 4)); // Aproximadamente 4 semanas por mês
+  const predictionMonthsCount = Math.ceil(predictionWeeks / 4); // Aproximadamente 4 semanas por mês
+  const futureMonthsNames = getFutureMonths((lastMonthIndex + 1), predictionMonthsCount);
 
+  // Criar a série de dados de previsão com uma chave diferente
+  const predictionData: { month: string; cases: null; predicted_cases: number }[] = [];
+  let lastPredictionValue = lastDataPoint.cases;
   for (let i = 0; i < futureMonthsNames.length; i++) {
     // Exemplo simples: a previsão aumenta ou diminui um pouco
-    const predictedCases = lastMonthValue + (Math.random() - 0.5) * (lastMonthValue * 0.2); // Variação de +-20%
-    predictionData.push({ month: futureMonthsNames[i], cases: Math.max(0, Math.round(predictedCases)) });
+    const predictedCases = lastPredictionValue + (Math.random() - 0.5) * (lastPredictionValue * 0.2); // Variação de +-20%
+    lastPredictionValue = Math.max(0, Math.round(predictedCases));
+    
+    predictionData.push({
+      month: futureMonthsNames[i],
+      cases: null, // Deixa os dados reais como nulos para a previsão
+      predicted_cases: lastPredictionValue,
+    });
   }
 
-  // Combinar dados históricos e de previsão para o gráfico
-  const combinedData = [...data, ...predictionData];
-
-  // Identificar onde começa a área de previsão
-  const predictionStartIndex = data.length -1;
-  const predictionEndXIndex = combinedData.length -1;
+  // Combinar dados históricos e de previsão
+  // A última data real terá o valor real e será o ponto inicial da previsão
+  const combinedData = [
+    ...data.map(d => ({ ...d, predicted_cases: null })),
+    { ...lastDataPoint, predicted_cases: lastDataPoint.cases, cases: lastDataPoint.cases },
+    ...predictionData,
+  ];
 
   return (
     <ResponsiveContainer width="100%" height={400}>
@@ -78,28 +88,28 @@ const SimpleLineChart: React.FC<LineChartProps> = ({ data, predictionWeeks }) =>
           itemStyle={{ color: '#fff' }}
           labelStyle={{ color: '#888' }}
         />
+        <Legend />
 
         {/* Linha principal azul para dados históricos */}
         <Line
           type="monotone"
           dataKey="cases"
+          name="Casos Reais"
           stroke="#4299e1" // Cor azul para a linha principal
           strokeWidth={2}
           dot={true}
-          // Limita a linha azul apenas aos dados históricos
-          data={data}
         />
 
         {/* Linha de previsão vermelha */}
         {predictionData.length > 0 && (
           <Line
             type="monotone"
-            dataKey="cases"
+            dataKey="predicted_cases"
+            name="Previsão"
             stroke="#ef4444" // Cor vermelha para a previsão
             strokeDasharray="5 5" // Linha tracejada para a previsão
             strokeWidth={2}
             dot={false}
-            data={combinedData.slice(predictionStartIndex)} // Começa do último ponto histórico
           />
         )}
       </LineChart>

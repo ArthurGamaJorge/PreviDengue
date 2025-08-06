@@ -6,7 +6,7 @@ import Header from "@/components/Header";
 import KPIs from "@/components/KPIs";
 import IntensityForm from "@/components/IntensityForm";
 import Footer from "@/components/Footer";
-import SimpleLineChart from "@/components/LineChart"; // <-- Adição aqui
+import SimpleLineChart from "@/components/LineChart";
 
 const DynamicMap = dynamic(() => import("@/components/HeatMap"), {
   ssr: false,
@@ -18,7 +18,7 @@ interface DataPoint {
   intensity: number;
   imageFilename: string | null;
   imageBase64: string;
-  detectedObjects: Record<string, number>; // Ex: { carro: 2, piscina: 1 }
+  detectedObjects: Record<string, number>;
 }
 
 export default function Home() {
@@ -37,11 +37,9 @@ export default function Home() {
   const [imageFileNames, setImageFileNames] = useState<Set<string>>(new Set());
   const [importWarnings, setImportWarnings] = useState<string[]>([]);
 
-  // --- Adições para o Gráfico de Linhas ---
   const [selectedCity, setSelectedCity] = useState("Campinas");
-  const [predictionWeeks, setPredictionWeeks] = useState(12); // Padrão de 12 semanas
+  const [predictionWeeks, setPredictionWeeks] = useState(12);
 
-  // Dados de exemplo para diferentes cidades
   const chartData = {
     Campinas: [
       { month: "Jan", cases: 200 },
@@ -95,7 +93,6 @@ export default function Home() {
     const value = parseInt(e.target.value, 10);
     setPredictionWeeks(isNaN(value) ? 0 : value);
   };
-  // --- Fim das Adições para o Gráfico de Linhas ---
 
   const totalIntensity = dataPoints.reduce((sum, p) => sum + p.intensity, 0);
   const averageIntensity =
@@ -131,7 +128,7 @@ export default function Home() {
 
       if (!res.ok) throw new Error("Erro no backend");
 
-      const data = await res.json(); // Ex: { intensity_score: 6.4, counts: { carro: 2, piscina: 1 } }
+      const data = await res.json();
 
       const newPoint: DataPoint = {
         lat: selectedCoords[0],
@@ -201,7 +198,6 @@ export default function Home() {
     setImportWarnings(warnings);
   }
 
-  // No onChange do input JSON:
   const handleJsonChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setJsonFile(file);
@@ -231,7 +227,6 @@ export default function Home() {
     reader.readAsText(file);
   };
 
-  // No onChange do input de imagens:
   const handleImagesChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) {
@@ -283,7 +278,6 @@ export default function Home() {
             let detectedObjects = point.detectedObjects ?? null;
             let intensity = point.intensity ?? null;
 
-            // Se faltar alguma das duas infos, faz a chamada à API
             if (
               !detectedObjects ||
               intensity === null ||
@@ -350,21 +344,39 @@ export default function Home() {
         </p>
       </section>
 
-      {/* Botão para abrir o modal */}
-      <div className="max-w-3xl mx-auto flex justify-center gap-4 mb-4">
-        <button
-          onClick={() => setShowImportModal(true)}
-          className="bg-green-600 px-4 py-2 rounded hover:bg-green-700 transition"
-        >
-          Importar Dados
-        </button>
+      {/* Seção Principal: Botões e KPIs à esquerda, Mapa no centro */}
+      <div className="flex flex-col lg:flex-row gap-4 mb-12 items-stretch">
+        {/* Coluna da Esquerda: Botões e KPIs */}
+        <div className="flex flex-col gap-4 lg:w-1/5">
+          <div className="flex flex-col gap-4">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="bg-green-600 px-4 py-2 rounded hover:bg-green-700 transition"
+            >
+              Importar Dados
+            </button>
+            <button
+              onClick={handleExportJson}
+              className="bg-zinc-700 px-4 py-2 rounded hover:bg-zinc-600 transition"
+            >
+              Exportar JSON
+            </button>
+          </div>
+          <KPIs
+            totalCases={totalIntensity}
+            pointCount={dataPoints.length}
+            avgIntensity={averageIntensity}
+          />
+        </div>
 
-        <button
-          onClick={handleExportJson}
-          className="bg-zinc-700 px-4 py-2 rounded hover:bg-zinc-600 transition"
-        >
-          Exportar JSON
-        </button>
+        {/* Coluna do Centro: Mapa */}
+        <div className="flex-1 rounded-xl overflow-hidden shadow-lg border border-zinc-800">
+          <DynamicMap
+            points={dataPoints}
+            onMapClick={handleMapClick}
+            onRemovePoint={handleRemovePoint}
+          />
+        </div>
       </div>
 
       {/* Modal de importação */}
@@ -383,7 +395,6 @@ export default function Home() {
             <h3 className="mb-4 text-lg font-semibold text-white">
               Importar JSON + Imagens
             </h3>
-
             <div className="mb-6">
               <label
                 htmlFor="jsonFileInput"
@@ -414,7 +425,6 @@ export default function Home() {
       transition duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
-
             <div className="mb-6">
               <label
                 htmlFor="imageFilesInput"
@@ -453,7 +463,6 @@ export default function Home() {
                 ))}
               </div>
             )}
-
             <details className="mb-6 bg-zinc-700 rounded p-4 text-sm text-gray-100">
               <summary className="cursor-pointer font-semibold text-base mb-2 text-white">
                 📄 Ver modelo de JSON aceito
@@ -467,12 +476,10 @@ export default function Home() {
                   </li>
                   <li>
                     <strong>imageFilename</strong>: nome do arquivo da imagem
-                    correspondente. Este nome deve ser igual ao nome do arquivo
-                    enviado no campo de upload de imagens abaixo.
+                    correspondente.
                   </li>
                   <li>
                     <strong>intensity</strong> (opcional):
-                    <br />
                     <span className="text-yellow-400">
                       ⚠️ Se você estiver criando o JSON externamente, **não
                       manipule esse campo**.
@@ -480,19 +487,16 @@ export default function Home() {
                   </li>
                   <li>
                     <strong>detectedObjects</strong> (opcional):
-                    <br />
                     <span className="text-yellow-400">
                       ⚠️ Se você estiver criando o JSON externamente, **não
                       manipule esse campo**.
                     </span>
                   </li>
                 </ul>
-
                 <p className="text-gray-400">
                   Caso algum campo opcional não esteja presente, a IA calculará
                   os valores.
                 </p>
-
                 <pre className="whitespace-pre-wrap font-mono bg-zinc-800 p-3 rounded border border-zinc-600 overflow-auto text-gray-200 text-xs">
                   {`[
   {
@@ -517,7 +521,6 @@ export default function Home() {
                 </pre>
               </div>
             </details>
-
             <button
               onClick={handleImport}
               disabled={!jsonFile || !imageFiles || imageFiles.length === 0}
@@ -533,66 +536,102 @@ export default function Home() {
         </div>
       )}
 
-      <KPIs
-        totalCases={totalIntensity}
-        pointCount={dataPoints.length}
-        avgIntensity={averageIntensity}
-      />
-
-      <div className="max-w-6xl mx-auto mb-12 rounded-xl overflow-hidden shadow-lg border border-zinc-800">
-        <DynamicMap
-          points={dataPoints}
-          onMapClick={handleMapClick}
-          onRemovePoint={handleRemovePoint}
-        />
-      </div>
-
-      {/* --- Início da Seção do Gráfico de Linhas (Adição aqui) --- */}
-      <section className="max-w-6xl mx-auto mb-12 p-6 bg-zinc-900 rounded-xl shadow-lg border border-zinc-800">
-        <h3 className="text-2xl font-bold mb-6 text-white text-center">
-          Previsão de Casos de Dengue por Município
-        </h3>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-          <div className="flex items-center gap-2">
-            <label htmlFor="city-select" className="text-zinc-300">
-              Município:
-            </label>
-            <select
-              id="city-select"
-              value={selectedCity}
-              onChange={handleCityChange}
-              className="p-2 rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {Object.keys(chartData).map((city) => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label htmlFor="weeks-input" className="text-zinc-300">
-              Semanas a Prever:
-            </label>
-            <input
-              id="weeks-input"
-              type="number"
-              value={predictionWeeks}
-              onChange={handleWeeksChange}
-              min="0"
-              max="52" // Limite de 52 semanas (1 ano)
-              className="w-20 p-2 rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+      {/* Seção do Gráfico e Cards de Informação */}
+      <section className="flex flex-col lg:flex-row gap-4 mb-12">
+        {/* Card Fictício da Esquerda */}
+        <div className="flex-1 p-6 bg-zinc-900 rounded-xl shadow-lg border border-zinc-800">
+          <h4 className="text-xl font-bold mb-4 text-white">Análise Preditiva e Fatores de Risco</h4>
+          <p className="text-zinc-400 mb-4 text-sm">
+            Esta seção apresenta insights baseados em modelos de IA. Fatores ambientais como temperatura média, umidade relativa e precipitação são analisados para entender sua correlação com a incidência de casos.
+          </p>
+          <ul className="space-y-3 text-zinc-300 text-sm">
+            <li className="flex items-center gap-2">
+              <span className="text-yellow-500 font-bold">Temperatura:</span>
+              <span>Aumento de 1°C pode levar a um crescimento de 3% nos casos na próxima semana.</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="text-blue-500 font-bold">Precipitação:</span>
+              <span>Aumento de 20mm de chuva está associado a um pico de focos 15 dias depois.</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="text-green-500 font-bold">Densidade Populacional:</span>
+              <span>Áreas com mais de 500 hab/km² tendem a ter uma propagação 40% mais rápida.</span>
+            </li>
+          </ul>
+          <p className="mt-4 text-xs text-zinc-500">
+            *Dados e correlações fictícias para demonstração.
+          </p>
         </div>
 
-        <SimpleLineChart
-          data={chartData[selectedCity as keyof typeof chartData]}
-          predictionWeeks={predictionWeeks}
-        />
+        {/* Gráfico de Linha */}
+        <div className="flex-3 p-6 bg-zinc-900 rounded-xl shadow-lg border border-zinc-800">
+          <h3 className="text-2xl font-bold mb-6 text-white text-center">
+            Previsão de Casos de Dengue por Município
+          </h3>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+            <div className="flex items-center gap-2">
+              <label htmlFor="city-select" className="text-zinc-300">
+                Município:
+              </label>
+              <select
+                id="city-select"
+                value={selectedCity}
+                onChange={handleCityChange}
+                className="p-2 rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {Object.keys(chartData).map((city) => (
+                  <option key={city} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="weeks-input" className="text-zinc-300">
+                Semanas a Prever:
+              </label>
+              <input
+                id="weeks-input"
+                type="number"
+                value={predictionWeeks}
+                onChange={handleWeeksChange}
+                min="0"
+                max="52"
+                className="w-20 p-2 rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          <SimpleLineChart
+            data={chartData[selectedCity as keyof typeof chartData]}
+            predictionWeeks={predictionWeeks}
+          />
+        </div>
+
+        {/* Card Fictício da Direita */}
+        <div className="flex-1 p-6 bg-zinc-900 rounded-xl shadow-lg border border-zinc-800">
+          <h4 className="text-xl font-bold mb-4 text-white">Plano de Ação Inteligente</h4>
+          <p className="text-zinc-400 mb-4 text-sm">
+            Com base na previsão e na análise de focos, o sistema sugere ações estratégicas para mitigar a propagação da dengue. Estas recomendações são personalizadas para cada município.
+          </p>
+          <div className="space-y-4">
+            <div className="bg-zinc-800 p-3 rounded-lg border border-zinc-700">
+              <h5 className="font-semibold text-orange-400 mb-1">Risco Iminente</h5>
+              <p className="text-sm text-zinc-300">
+                A cidade de Campinas apresenta um aumento previsto de 15% nos casos nas próximas 4 semanas. Recomenda-se intensificar a fiscalização em 3 bairros de alto risco.
+              </p>
+            </div>
+            <div className="bg-zinc-800 p-3 rounded-lg border border-zinc-700">
+              <h5 className="font-semibold text-blue-400 mb-1">Recursos Alocados</h5>
+              <p className="text-sm text-zinc-300">
+                Para esta semana, 12 equipes de campo e 45 agentes comunitários de saúde foram mobilizados para as áreas com maior intensidade de focos.
+              </p>
+            </div>
+          </div>
+          <p className="mt-4 text-xs text-zinc-500">
+            *Exemplos de recomendações fictícias geradas pelo sistema.
+          </p>
+        </div>
       </section>
-      {/* --- Fim da Seção do Gráfico de Linhas --- */}
 
       {selectedCoords && (
         <IntensityForm

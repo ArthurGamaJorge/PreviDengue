@@ -147,7 +147,7 @@ export default function About() {
         {/* --- 1. Seção de Hero / Introdução --- */}
         <section className="text-center flex flex-col items-center justify-center gap-6 mb-24 px-4">
           <h2 className="text-5xl sm:text-7xl font-extrabold leading-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-green-400 animate-fade-in-up">
-            PreviDengue: Linha de Frente no Combate à Dengue
+            Linha de Frente no Combate à Dengue
           </h2>
           <p className="max-w-3xl text-zinc-200 text-lg sm:text-xl leading-relaxed animate-fade-in-up delay-200">
             Uma iniciativa de impacto social impulsionada pela inteligência artificial para proteger comunidades da ameaça da dengue através de detecção precoce, previsão e engajamento comunitário.

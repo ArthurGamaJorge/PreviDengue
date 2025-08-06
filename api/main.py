@@ -21,7 +21,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-model_path = "../ai/model/smallTest1.pt"
+model_path = "../ai_detect/model/smallTest1.pt"
 model = YOLO(model_path)
 
 @app.get("/hello")
