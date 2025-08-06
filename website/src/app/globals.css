@@ -143,3 +143,22 @@
   filter: drop-shadow(0 0 6px rgba(255, 0, 0, 1));
   cursor: pointer;
 }
+
+.scroll-left-invisible {
+  direction: rtl; /* move scrollbar to the left */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scroll-left-invisible::-webkit-scrollbar {
+  width: 0px; /* Chrome/Safari */
+  background: transparent;
+}
+
+.scroll-left-invisible::-webkit-scrollbar {
+  width: 0px; /* Chrome/Safari */
+  background: transparent;
+}
+
+.scroll-left-invisible > * {
+  direction: ltr; /* content remains left-to-right */
+}
