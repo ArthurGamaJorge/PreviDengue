@@ -1,11 +1,13 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useState, ChangeEvent } from "react";
 import Header from "@/components/Header";
-import KPIs from "@/components/KPIs";
-import IntensityForm from "@/components/IntensityForm";
 import Footer from "@/components/Footer";
+<<<<<<< HEAD
+import MapSection from "@/components/MapSection";
+import ChartSection from "@/components/ChartSection";
+
+export default function Home() {
+=======
 import SimpleLineChart from "@/components/LineChart"; // <-- Adição aqui
 import { API_URL } from "@/lib/config";
 
@@ -341,274 +343,15 @@ export default function Home() {
     setImageFileNames(new Set());
   };
 
+>>>>>>> 1a4a7c995c347bd1cafdcba0b38fa79c4694726d
   return (
     <main className="min-h-screen bg-gradient-to-br from-zinc-950 to-zinc-900 text-white pt-20 px-4 sm:px-8">
       <Header />
-      <section className="text-center mt-8 mb-12 max-w-3xl mx-auto">
-        <h2 className="text-4xl font-bold mb-4">Análise Inteligente de Focos</h2>
-        <p className="text-zinc-400 text-lg">
-          Essa página tem como principal funcionalidade oferecer uma visão ampla das cidades e focos de possível dengue. Além disso, o upload de imagens e coordenadas possibilita a importação de dados em massa, algo necessário para a avaliação de uma cidade inteira.
-        </p>
-      </section>
-
-      {/* Botão para abrir o modal */}
-      <div className="max-w-3xl mx-auto flex justify-center gap-4 mb-4">
-        <button
-          onClick={() => setShowImportModal(true)}
-          className="bg-green-600 px-4 py-2 rounded hover:bg-green-700 transition"
-        >
-          Importar Dados
-        </button>
-
-        <button
-          onClick={handleExportJson}
-          className="bg-zinc-700 px-4 py-2 rounded hover:bg-zinc-600 transition"
-        >
-          Exportar JSON
-        </button>
-      </div>
-
-      {/* Modal de importação */}
-      {showImportModal && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"
-          onClick={closeModal}
-        >
-          <div className="bg-zinc-800 p-6 rounded-md w-full max-w-md relative" onClick={(e) => e.stopPropagation()}>
-            <button
-              onClick={closeModal}
-              className="absolute top-2 right-3 text-white text-xl hover:text-red-400"
-            >
-              ×
-            </button>
-            <h3 className="mb-4 text-lg font-semibold text-white">
-              Importar JSON + Imagens
-            </h3>
-
-            <div className="mb-6">
-              <label
-                htmlFor="jsonFileInput"
-                className="flex items-center gap-2 mb-2 text-gray-200 font-semibold"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-indigo-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M9 12h6m-3-3v6m-6 3h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v7a2 2 0 002 2z"
-                  />
-                </svg>
-                Arquivo JSON
-              </label>
-              <input
-                id="jsonFileInput"
-                type="file"
-                accept=".json"
-                onChange={handleJsonChange}
-                className="w-full rounded border border-gray-600 bg-gray-800 text-gray-100 p-2 cursor-pointer
-      transition duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div className="mb-6">
-              <label
-                htmlFor="imageFilesInput"
-                className="flex items-center gap-2 mb-2 text-gray-200 font-semibold"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-green-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7M3 7l4-4h10l4 4M16 13l-3-3-2 2-3-3"
-                  />
-                </svg>
-                Imagens (múltiplas)
-              </label>
-              <input
-                id="imageFilesInput"
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImagesChange}
-                className="w-full rounded border border-gray-600 bg-gray-800 text-gray-100 p-2 cursor-pointer
-      transition duration-200 focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            {jsonFile && imageFiles && importWarnings.length > 0 && (
-              <div className="mb-6 p-3 rounded bg-red-800 text-red-200 text-sm max-h-40 overflow-auto">
-                {importWarnings.map((msg, idx) => (
-                  <p key={idx}>{msg}</p>
-                ))}
-              </div>
-            )}
-
-            <details className="mb-6 bg-zinc-700 rounded p-4 text-sm text-gray-100">
-              <summary className="cursor-pointer font-semibold text-base mb-2 text-white">
-                📄 Ver modelo de JSON aceito
-              </summary>
-              <div className="mt-2 space-y-3">
-                <p>O arquivo JSON deve conter uma lista com as chaves:</p>
-                <ul className="list-disc list-inside space-y-2 text-gray-300">
-                  <li>
-                    <strong>lat</strong> e <strong>lng</strong>: coordenadas do
-                    ponto, no formato decimal.
-                  </li>
-                  <li>
-                    <strong>imageFilename</strong>: nome do arquivo da imagem
-                    correspondente. Este nome deve ser igual ao nome do arquivo
-                    enviado no campo de upload de imagens abaixo.
-                  </li>
-                  <li>
-                    <strong>intensity</strong> (opcional):
-                    <br />
-                    <span className="text-yellow-400">
-                      ⚠️ Se você estiver criando o JSON externamente, **não
-                      manipule esse campo**.
-                    </span>
-                  </li>
-                  <li>
-                    <strong>detectedObjects</strong> (opcional):
-                    <br />
-                    <span className="text-yellow-400">
-                      ⚠️ Se você estiver criando o JSON externamente, **não
-                      manipule esse campo**.
-                    </span>
-                  </li>
-                </ul>
-
-                <p className="text-gray-400">
-                  Caso algum campo opcional não esteja presente, a IA calculará
-                  os valores.
-                </p>
-
-                <pre className="whitespace-pre-wrap font-mono bg-zinc-800 p-3 rounded border border-zinc-600 overflow-auto text-gray-200 text-xs">
-                  {`[
-  {
-    "lat": -23.54395455873987,
-    "lng": -46.625904487997225,
-    "intensity": 9,
-    "imageFilename": "img-54.png",
-    "detectedObjects": {
-      "caixa_agua": 3
-    }
-  },
-  {
-    "lat": -23.555206120737367,
-    "lng": -46.66365382056169,
-    "imageFilename": "img-8.png",
-    "detectedObjects": {
-      "carro": 94,
-      "piscina": 9
-    }
-  }
-]`}
-                </pre>
-              </div>
-            </details>
-
-            <button
-              onClick={handleImport}
-              disabled={!jsonFile || !imageFiles || imageFiles.length === 0}
-              className={`w-full py-2 rounded ${
-                jsonFile && imageFiles?.length
-                  ? "bg-green-600 hover:bg-green-700"
-                  : "bg-gray-700 cursor-not-allowed"
-              } transition text-white`}
-            >
-              Importar
-            </button>
-          </div>
-        </div>
-      )}
-
-      <KPIs
-        totalCases={totalIntensity}
-        pointCount={dataPoints.length}
-        avgIntensity={averageIntensity}
-      />
-
-      <div className="max-w-6xl mx-auto mb-12 rounded-xl overflow-hidden shadow-lg border border-zinc-800">
-        <DynamicMap
-          points={dataPoints}
-          onMapClick={handleMapClick}
-          onRemovePoint={handleRemovePoint}
-        />
-      </div>
-
-      {/* --- Início da Seção do Gráfico de Linhas (Adição aqui) --- */}
-      <section className="max-w-6xl mx-auto mb-12 p-6 bg-zinc-900 rounded-xl shadow-lg border border-zinc-800">
-        <h3 className="text-2xl font-bold mb-6 text-white text-center">
-          Previsão de Casos de Dengue por Município
-        </h3>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-          <div className="flex items-center gap-2">
-            <label htmlFor="city-select" className="text-zinc-300">
-              Município:
-            </label>
-            <select
-              id="city-select"
-              value={selectedCity}
-              onChange={handleCityChange}
-              className="p-2 rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {Object.keys(chartData).map((city) => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label htmlFor="weeks-input" className="text-zinc-300">
-              Semanas a Prever:
-            </label>
-            <input
-              id="weeks-input"
-              type="number"
-              value={predictionWeeks}
-              onChange={handleWeeksChange}
-              min="0"
-              max="52" // Limite de 52 semanas (1 ano)
-              className="w-20 p-2 rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        <SimpleLineChart
-          data={chartData[selectedCity as keyof typeof chartData]}
-          predictionWeeks={predictionWeeks}
-        />
-      </section>
-      {/* --- Fim da Seção do Gráfico de Linhas --- */}
-
-      {selectedCoords && (
-        <IntensityForm
-          selectedCoords={selectedCoords}
-          onAdd={handleAddPoint}
-          onCancel={() => {
-            setSelectedCoords(null);
-            setImageFile(null);
-          }}
-          imageFile={imageFile}
-          setImageFile={setImageFile}
-          uploading={uploading}
-        />
-      )}
-
+      
+      <MapSection />
+      
+      <ChartSection />
+      
       <Footer />
     </main>
   );

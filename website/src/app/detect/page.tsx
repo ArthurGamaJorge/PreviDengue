@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import * as Slider from "@radix-ui/react-slider";
+import Header from "@/components/Header"; 
+import Footer from "@/components/Footer"; 
 import { FileImage } from "lucide-react";
 import { ClipboardEvent as ReactClipboardEvent } from "react";
 import { API_URL } from "@/lib/config";
@@ -91,14 +93,8 @@ export default function Detectar() {
 
   return (
     <div className="min-h-screen font-sans bg-zinc-950 text-white px-8 py-12">
-      <header className="fixed top-0 left-0 w-full z-50 bg-zinc-900 bg-opacity-90 backdrop-blur-sm shadow-md flex justify-between items-center px-8 py-4 text-white">
-        <a href="/"><h1 className="text-3xl font-bold tracking-tight">Undengue-Vision</h1></a>
-        <nav className="flex gap-8 text-base font-medium">
-          <a href="/" className="hover:underline">
-            Home
-          </a>
-        </nav>
-      </header>
+      
+      <Header></Header>
 
       <main className="pt-28 flex mx-auto gap-12">
         {/* Sidebar de Controles */}
@@ -327,15 +323,7 @@ export default function Detectar() {
         </section>
       </main>
 
-      <footer className="bg-zinc-900 text-zinc-400 text-center py-6 mt-12 border-t border-zinc-700">
-        <a
-          href="https://github.com/ionmateus/tcc"
-          target="_blank"
-          className="underline hover:text-white"
-        >
-          GitHub do Projeto
-        </a>
-      </footer>
+      <Footer></Footer>
     </div>
   );
 }

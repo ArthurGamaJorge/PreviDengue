@@ -7,7 +7,7 @@ import Header from "@/components/Header"; // Importe seu Header
 import Footer from "@/components/Footer"; // Importe seu Footer
 import { useState } from "react"; // Para o FAQ
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'; // Para os gráficos
-import { ChevronDown, ChevronUp, Lightbulb, Target, MapPin, Brain, Megaphone, Gauge, FlaskConical, LayoutDashboard, Gamepad2, HeartHandshake } from 'lucide-react'; // Ícones (instale: npm install lucide-react)
+import { ChevronDown, ChevronUp, Lightbulb, Target, MapPin, Brain, Megaphone, Gauge, FlaskConical, LayoutDashboard, Gamepad2, HeartHandshake, Crosshair, ChartSpline } from 'lucide-react'; // Ícones (instale: npm install lucide-react)
 
 
 // --- Dados de Exemplo para Gráficos ---
@@ -94,14 +94,14 @@ const faqs: FAQItem[] = [
 const toolCards = [
   {
     title: "Detecção de Focos",
-    description: "Utilize nossa IA para identificar potenciais criadouros do mosquito Aedes aegypti em imagens.",
-    icon: <Gauge size={32} />,
+    description: "Utilize nossa IA para identificar potenciais criadouros do mosquito Aedes aegypti em imagens aéreas.",
+    icon: <Crosshair size={32} />,
     link: "/detect"
   },
   {
     title: "Previsão de Surtos",
     description: "Acesse modelos preditivos para antecipar áreas de maior risco de dengue.",
-    icon: <FlaskConical size={32} />,
+    icon: <ChartSpline size={32} />,
     link: "/predict"
   },
   {
@@ -117,7 +117,7 @@ const toolCards = [
     link: "/game"
   },
   {
-    title: "Campanhas de Conscientização",
+    title: "Cartilha de Conscientização",
     description: "Materiais e recursos para educar e mobilizar sua comunidade.",
     icon: <HeartHandshake size={32} />,
     link: "/conscientizacao"
@@ -147,7 +147,7 @@ export default function About() {
         {/* --- 1. Seção de Hero / Introdução --- */}
         <section className="text-center flex flex-col items-center justify-center gap-6 mb-24 px-4">
           <h2 className="text-5xl sm:text-7xl font-extrabold leading-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-green-400 animate-fade-in-up">
-            PreviDengue: Linha de Frente no Combate à Dengue
+            Linha de Frente no Combate à Dengue
           </h2>
           <p className="max-w-3xl text-zinc-200 text-lg sm:text-xl leading-relaxed animate-fade-in-up delay-200">
             Uma iniciativa de impacto social impulsionada pela inteligência artificial para proteger comunidades da ameaça da dengue através de detecção precoce, previsão e engajamento comunitário.
