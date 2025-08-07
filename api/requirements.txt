@@ -1,7 +1,6 @@
-from fastapi import FastAPI, UploadFile, File
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from PIL import Image
-import cv2
-import numpy as np
-from ultralytics import YOLO
+fastapi==0.115.12
+uvicorn==0.34.0
+pillow==11.1.0
+opencv-python==4.11.0.86
+numpy==2.1.1
+ultralytics==8.3.105
