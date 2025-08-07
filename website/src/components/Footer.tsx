@@ -39,8 +39,7 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-bold text-lg mb-4">Contato</h3>
             <p className="text-zinc-500">
-              E-mail: contato@projeto.com <br />
-              Telefone: (00) 1234-5678
+              E-mail: previdengue@gmail.com
             </p>
           </div>
 
