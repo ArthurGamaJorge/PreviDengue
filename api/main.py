@@ -21,8 +21,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-model_path = "../ai_detect/model/smallTest1.pt"
-model = YOLO(model_path)
+detect_model_path= "./model/DetectsmallTest1.pt"
+detect_model = YOLO(detect_model_path)
 
 @app.get("/hello")
 def read_root():
@@ -58,10 +58,10 @@ async def upload_image(file: UploadFile = File(...)):
         with Image.open(image_path) as image:
             width, height = image.size
 
-            results = model(image_path)
+            results = detect_model(image_path)
             result = results[0]
             boxes = result.boxes
-            names = model.names
+            names = detect_model.names
             
             class_ids = boxes.cls.tolist()
             confidences = boxes.conf.tolist()

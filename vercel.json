@@ -11,6 +11,7 @@
         "src": "/api/(.*)",
         "dest": "api/main.py"
       }
-    ]
+    ],
+    "installCommand": "pip install -r api/requirements.txt"
   }
   
