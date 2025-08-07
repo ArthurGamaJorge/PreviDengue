@@ -26,6 +26,7 @@ interface HeatMapProps {
   }[];
   onMapClick: (latLng: [number, number]) => void;
   onRemovePoint: (index: number) => void;
+  centerCoords: [number, number];
 }
 
 function HeatLayer({
@@ -171,10 +172,27 @@ function PopupContent({
   );
 }
 
+
+function MapFlyToHandler({ centerCoords }: { centerCoords: [number, number] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (map.getCenter().lat !== centerCoords[0] || map.getCenter().lng !== centerCoords[1]) {
+      map.flyTo(centerCoords, 12, {
+        duration: 1.5, 
+      });
+    }
+  }, [centerCoords, map]);
+
+  return null; 
+}
+
+
 export default function HeatMap({
   points,
   onMapClick,
   onRemovePoint,
+  centerCoords
 }: HeatMapProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
@@ -229,7 +247,7 @@ export default function HeatMap({
 
   return (
     <MapContainer
-      center={[-23.552, -46.633]}
+      center={centerCoords} // Use a prop para definir o centro inicial
       zoom={14}
       className="z-0"
       scrollWheelZoom={true}
@@ -246,8 +264,12 @@ export default function HeatMap({
         attribution='&copy; <a href="https://carto.com/">CARTO</a>'
         noWrap={true}
       />
+
       <HeatLayer points={points} />
       <MapClickHandler onMapClick={onMapClick} />
+      
+      {/* Adicione o componente que anima o mapa aqui */}
+      <MapFlyToHandler centerCoords={centerCoords} />
 
       {points.map(
         ({ lat, lng, intensity, imageBase64, detectedObjects }, i) => (
