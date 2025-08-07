@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer"; 
 import { FileImage } from "lucide-react";
 import { ClipboardEvent as ReactClipboardEvent } from "react";
+import { API_URL } from "@/lib/config";
 
 export default function Detectar() {
   const [images, setImages] = useState<
@@ -67,7 +68,7 @@ export default function Detectar() {
 
       setImages((prev) => [...prev, { name: file.name, url, loading: true }]);
 
-      const response = await fetch("http://localhost:8000/detect/", {
+      const response = await fetch(API_URL + "/detect/", {
         method: "POST",
         body: formData,
       });
