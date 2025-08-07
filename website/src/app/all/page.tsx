@@ -8,6 +8,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   Legend, ResponsiveContainer, CartesianGrid
 } from "recharts";
+import { API_URL } from "@/lib/config";
 
 const HeatMap = dynamic(() => import("../../components/HeatMap"), { ssr: false });
 
@@ -31,7 +32,7 @@ export default function Dashboard() {
       setImages(imgs => [...imgs, { url, loading: true }]);
       const form = new FormData();
       form.append("file", file);
-      const res = await fetch("http://localhost:8000/detect/", { method: "POST", body: form });
+      const res = await fetch(API_URL + "/detect/", { method: "POST", body: form });
       const result = await res.json();
       setImages(imgs => imgs.map(i => i.url===url ? { url, result, loading:false } : i));
     }
@@ -55,7 +56,7 @@ export default function Dashboard() {
     if(!selectedCoords||!e.target.files?.length) return;
     const file = e.target.files[0];
     const form = new FormData(); form.append("file",file);
-    const res = await fetch("http://localhost:8000/detect/",{method:"POST",body:form});
+    const res = await fetch(API_URL + "/detect/",{method:"POST",body:form});
     const data = await res.json();
     const intensity = data.intensity_score ?? 0;
     setPoints(ps=>[...ps,[selectedCoords[0],selectedCoords[1],intensity]]);

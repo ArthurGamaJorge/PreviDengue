@@ -7,6 +7,7 @@ import KPIs from "@/components/KPIs";
 import IntensityForm from "@/components/IntensityForm";
 import Footer from "@/components/Footer";
 import SimpleLineChart from "@/components/LineChart"; // <-- Adição aqui
+import { API_URL } from "@/lib/config";
 
 const DynamicMap = dynamic(() => import("@/components/HeatMap"), {
   ssr: false,
@@ -124,7 +125,7 @@ export default function Home() {
         reader.readAsDataURL(imageFile);
       });
 
-      const res = await fetch("http://localhost:8000/detect/", {
+      const res = await fetch(API_URL + "/detect/", {
         method: "POST",
         body: formData,
       });
@@ -292,7 +293,7 @@ export default function Home() {
               const formData = new FormData();
               formData.append("file", imageFile);
 
-              const res = await fetch("http://localhost:8000/detect/", {
+              const res = await fetch(API_URL + "/detect/", {
                 method: "POST",
                 body: formData,
               });
