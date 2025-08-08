@@ -43,7 +43,7 @@ function HeatLayer({
       (p) => [p.lat, p.lng, p.intensity] as [number, number, number]
     );
 
-    const heat = L.heatLayer(heatPoints as any, {
+    const heat = L.heatLayer(heatPoints, {
       radius: 25,
       blur: 15,
       maxZoom: 17,
@@ -102,7 +102,7 @@ function PopupContent({
   useEffect(() => {
     if (!map) return;
 
-    const handlePopupOpen = (e: L.LeafletEvent) => {
+    const handlePopupOpen = (_e: L.LeafletEvent) => {
       if (popupRef.current) {
         popupRef.current.update();
       }
@@ -172,27 +172,28 @@ function PopupContent({
   );
 }
 
-
 function MapFlyToHandler({ centerCoords }: { centerCoords: [number, number] }) {
   const map = useMap();
 
   useEffect(() => {
-    if (map.getCenter().lat !== centerCoords[0] || map.getCenter().lng !== centerCoords[1]) {
+    if (
+      map.getCenter().lat !== centerCoords[0] ||
+      map.getCenter().lng !== centerCoords[1]
+    ) {
       map.flyTo(centerCoords, 12, {
-        duration: 1.5, 
+        duration: 1.5,
       });
     }
   }, [centerCoords, map]);
 
-  return null; 
+  return null;
 }
-
 
 export default function HeatMap({
   points,
   onMapClick,
   onRemovePoint,
-  centerCoords
+  centerCoords,
 }: HeatMapProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
@@ -209,24 +210,6 @@ export default function HeatMap({
         clipRule="evenodd"
         d="M12 21C12 21 18 13.5 18 9C18 5.68629 15.3137 3 12 3C8.68629 3 6 5.68629 6 9C6 13.5 12 21 12 21ZM12 7C13.6569 7 15 8.34315 15 10C15 11.6569 13.6569 13 12 13C10.3431 13 9 11.6569 9 10C9 8.34315 10.3431 7 12 7Z"
         fill="#ef0000cc"
-      />
-    </svg>
-  );
-
-  const svgHoverString = renderToStaticMarkup(
-    <svg
-      width="40"
-      height="40"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ filter: "drop-shadow(0 0 4px yellow)" }}
-    >
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M12 21C12 21 18 13.5 18 9C18 5.68629 15.3137 3 12 3C8.68629 3 6 5.68629 6 9C6 13.5 12 21 12 21ZM12 7C13.6569 7 15 8.34315 15 10C15 11.6569 13.6569 13 12 13C10.3431 13 9 11.6569 9 10C9 8.34315 10.3431 7 12 7Z"
-        fill="#ffff00cc"
       />
     </svg>
   );
@@ -267,7 +250,7 @@ export default function HeatMap({
 
       <HeatLayer points={points} />
       <MapClickHandler onMapClick={onMapClick} />
-      
+
       {/* Adicione o componente que anima o mapa aqui */}
       <MapFlyToHandler centerCoords={centerCoords} />
 

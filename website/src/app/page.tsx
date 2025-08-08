@@ -6,8 +6,8 @@ import Link from "next/link";
 import Header from "@/components/Header"; // Importe seu Header
 import Footer from "@/components/Footer"; // Importe seu Footer
 import { useState } from "react"; // Para o FAQ
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'; // Para os gráficos
-import { ChevronDown, ChevronUp, Lightbulb, Target, MapPin, Brain, Megaphone, Gauge, FlaskConical, LayoutDashboard, Gamepad2, HeartHandshake, Crosshair, ChartSpline } from 'lucide-react'; // Ícones (instale: npm install lucide-react)
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, } from 'recharts'; // Para os gráficos
+import { ChevronDown, ChevronUp, Lightbulb, Target, MapPin, Brain, Megaphone, LayoutDashboard, Gamepad2, HeartHandshake, Crosshair, ChartSpline } from 'lucide-react'; // Ícones (instale: npm install lucide-react)
 
 
 // --- Dados de Exemplo para Gráficos ---
@@ -25,14 +25,6 @@ const dengueCasesData = [
   { month: 'Out', cases: null, forecast: 230 },
   { month: 'Nov', cases: null, forecast: 270 },
   { month: 'Dez', cases: null, forecast: 210 },
-];
-
-const objectDetectionCounts = [
-  { object: 'Piscina', count: 450 },
-  { object: 'Caixa D\'Água', count: 320 },
-  { object: 'Pneu', count: 180 },
-  { object: 'Lixo', count: 600 },
-  { object: 'Outros Recipientes', count: 250 },
 ];
 
 // --- Dados de Exemplo para a Equipe ---
@@ -209,7 +201,7 @@ export default function About() {
               </div>
               <h4 className="text-2xl font-semibold text-blue-300 mb-3">1. Detecção Inteligente</h4>
               <p className="text-zinc-200 leading-relaxed">
-                Utilizamos visão computacional e redes neurais para analisar imagens de satélite e drones, identificando piscinas, caixas d'água e outros potenciais focos de dengue com alta precisão. Isso permite mapear áreas de risco de forma ágil e abrangente.
+                Utilizamos visão computacional e redes neurais para analisar imagens de satélite e drones, identificando piscinas, caixas d&aposágua e outros potenciais focos de dengue com alta precisão. Isso permite mapear áreas de risco de forma ágil e abrangente.
               </p>
             </div>
             <div className="bg-zinc-900 p-8 rounded-xl shadow-xl border border-zinc-800 flex flex-col items-center group transform transition-all duration-300 hover:scale-[1.02] animate-fade-in-up delay-300">

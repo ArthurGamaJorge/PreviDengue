@@ -6,7 +6,6 @@ import * as Slider from "@radix-ui/react-slider";
 import Header from "@/components/Header"; 
 import Footer from "@/components/Footer"; 
 import { FileImage } from "lucide-react";
-import { ClipboardEvent as ReactClipboardEvent } from "react";
 import { API_URL } from "@/lib/config";
 
 export default function Detectar() {
@@ -76,7 +75,7 @@ export default function Detectar() {
       const result = await response.json();
 
       setImages((prev) =>
-        prev.map((img, index) =>
+        prev.map((img, _index) =>
           img.url === url ? { ...img, result, loading: false } : img
         )
       );

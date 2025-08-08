@@ -5,8 +5,8 @@ import { useState, ChangeEvent } from "react";
 import KPIs from "@/components/KPIs";
 import IntensityForm from "@/components/IntensityForm";
 import municipiosData from '../../public/data/municipios.json'; // Importando o arquivo JSON diretamente
-
-import { useRef, useEffect } from "react";
+import { useEffect } from "react";
+import { API_URL } from "@/lib/config";
 
 const DynamicMap = dynamic(() => import("@/components/HeatMap"), {
   ssr: false,
@@ -109,7 +109,7 @@ export default function MapSection() {
         reader.readAsDataURL(imageFile);
       });
 
-      const res = await fetch("http://localhost:8000/detect/", {
+      const res = await fetch(API_URL + "/detect/", {
         method: "POST",
         body: formData,
       });
@@ -131,7 +131,7 @@ export default function MapSection() {
 
       setSelectedCoords(null);
       setImageFile(null);
-    } catch (err) {
+    } catch {
       alert("Erro ao processar imagem");
     } finally {
       setUploading(false);
@@ -244,7 +244,7 @@ export default function MapSection() {
             if (!detectedObjects || intensity === null || intensity === undefined) {
               const formData = new FormData();
               formData.append("file", imageFile);
-              const res = await fetch("http://localhost:8000/detect/", {
+              const res = await fetch(API_URL + "/detect/", {
                 method: "POST",
                 body: formData,
               });
