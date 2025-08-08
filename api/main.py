@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 from collections import Counter
 from ultralytics import YOLO
+import uvicorn
 
 app = FastAPI()
 
@@ -101,3 +102,7 @@ async def upload_image(file: UploadFile = File(...)):
             os.remove(image_path)
 
         return JSONResponse(status_code=500, content={"error": str(e)})
+    
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 8000)) 
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
