@@ -6,11 +6,8 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 import os
-import cv2
-import numpy as np
 from collections import Counter
 from ultralytics import YOLO
-import uvicorn
 
 app = FastAPI()
 
@@ -22,7 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-detect_model_path= "./model/DetectsmallTest1.pt"
+detect_model_path = "./models/DetectsmallTest1.pt"
 detect_model = YOLO(detect_model_path)
 
 @app.get("/hello")
