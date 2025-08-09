@@ -1,107 +1,132 @@
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.models import load_model
 import os
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import joblib
+from tensorflow.keras.models import load_model
 
-# Suas configurações
+# --- Local paths config ---
 DATA_PATH = "../data/final_training_data.parquet"
-MODEL_PATH = "modelo_lstm_casos_dengue.h5"
+MODEL_PATH = "./checkpoints/model_checkpoint_best.keras"
+SCALER_DIR = "./scalers/"
 SEQUENCE_LENGTH = 12
 
 def inverse_transform_cases(scaler, data, feature_index=0):
     """
-    Desfaz a normalização apenas para a coluna 'numero_casos'.
-    O scaler precisa das mesmas dimensões dos dados originais para funcionar.
+    Inverse transform the scaled target (numero_casos) using the given scaler.
     """
     dummy_data = np.zeros((len(data), scaler.n_features_in_))
     dummy_data[:, feature_index] = data
-    inversed_data = scaler.inverse_transform(dummy_data)[:, feature_index]
-    return inversed_data
+    return scaler.inverse_transform(dummy_data)[:, feature_index]
 
-# 1. Carregar o modelo e os dados originais
-print("--- Carregando modelo e dados... ---")
-if not os.path.exists(MODEL_PATH):
-    print(f"Erro: O arquivo do modelo '{MODEL_PATH}' não foi encontrado. Certifique-se de que o modelo foi salvo após o treinamento.")
-    exit()
+def main():
+    print("--- Loading model and data ---")
+    if not os.path.exists(MODEL_PATH):
+        print(f"Error: Model file '{MODEL_PATH}' not found.")
+        return
+    if not os.path.exists(DATA_PATH):
+        print(f"Error: Data file '{DATA_PATH}' not found.")
+        return
 
-model = load_model(MODEL_PATH)
-df = pd.read_parquet(DATA_PATH)
-df = df.sort_values(by=['municipio', 'ano', 'semana'])
+    model = load_model(MODEL_PATH)
+    df = pd.read_parquet(DATA_PATH)
 
-# 2. Preparar os dados para a previsão
-features = ['numero_casos', 'T2M', 'T2M_MAX', 'T2M_MIN', 'PRECTOTCORR', 'RH2M', 'ALLSKY_SFC_SW_DWN']
-data_for_lstm = df[features]
-scaler = MinMaxScaler(feature_range=(0, 1))
-scaled_data = scaler.fit_transform(data_for_lstm)
+    # Check required columns
+    for col in ['codigo_ibge', 'municipio', 'ano', 'semana']:
+        if col not in df.columns:
+            print(f"Error: Required column '{col}' not found in data.")
+            return
 
-municipios = df['municipio'].unique()
-municipios_list = sorted(list(municipios))
+    # Convert codigo_ibge to int (important for matching)
+    df['codigo_ibge'] = df['codigo_ibge'].astype(int)
 
-# 3. Escolha do município
-print("\n--- Selecione um município para a previsão ---")
-num_to_list = min(100, len(municipios_list))
-for i in range(num_to_list):
-    print(f"{i+1:3d}: {municipios_list[i]}")
+    # Sort data temporally per municipality
+    df = df.sort_values(by=['codigo_ibge', 'ano', 'semana'])
 
-try:
-    choice = int(input(f"\nDigite o número do município (1 a {num_to_list}): ")) - 1
-    if 0 <= choice < num_to_list:
-        selected_municipio = municipios_list[choice]
-        print(f"Você selecionou: {selected_municipio}")
-    else:
-        print("Opção inválida. Saindo.")
-        exit()
-except ValueError:
-    print("Entrada inválida. Por favor, digite um número. Saindo.")
-    exit()
+    # Features used in training
+    dynamic_features = [
+        "numero_casos", "T2M", "T2M_MAX", "T2M_MIN",
+        "PRECTOTCORR", "RH2M", "ALLSKY_SFC_SW_DWN"
+    ]
+    static_features = ["latitude", "longitude"]
 
-# 4. Fazer a previsão
-print(f"--- Gerando previsões para {selected_municipio}... ---")
+    # Unique municipios with names, sorted by codigo_ibge
+    municipios = df[['codigo_ibge', 'municipio']].drop_duplicates().sort_values('codigo_ibge').reset_index(drop=True)
 
-# Filtrar os dados do município escolhido
-municipio_data = scaled_data[df['municipio'] == selected_municipio]
-X_municipio = []
-y_municipio = []
+    # Input IBGE code
+    print("\n--- Enter the IBGE code of the municipality for prediction ---")
+    try:
+        input_code = int(input("Digite o código IBGE: ").strip())
+    except ValueError:
+        print("Invalid input. Please enter a valid integer IBGE code. Exiting.")
+        return
 
-for i in range(len(municipio_data) - SEQUENCE_LENGTH):
-    X_municipio.append(municipio_data[i:(i + SEQUENCE_LENGTH), :])
-    y_municipio.append(municipio_data[i + SEQUENCE_LENGTH, 0])
+    if input_code not in municipios['codigo_ibge'].values:
+        print(f"IBGE code {input_code} not found in dataset. Exiting.")
+        return
 
-if len(X_municipio) == 0:
-    print("Dados insuficientes para fazer uma previsão para este município.")
-    exit()
+    selected_row = municipios[municipios['codigo_ibge'] == input_code].iloc[0]
+    selected_municipio_code = selected_row['codigo_ibge']
+    selected_municipio_name = selected_row['municipio']
+    print(f"Selected municipality: {selected_municipio_code} - {selected_municipio_name}")
 
-X_municipio = np.array(X_municipio)
-y_municipio = np.array(y_municipio)
+    # Filter data for selected municipio
+    df_mun = df[df['codigo_ibge'] == selected_municipio_code]
 
-# Fazer a previsão
-predictions_scaled = model.predict(X_municipio)
+    # Load scalers for this municipality
+    scaler_dyn_path = os.path.join(SCALER_DIR, f"{selected_municipio_code}_dynamic.pkl")
+    scaler_static_path = os.path.join(SCALER_DIR, f"{selected_municipio_code}_static.pkl")
+    if not os.path.exists(scaler_dyn_path) or not os.path.exists(scaler_static_path):
+        print(f"Scaler files for municipio {selected_municipio_code} not found. Cannot proceed.")
+        return
+    scaler_dyn = joblib.load(scaler_dyn_path)
+    scaler_static = joblib.load(scaler_static_path)
 
-# Desfazer a normalização
-predictions = inverse_transform_cases(scaler, predictions_scaled.flatten())
-real_values = inverse_transform_cases(scaler, y_municipio)
+    # Prepare dynamic data sequences (scaled)
+    dynamic_data = df_mun[dynamic_features].values
+    static_data = df_mun[static_features].iloc[0].values.reshape(1, -1)  # static data fixed for municipality
+    static_scaled = scaler_static.transform(static_data)
 
-# 5. Plotar o gráfico
-print("\n--- Gerando gráfico de comparação... ---")
+    # Scale dynamic data using saved scaler (do NOT fit)
+    dynamic_scaled = scaler_dyn.transform(dynamic_data)
 
-# Ajustar os dados para o plot
-real_series = real_values
-predicted_series = np.concatenate(([np.nan] * SEQUENCE_LENGTH, predictions))
+    X_mun = []
+    static_mun = []
 
-# Criar a série de tempo para o plot
-date_range = df[df['municipio'] == selected_municipio].index
-plot_data_index = range(len(real_series))
+    for i in range(len(dynamic_scaled) - SEQUENCE_LENGTH):
+        X_mun.append(dynamic_scaled[i : i + SEQUENCE_LENGTH, :])
+        static_mun.append(static_scaled[0])  # same static data for all sequences
 
-plt.figure(figsize=(15, 7))
-plt.plot(plot_data_index, real_series, label='Valores Reais', color='blue', marker='o', linestyle='--')
-plt.plot(plot_data_index, predicted_series[SEQUENCE_LENGTH:], label='Previsão da IA', color='red', marker='x')
-plt.title(f'Previsão de Casos de Dengue para {selected_municipio}')
-plt.xlabel('Semanas')
-plt.ylabel('Número de Casos')
-plt.legend()
-plt.grid(True)
-plt.show()
+    if len(X_mun) == 0:
+        print("Not enough data to create sequences for prediction.")
+        return
 
-print("\n--- Processo concluído. ---")
+    X_mun = np.array(X_mun, dtype=np.float32)
+    static_mun = np.array(static_mun, dtype=np.float32)
+
+    # Predict
+    predictions_scaled = model.predict([X_mun, static_mun], verbose=1).flatten()
+
+    # True targets scaled
+    y_true_scaled = dynamic_scaled[SEQUENCE_LENGTH:, 0]  # first feature is 'numero_casos'
+
+    # Inverse transform both predictions and true values
+    predictions = inverse_transform_cases(scaler_dyn, predictions_scaled)
+    y_true = inverse_transform_cases(scaler_dyn, y_true_scaled)
+
+    # Plot results
+    import matplotlib.pyplot as plt
+    plt.figure(figsize=(15, 7))
+    plt.plot(range(len(y_true)), y_true, label="Real Cases", marker='o', linestyle='--', color='blue')
+    plt.plot(range(len(predictions)), predictions, label="Predicted Cases", marker='x', color='red')
+    plt.title(f"Dengue Cases Prediction for Municipality {selected_municipio_name} ({selected_municipio_code})")
+    plt.xlabel("Weeks")
+    plt.ylabel("Number of Cases")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    print("\n--- Done ---")
+
+if __name__ == "__main__":
+    main()
