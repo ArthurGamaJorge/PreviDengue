@@ -5,7 +5,8 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer"; 
 
 const sections = [
-  { id: "intro:o-que-e", title: "O que é?" },
+  { id: "intro:quem-somos", title: "Quem somos?" },
+  { id: "o-que-e", title: "O que é?" },
   { id: "divider:identificacao", title: "Frente de Identificação*" },
   { id: "identificacao:problema", title: "O problema" },
   { id: "identificacao:solucao", title: "A solução e impacto" },
@@ -25,7 +26,7 @@ const sections = [
 ];
 
 const contentMap: { [key: string]: string } = {
-  "intro:o-que-e": "Conteúdo explicando o que é o projeto.",
+  "intro:quem-somos": "Conteúdo explicando o que é o projeto.",
   "identificacao:problema": "Problema identificado na frente de identificação.",
   "previsao:problema": "Problema identificado na frente de previsão.",
   "conscientizacao:problema": "Problema identificado na frente de conscientização.",
@@ -33,7 +34,7 @@ const contentMap: { [key: string]: string } = {
 };
 
 export default function Home() {
-  const [selectedId, setSelectedId] = useState("intro:o-que-e");
+  const [selectedId, setSelectedId] = useState("intro:quem-somos");
 
   return (
     <div className="min-h-screen font-sans bg-[radial-gradient(ellipse_at_top,_#0b0b0b_0%,_#111111_40%,_#1a1a1a_70%,_#0f1115_100%)] text-white px-8 py-12">

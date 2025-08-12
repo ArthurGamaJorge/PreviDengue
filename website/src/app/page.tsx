@@ -63,63 +63,7 @@ const faqs: FAQItem[] = [
   {
     question: "Qual a precisão do sistema na detecção e previsão?",
     answer: "Nossos modelos estão em constante aprimoramento, com uma precisão que já atinge mais de 90% na identificação de objetos, dependendo da qualidade da imagem e das condições ambientais. Para a previsão, combinamos dados históricos, climáticos e sociais, oferecendo projeções robustas para auxiliar na alocação de recursos e ações preventivas. A validação em campo é um processo contínuo."
-  },
-  {
-    question: "Os dados coletados são seguros e privados?",
-    answer: "Sim, a segurança e a privacidade dos dados são prioridades absolutas. Adotamos protocolos rigorosos de criptografia e anonimização de informações sensíveis. Os dados são utilizados exclusivamente para o propósito de saúde pública e combate à dengue, em estrita conformidade com a Lei Geral de Proteção de Dados (LGPD) e outras regulamentações internacionais."
-  },
-  {
-    question: "É possível integrar o PreviDengue com sistemas de saúde existentes?",
-    answer: "Absolutamente. Nosso sistema foi projetado com uma arquitetura modular e APIs robustas, facilitando a integração transparente com plataformas governamentais, sistemas de vigilância epidemiológica e softwares de gestão de saúde pública já em uso. Isso permite um fluxo de trabalho contínuo, aprimorando a capacidade de resposta das autoridades."
-  },
-  {
-    question: "Como posso contribuir ou colaborar com o projeto?",
-    answer: "Sua contribuição é muito bem-vinda! Se você tem experiência em inteligência artificial, desenvolvimento de software, saúde pública, design ou qualquer área relevante, convidamos você a entrar em contato conosco. Você pode explorar nosso repositório no GitHub para discussões técnicas, sugerir melhorias ou até mesmo se juntar à nossa equipe. Parcerias com instituições e órgãos governamentais também são encorajadas."
-  },
-  {
-    question: "Qual o impacto esperado do PreviDengue nas comunidades?",
-    answer: "Esperamos um impacto transformador. Ao identificar e mitigar focos de dengue de forma mais rápida e eficiente, o PreviDengue visa reduzir significativamente a incidência da doença, aliviar a sobrecarga nos sistemas de saúde, e, o mais importante, salvar vidas. Além disso, a plataforma busca educar e engajar a população, promovendo uma cultura de prevenção contínua."
   }
-];
-
-// --- Dados para a nova seção de Ferramentas ---
-const toolCards = [
-  {
-    title: "Detecção de Focos",
-    description: "Utilize nossa IA para identificar potenciais criadouros do mosquito Aedes aegypti em imagens aéreas.",
-    icon: <Crosshair size={32} />,
-    link: "/detect"
-  },
-  {
-    title: "Previsão de Surtos",
-    description: "Acesse modelos preditivos para antecipar áreas de maior risco de dengue.",
-    icon: <ChartSpline size={32} />,
-    link: "/predict"
-  },
-  {
-    title: "Dashboard Interativo",
-    description: "Visualize dados e informações cruciais sobre a dengue em tempo real.",
-    icon: <LayoutDashboard size={32} />,
-    link: "/dashboard"
-  },
-  {
-    title: "Jogo Educativo",
-    description: "Aprenda sobre a prevenção da dengue de forma divertida e engajadora.",
-    icon: <Gamepad2 size={32} />,
-    link: "/game"
-  },
-  {
-    title: "Cartilha de Conscientização",
-    description: "Materiais e recursos para educar e mobilizar sua comunidade.",
-    icon: <HeartHandshake size={32} />,
-    link: "/conscientizacao"
-  },
-  {
-    title: "Sobre o Projeto",
-    description: "Conheça mais a fundo a nossa missão, visão e a equipe por trás do PreviDengue.",
-    icon: <Lightbulb size={32} />,
-    link: "/sobre"
-  },
 ];
 
 
@@ -141,8 +85,8 @@ export default function About() {
           <h2 className="text-5xl sm:text-7xl font-extrabold leading-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-green-400 animate-fade-in-up">
             Linha de Frente no Combate à Dengue
           </h2>
-          <p className="max-w-3xl text-zinc-200 text-lg sm:text-xl leading-relaxed animate-fade-in-up delay-200">
-            Uma iniciativa de impacto social impulsionada pela inteligência artificial para proteger comunidades da ameaça da dengue através de detecção precoce, previsão e engajamento comunitário.
+          <p className="max-w-2xl text-zinc-200 text-lg sm:text-xl leading-relaxed animate-fade-in-up delay-200">
+          Com detecção de focos e previsão de surtos, oferecemos uma ferramenta essencial para proteger comunidades da ameaça da dengue.
           </p>
           <div className="mt-8 animate-fade-in-up delay-300">
           <Link href="/#ferramentas" className="
@@ -158,6 +102,61 @@ export default function About() {
         </div>
 
         </section>
+
+        <hr className="border-zinc-700 mb-24" />
+
+
+
+    <section id="ferramentas" className="max-w mx-auto mb-24 px-4 text-center">
+      <h3 className="text-4xl font-bold text-white mb-12 animate-fade-in-up">Explore as Ferramentas do PreviDengue</h3>
+      <p className="text-zinc-200 text-lg mb-10 max-w-2xl mx-auto animate-fade-in-up delay-100">
+        Conheça as diversas funcionalidades que o PreviDengue oferece para auxiliar no controle e prevenção da dengue em sua comunidade.
+      </p>
+
+      <div className="flex items-center justify-center space-x-4 md:space-x-8 lg:space-x-12 flex-wrap">
+        {/* Card de Detecção de Focos */}
+        <Link
+          href="/detect"
+          className="flex-1 min-w-[280px] h-full p-6 rounded-xl bg-zinc-900 border border-zinc-800 shadow-xl transform transition-all duration-300 hover:scale-[1.03] hover:border-blue-600 group animate-fade-in-up"
+        >
+          <div className="flex items-center justify-center bg-blue-700 w-14 h-14 rounded-full mb-6 mx-auto text-white group-hover:bg-blue-600 transition-colors duration-300">
+            <Crosshair size={32} />
+          </div>
+          <h4 className="text-2xl font-semibold text-blue-300 mb-3">Detecção de Focos</h4>
+          <p className="text-zinc-200 leading-relaxed">Utilize nossa IA para identificar potenciais criadouros do mosquito Aedes aegypti em imagens aéreas.</p>
+        </Link>
+
+        <div className="text-5xl font-bold text-white my-8 md:my-0 lg:my-0">+</div>
+
+        <Link
+          href="/predict"
+          className="flex-1 min-w-[280px] h-full p-6 rounded-xl bg-zinc-900 border border-zinc-800 shadow-xl transform transition-all duration-300 hover:scale-[1.03] hover:border-blue-600 group animate-fade-in-up"
+        >
+          <div className="flex items-center justify-center bg-blue-700 w-14 h-14 rounded-full mb-6 mx-auto text-white group-hover:bg-blue-600 transition-colors duration-300">
+            <ChartSpline size={32} />
+          </div>
+          <h4 className="text-2xl font-semibold text-blue-300 mb-3">Previsão de Surtos</h4>
+          <p className="text-zinc-200 leading-relaxed">Acesse modelos preditivos para antecipar áreas de maior risco de dengue.</p>
+        </Link>
+
+
+        <div className="text-5xl font-bold text-white my-8 md:my-0 lg:my-0">=</div>
+
+        {/* Card de Dashboard Interativo */}
+        <Link
+          href="/dashboard"
+          className="flex-1 min-w-[280px] h-full p-6 rounded-xl bg-zinc-900 border border-zinc-800 shadow-xl transform transition-all duration-300 hover:scale-[1.03] hover:border-blue-600 group animate-fade-in-up"
+        >
+          <div className="flex items-center justify-center bg-blue-700 w-14 h-14 rounded-full mb-6 mx-auto text-white group-hover:bg-blue-600 transition-colors duration-300">
+            <LayoutDashboard size={32} />
+          </div>
+          <h4 className="text-2xl font-semibold text-blue-300 mb-3">Dashboard Interativo</h4>
+          <p className="text-zinc-200 leading-relaxed">Visualize dados e informações cruciais sobre a dengue em tempo real para guiar suas ações.</p>
+        </Link>
+      </div>
+    </section>
+
+
 
         <hr className="border-zinc-700 mb-24" />
 
@@ -194,7 +193,7 @@ export default function About() {
           <p className="text-zinc-200 text-lg mb-10 max-w-2xl mx-auto animate-fade-in-up delay-100">
             Nossa abordagem integrada combina o poder da inteligência artificial com a ação comunitária para maximizar a eficácia no combate à dengue.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             <div className="bg-zinc-900 p-8 rounded-xl shadow-xl border border-zinc-800 flex flex-col items-center group transform transition-all duration-300 hover:scale-[1.02] animate-fade-in-up delay-200">
               <div className="bg-blue-700 p-4 rounded-full mb-6 group-hover:bg-blue-600 transition-colors duration-300">
                 <MapPin size={36} className="text-white" />
@@ -211,15 +210,6 @@ export default function About() {
               <h4 className="text-2xl font-semibold text-green-300 mb-3">2. Análise Preditiva</h4>
               <p className="text-zinc-200 leading-relaxed">
                 Nossos modelos de Machine Learning processam dados históricos, climáticos e geográficos para prever o risco e a incidência de casos de dengue em diferentes regiões. Essa capacidade preditiva é crucial para a alocação eficiente de recursos e ações preventivas direcionadas.
-              </p>
-            </div>
-            <div className="bg-zinc-900 p-8 rounded-xl shadow-xl border border-zinc-800 flex flex-col items-center group transform transition-all duration-300 hover:scale-[1.02] animate-fade-in-up delay-400">
-              <div className="bg-purple-700 p-4 rounded-full mb-6 group-hover:bg-purple-600 transition-colors duration-300">
-                <Megaphone size={36} className="text-white" />
-              </div>
-              <h4 className="text-2xl font-semibold text-purple-300 mb-3">3. Conscientização e Engajamento</h4>
-              <p className="text-zinc-200 leading-relaxed">
-                Transformamos dados complexos em informações acessíveis e interativas, como mapas de calor de risco e painéis de dados. Além disso, criamos materiais educativos para engajar a população na prevenção e combate diário à doença, promovendo a responsabilidade compartilhada.
               </p>
             </div>
           </div>
@@ -360,32 +350,6 @@ export default function About() {
                   @{member.github}
                 </Link>
               </div>
-            ))}
-          </div>
-        </section>
-
-        <hr className="border-zinc-700 mb-24" />
-
-        {/* --- 9. Nova Seção: Ferramentas do PreviDengue --- */}
-        <section id="ferramentas" className="max-w-6xl mx-auto mb-24 px-4 text-center">
-          <h3 className="text-4xl font-bold text-white mb-12 animate-fade-in-up">Explore as Ferramentas do PreviDengue</h3>
-          <p className="text-zinc-200 text-lg mb-10 max-w-2xl mx-auto animate-fade-in-up delay-100">
-            Conheça as diversas funcionalidades que o PreviDengue oferece para auxiliar no controle e prevenção da dengue em sua comunidade.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {toolCards.map((card, index) => (
-              <Link
-                key={index}
-                href={card.link}
-                className="block p-6 rounded-xl bg-zinc-900 border border-zinc-800 shadow-xl transform transition-all duration-300 hover:scale-[1.03] hover:border-blue-600 group animate-fade-in-up"
-                style={{ animationDelay: `${0.2 + index * 0.1}s` }}
-              >
-                <div className="flex items-center justify-center bg-blue-700 w-14 h-14 rounded-full mb-6 mx-auto text-white group-hover:bg-blue-600 transition-colors duration-300">
-                  {card.icon}
-                </div>
-                <h4 className="text-2xl font-semibold text-blue-300 mb-3">{card.title}</h4>
-                <p className="text-zinc-200 leading-relaxed">{card.description}</p>
-              </Link>
             ))}
           </div>
         </section>

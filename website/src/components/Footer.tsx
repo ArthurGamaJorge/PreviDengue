@@ -23,12 +23,12 @@ export default function Footer() {
                 </Link>
               </li>
               <li className="mb-2">
-                <a href="#map" className="hover:text-white transition-colors">
+                <a href="/dashboard" className="hover:text-white transition-colors">
                   Ver Mapa
                 </a>
               </li>
               <li className="mb-2">
-                <Link href="/about" className="hover:text-white transition-colors">
+                <Link href="/sobre" className="hover:text-white transition-colors">
                   Sobre nós
                 </Link>
               </li>

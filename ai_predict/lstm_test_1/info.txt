@@ -1,0 +1,16 @@
+Informações que a IA pode fornecer
+Previsão de Casos de Dengue: A principal utilidade da IA é prever o número de casos de dengue para uma determinada semana em um município específico. Ela utiliza a sequência de 12 semanas anteriores, incluindo dados de casos e atributos climáticos, para fazer essa previsão.
+
+Análise de Tendências: Ao alimentar a IA com dados semana após semana, é possível observar e prever a evolução dos casos de dengue em cada município. Isso permite identificar se uma tendência de aumento ou queda está se formando, auxiliando na alocação de recursos preventivos.
+
+Identificação de Padrões Clima-Dengue: A IA aprendeu a relação entre as condições climáticas e o número de casos de dengue. Ao analisar as previsões, é possível inferir como variações na temperatura (T2M, T2M_MAX, T2M_MIN), precipitação (PRECTOTCORR), umidade (RH2M) e radiação solar (ALLSKY_SFC_SW_DWN) influenciam o comportamento da epidemia em cada região.
+
+Análise da Influência da Localização Geográfica: A arquitetura do modelo inclui as variáveis latitude e longitude como dados estáticos. Isso significa que a IA leva em consideração a localização geográfica de cada município para suas previsões, capturando padrões que podem ser específicos de regiões com climas ou características geográficas similares.
+
+Apoio à Tomada de Decisão: As previsões da IA podem ser usadas por órgãos de saúde pública para:
+
+Otimizar Campanhas de Prevenção: Direcionar campanhas para áreas onde a IA prevê um aumento de casos.
+
+Alocação de Recursos: Garantir que hospitais, clínicas e estoques de medicamentos estejam preparados para o aumento da demanda em semanas futuras.
+
+Monitoramento Eficaz: Oferecer uma ferramenta para monitorar o cenário da dengue em todos os 5.570 municípios do dataset de forma proativa.
