@@ -32,20 +32,20 @@ const teamMembers = [
   {
     name: "Arthur Gama Jorge",
     github: "arthurgamajorge",
-    avatar: "https://avatars.githubusercontent.com/u/129080603?v=4",
-    role: "Desenvolvedor Backend & IA"
+    avatar: "/images/arthur.png",
+    role: "X"
   },
   {
     name: "Daniel Dorigan de Carvalho Campos",
     github: "DanielDoriganCC",
-    avatar: "https://avatars.githubusercontent.com/u/129087589?v=4",
-    role: "Desenvolvedor Frontend & UI/UX"
+    avatar: "/images/daniel.png",
+    role: "Y"
   },
   {
     name: "Ion Mateus Nunes Oprea",
     github: "ionmateus",
-    avatar: "https://avatars.githubusercontent.com/u/90868424?v=4",
-    role: "Líder de Projeto & IA"
+    avatar: "/images/ion.png",
+    role: "Z"
   },
 ];
 
@@ -256,15 +256,12 @@ export default function About() {
           </p>
           <div className="relative w-full h-96 rounded-xl overflow-hidden shadow-2xl border border-zinc-700">
             <Image
-              src="https://picsum.photos/seed/dengue/1200/600" // Imagem de exemplo
+              src="https://picsum.photos/1000" // Imagem de exemplo
               alt="Imagem aérea de foco de dengue"
               layout="fill"
               objectFit="cover"
               className="transition-transform duration-500 hover:scale-105"
             />
-            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">
-              <span className="text-white text-2xl font-semibold">Análise de Potencial Foco</span>
-            </div>
           </div>
           <p className="text-zinc-500 text-sm mt-4">
             *Imagem ilustrativa de uma possível área de análise.

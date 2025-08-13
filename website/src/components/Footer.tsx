@@ -45,17 +45,8 @@ export default function Footer() {
 
           {/* Coluna 4: Redes Sociais e Código */}
           <div>
-            <h3 className="text-white font-bold text-lg mb-4">Siga-nos</h3>
-            <div className="flex gap-4 mb-4">
-              <a href="#" className="hover:text-white transition-colors" aria-label="LinkedIn">
-                {/* Ícone do LinkedIn */}
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.761 0-.961.784-1.761 1.75-1.761s1.75.8 1.75 1.761c0 .971-.784 1.761-1.75 1.761zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
-              </a>
-              <a href="#" className="hover:text-white transition-colors" aria-label="Twitter">
-                {/* Ícone do Twitter */}
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.795-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.579 0-6.478 2.9-6.478 6.478 0 .506.057.998.169 1.474-5.382-.271-10.169-2.844-13.366-6.752-.556.958-.876 2.072-.876 3.252 0 2.247 1.144 4.238 2.871 5.399-.199-.006-.386-.062-.574-.159v.081c0 3.167 2.251 5.807 5.215 6.425-.547.149-1.12.23-1.705.23-.418 0-.822-.04-1.222-.116.834 2.588 3.232 4.471 6.096 4.524-2.228 1.748-5.045 2.809-8.125 2.809-.533 0-1.054-.031-1.566-.092 2.909 1.861 6.368 2.949 10.07 2.949 12.08 0 18.661-10.088 18.661-18.661 0-.285-.008-.567-.019-.849 1.282-.924 2.392-2.074 3.279-3.391z"/></svg>
-              </a>
-            </div>
+            <h3 className="text-white font-bold text-lg mb-4">Outros</h3>
+           
             <a href="https://github.com/ionmateus/tcc" target="_blank" className="hover:text-white underline transition-colors">
               <span className="flex items-center gap-2">
                 {/* Ícone do GitHub */}
