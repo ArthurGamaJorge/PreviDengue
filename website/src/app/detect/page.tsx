@@ -1,11 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import * as Slider from "@radix-ui/react-slider";
-import Header from "@/components/Header"; 
-import Footer from "@/components/Footer"; 
-import { FileImage } from "lucide-react";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import { FileImage, Info, X, MapPin, Box } from "lucide-react";
 import { API_URL } from "@/lib/config";
 
 export default function Detectar() {
@@ -19,6 +19,14 @@ export default function Detectar() {
     "piscina",
     "caixa_agua",
   ]);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  // Variável movida para um escopo global no componente
+  const cores_por_classe: { [key: string]: string } = {
+    carro: "rgb(155, 0, 0)",
+    piscina: "rgb(0, 0, 155)",
+    caixa_agua: "rgb(0, 155, 0)",
+  };
 
   const handleDrop = async (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
@@ -60,25 +68,42 @@ export default function Detectar() {
   };
 
   const processFiles = async (files: File[]) => {
+    const newImages = files.map(file => ({
+      name: file.name,
+      url: URL.createObjectURL(file),
+      loading: true,
+    }));
+    setImages(prev => [...prev, ...newImages]);
+
     for (const file of files) {
-      const url = URL.createObjectURL(file);
       const formData = new FormData();
       formData.append("file", file);
 
-      setImages((prev) => [...prev, { name: file.name, url, loading: true }]);
+      try {
+        const response = await fetch(API_URL + "/detect/", {
+          method: "POST",
+          body: formData,
+        });
 
-      const response = await fetch(API_URL + "/detect/", {
-        method: "POST",
-        body: formData,
-      });
+        if (!response.ok) {
+          throw new Error('Erro na detecção.');
+        }
 
-      const result = await response.json();
+        const result = await response.json();
 
-      setImages((prev) =>
-        prev.map((img, _index) =>
-          img.url === url ? { ...img, result, loading: false } : img
-        )
-      );
+        setImages(prev =>
+          prev.map(img =>
+            img.name === file.name && img.loading ? { ...img, result, loading: false } : img
+          )
+        );
+      } catch (error) {
+        console.error("Falha ao processar arquivo:", file.name, error);
+        setImages(prev =>
+          prev.map(img =>
+            img.name === file.name && img.loading ? { ...img, loading: false } : img
+          )
+        );
+      }
     }
   };
 
@@ -90,22 +115,35 @@ export default function Detectar() {
     );
   };
 
+  const openDialog = () => {
+    if (dialogRef.current) {
+      dialogRef.current.showModal();
+    }
+  };
+
+  const closeDialog = () => {
+    if (dialogRef.current) {
+      dialogRef.current.close();
+    }
+  };
+
   return (
     <div className="min-h-screen font-sans bg-zinc-950 text-white px-8 py-12">
-      
-      <Header></Header>
+      <Header />
 
-      <main className="pt-28 flex mx-auto gap-12">
+      <main className="pt-28 flex mx-auto gap-8">
         {/* Sidebar de Controles */}
-        <aside className="w-[350px] flex-shrink-0 sticky top-28 self-start space-y-12">
+        <aside className="w-[350px] flex-shrink-0 sticky top-28 self-start space-y-4">
+
+
           {/* Upload Box */}
-          <div>
+          <div className="bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700 rounded-xl p-6 shadow-lg">
             <label
               onDrop={handleDrop}
               onDragOver={(e) => e.preventDefault()}
-              className="flex flex-col items-center justify-center w-full h-60 p-6 border-2 border-dashed border-zinc-700 rounded-xl cursor-pointer hover:border-white hover:bg-zinc-800 transition-colors"
+              className="flex flex-col items-center justify-center w-full h-48 p-6 border-2 border-dashed border-zinc-700 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-zinc-800 transition-colors"
             >
-              <FileImage className="w-12 h-12 text-zinc-400 mb-2" />
+              <FileImage className="w-10 h-10 text-zinc-400 mb-2" />
               <p className="text-zinc-400 text-center text-sm">
                 Arraste uma imagem aqui ou clique para selecionar
               </p>
@@ -119,53 +157,52 @@ export default function Detectar() {
             </label>
           </div>
 
-          {/* Slider */}
-          <div>
-            <label className="flex items-center justify-between mb-2">
-              <span className="text-zinc-300">
-                Mínimo de confiança
-              </span>
-              <span className="text-zinc-400 font-mono">
-                {sliderValue[0].toFixed(2)}
-              </span>
-            </label>
-            <Slider.Root
-              className="relative flex items-center select-none touch-none w-full h-6"
-              value={sliderValue}
-              min={0}
-              max={1}
-              step={0.01}
-              onValueChange={setSliderValue}
-            >
-              <Slider.Track className="bg-zinc-700 relative grow rounded-full h-2">
-                <Slider.Range className="absolute bg-blue-500 rounded-full h-full" />
-              </Slider.Track>
-              <Slider.Thumb className="block w-4 h-4 bg-white rounded-full shadow hover:bg-blue-400 focus:outline-none" />
-            </Slider.Root>
-          </div>
+          {/* Grupo de Controles (Slider, Checkbox, Botão de Limpar) */}
+          <div className="bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700 rounded-xl p-6 shadow-lg space-y-6">
+            {/* Slider */}
+            <div>
+              <label className="flex items-center justify-between mb-2">
+                <span className="text-zinc-300">Mínimo de Confiança</span>
+                <span className="text-zinc-400 font-mono">{sliderValue[0].toFixed(2)}</span>
+              </label>
+              <Slider.Root
+                className="relative flex items-center select-none touch-none w-full h-6"
+                value={sliderValue}
+                min={0}
+                max={1}
+                step={0.01}
+                onValueChange={setSliderValue}
+              >
+                <Slider.Track className="bg-zinc-700 relative grow rounded-full h-2">
+                  <Slider.Range className="absolute bg-blue-500 rounded-full h-full" />
+                </Slider.Track>
+                <Slider.Thumb className="block w-5 h-5 bg-white rounded-full shadow-md hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors" />
+              </Slider.Root>
+            </div>
 
-          {/* Checkbox + Clear Button */}
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                checked={showDetection}
-                onChange={() => setShowDetection(!showDetection)}
-                className="accent-blue-500 w-5 h-5"
-              />
-              <span className="text-zinc-300">Mostrar confiança</span>
-            </label>
+            {/* Checkbox + Clear Button */}
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={showDetection}
+                  onChange={() => setShowDetection(!showDetection)}
+                  className="accent-blue-500 w-5 h-5 rounded"
+                />
+                <span className="text-zinc-300">Mostrar Confiança</span>
+              </label>
 
-            <button
-              onClick={handleClearImages}
-              className="text-zinc-400 hover:text-white border border-zinc-600 hover:border-white px-4 py-1 rounded-md transition-colors text-sm"
-            >
-              Limpar imagens
-            </button>
+              <button
+                onClick={handleClearImages}
+                className="text-zinc-400 hover:text-white border border-zinc-600 hover:border-white px-4 py-2 rounded-lg transition-colors text-sm"
+              >
+                Limpar imagens
+              </button>
+            </div>
           </div>
 
           {/* Filtro de Classes */}
-          <div>
+          <div className="bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700 rounded-xl p-6 shadow-lg">
             <h3 className="text-zinc-300 font-semibold text-lg mb-4">
               Filtrar por Classe
             </h3>
@@ -190,139 +227,140 @@ export default function Detectar() {
 
         {/* Imagens e resultados */}
         <section className="flex-1">
-          <h2 className="text-4xl font-bold text-center mb-12">Identificação</h2>
+          <h2 className="text-4xl font-bold text-center mb-12 animate-fade-in-up">Identificação de Focos</h2>
 
-          {/* Imagens e resultados */}
-          {images.map((img, index) => (
-            <div
-              key={index}
-              className="flex flex-row items-start gap-8 mb-12 relative"
-            >
-              <div className="relative w-full max-w-[750px] mx-auto group">
-                <Image
-                  src={img.url}
-                  alt="Detectado"
-                  width={750}
-                  height={400}
-                  className="rounded-xl object-contain w-full h-auto"
-                />
+          <div className="space-y-8">
+            {images.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-[50vh] bg-zinc-900 rounded-xl border border-zinc-800">
+                    <FileImage className="w-20 h-20 text-zinc-700 mb-4" />
+                    <p className="text-zinc-500 text-xl font-medium">Faça o upload de uma imagem para começar a detecção.</p>
+                </div>
+            ) : (
+                images.map((img, index) => (
+                    <div
+                        key={index}
+                        className="flex flex-col gap-6 relative bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700 rounded-2xl p-6 shadow-xl"
+                    >
+                        {/* Imagem e as caixas de detecção */}
+                        <div className="relative w-full group">
+                            <Image
+                                src={img.url}
+                                alt="Imagem para detecção"
+                                width={750}
+                                height={400}
+                                className="rounded-xl object-contain w-full h-auto"
+                            />
 
-                <button
-                  onClick={() => handleRemoveImage(index)}
-                  className="absolute top-2 right-2 bg-zinc-700 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:scale-110 shadow-md"
-                  title="Remover imagem"
-                >
-                  <span className="text-lg font-bold">×</span>
-                </button>
+                            <button
+                                onClick={() => handleRemoveImage(index)}
+                                className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-700 hover:scale-110 shadow-md"
+                                title="Remover imagem"
+                            >
+                                <X size={20} />
+                            </button>
+                            
+                            {img.result?.objetos
+                                ?.filter(
+                                    (det: any) =>
+                                        det.confidence >= sliderValue[0] &&
+                                        selectedClasses.includes(det.class)
+                                )
+                                .map((det: any, i: number) => {
+                                    const box = det.box;
+                                    const confidence = (det.confidence * 100).toFixed(1);
+                                    const label = `${det.class} (${confidence}%)`;
 
-                {img.result?.objetos
-                    ?.filter(
-                      (det: any) =>
-                        det.confidence >= sliderValue[0] &&
-                        selectedClasses.includes(det.class)
-                    )
-                    .map((det: any, i: number) => {
+                                    const originalWidth = box.original_width || 1000;
+                                    const originalHeight = box.original_height || 600;
 
-                    const box = det.box;
-                    const confidence = (det.confidence * 100).toFixed(1);
-                    const label = `${det.class} (${confidence}%)`;
+                                    const leftPercent = (box.x1 / originalWidth) * 100;
+                                    const topPercent = (box.y1 / originalHeight) * 100;
+                                    const widthPercent =
+                                        ((box.x2 - box.x1) / originalWidth) * 100;
+                                    const heightPercent =
+                                        ((box.y2 - box.y1) / originalHeight) * 100;
 
-                    const originalWidth = box.original_width || 1000;
-                    const originalHeight = box.original_height || 600;
+                                    const corBox = cores_por_classe[det.class] || "rgb(255, 0, 0)";
 
-                    const leftPercent = (box.x1 / originalWidth) * 100;
-                    const topPercent = (box.y1 / originalHeight) * 100;
-                    const widthPercent =
-                      ((box.x2 - box.x1) / originalWidth) * 100;
-                    const heightPercent =
-                      ((box.y2 - box.y1) / originalHeight) * 100;
+                                    return (
+                                        <div
+                                            key={i}
+                                            className="absolute border-2 animate-fade-in"
+                                            style={{
+                                                left: `${leftPercent}%`,
+                                                top: `${topPercent}%`,
+                                                width: `${widthPercent}%`,
+                                                height: `${heightPercent}%`,
+                                                borderColor: corBox,
+                                            }}
+                                        >
+                                            {showDetection && (
+                                                <span
+                                                    className="absolute top-0 left-0 text-white text-xs px-1 rounded-br"
+                                                    style={{ backgroundColor: corBox }}
+                                                >
+                                                    {label}
+                                                </span>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                        </div>
 
-                    const cores_por_classe: { [key: string]: string } = {
-                      carro: "rgb(155, 0, 0)",
-                      piscina: "rgb(0, 0, 155)",
-                      caixa_agua: "rgb(0, 155, 0)",
-                    };
-
-                    const corBox =
-                      cores_por_classe[det.class] || "rgb(255, 0, 0)";
-
-                    return (
-                      <div
-                        key={i}
-                        className="absolute border-2"
-                        style={{
-                          left: `${leftPercent}%`,
-                          top: `${topPercent}%`,
-                          width: `${widthPercent}%`,
-                          height: `${heightPercent}%`,
-                          borderColor: corBox,
-                        }}
-                      >
-                        {showDetection && (
-                          <span
-                            className="absolute top-0 left-0 text-white text-xs px-1 rounded-br"
-                            style={{ backgroundColor: corBox }}
-                          >
-                            {label}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-              </div>
-
-              {/* Resultados da API */}
-              <div className="mt-6 bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700 rounded-2xl p-6 shadow-lg text-sm text-zinc-300 w-full max-w-[300px] min-h-[150px] flex flex-col justify-center">
-                {!img.result ? (
-                  // Mostrar Skeleton enquanto a imagem ainda não tem resultado
-                  <div className="animate-pulse space-y-4">
-                    <div className="h-4 bg-zinc-700 rounded w-3/4"></div>
-                    <div className="h-4 bg-zinc-700 rounded w-2/4"></div>
-                    <div className="h-4 bg-zinc-700 rounded w-5/6"></div>
-                  </div>
-                ) : (
-                  // Mostrar Resultado real
-                  <>
-                    <h5 className="font-semibold text-white mb-2">
-                      📦 Resultado da Detecção:
-                    </h5>
-                    {(() => {
-                      const objetosFiltrados = img.result.objetos.filter(
-                        (o: any) =>
-                          o.confidence >= sliderValue[0] &&
-                          selectedClasses.includes(o.class)
-                      );
-                      
-                      const contagemFiltrada: { [key: string]: number } = {};
-                      objetosFiltrados.forEach((o: any) => {
-                        contagemFiltrada[o.class] =
-                          (contagemFiltrada[o.class] || 0) + 1;
-                      });
-
-                      return (
-                        <>
-                          <p>Total de objetos: {objetosFiltrados.length}</p>
-                          <ul className="list-disc list-inside">
-                            {Object.entries(contagemFiltrada).map(
-                              ([classe, quantidade], i) => (
-                                <li key={i}>
-                                  {classe}: {quantidade}
-                                </li>
-                              )
+                        {/* Resultados da API (Agora abaixo da imagem) */}
+                        <div className="bg-gradient-to-br from-zinc-900 to-zinc-950 border border-zinc-700 rounded-xl p-6 shadow-md text-sm text-zinc-300">
+                            {!img.result ? (
+                                <div className="animate-pulse flex items-center gap-4">
+                                    <div className="h-6 w-6 rounded-full bg-zinc-700"></div>
+                                    <div className="h-4 bg-zinc-700 rounded w-full"></div>
+                                </div>
+                            ) : (
+                                <>
+                                    <h5 className="font-semibold text-white mb-3 flex items-center gap-2">
+                                        <Box size={20} className="text-blue-400" />
+                                        <span>Resultado da Detecção</span>
+                                    </h5>
+                                    {(() => {
+                                        const objetosFiltrados = img.result.objetos.filter(
+                                            (o: any) =>
+                                                o.confidence >= sliderValue[0] &&
+                                                selectedClasses.includes(o.class)
+                                        );
+                                        const contagemFiltrada: { [key: string]: number } = {};
+                                        objetosFiltrados.forEach((o: any) => {
+                                            contagemFiltrada[o.class] = (contagemFiltrada[o.class] || 0) + 1;
+                                        });
+                                        
+                                        return (
+                                            <>
+                                                <div className="flex items-center gap-2 mb-2 text-zinc-400">
+                                                  <MapPin size={16} />
+                                                  <span>Total de objetos detectados: <span className="font-bold text-white">{objetosFiltrados.length}</span></span>
+                                                </div>
+                                                
+                                                <div className="flex flex-wrap gap-2 mt-4">
+                                                    {Object.entries(contagemFiltrada).map(([classe, quantidade], i) => (
+                                                      <div key={i} className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 px-3 py-1 rounded-full text-zinc-200">
+                                                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cores_por_classe[classe] }}></span>
+                                                        <span className="font-semibold">{classe}: {quantidade}</span>
+                                                      </div>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
+                                </>
                             )}
-                          </ul>
-                        </>
-                      );
-                    })()}
-                  </>
-                )}
-              </div>
-            </div>
-          ))}
+                        </div>
+                    </div>
+                ))
+            )}
+          </div>
         </section>
       </main>
 
-      <Footer></Footer>
+      <Footer />
+
     </div>
   );
 }

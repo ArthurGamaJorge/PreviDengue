@@ -1,158 +1,273 @@
-"use client";
+import React, { useState, useEffect, useMemo } from 'react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { MapPin, Thermometer, CloudRain, Droplets, AlertTriangle, Lightbulb, BrainCircuit, BarChart3, CalendarClock, Bot } from 'lucide-react';
 
-import { useState, ChangeEvent } from "react";
-import SimpleLineChart from "@/components/LineChart";
+// --- Dados de Configuração ---
+// Em uma aplicação real, isso viria de um endpoint da API ou de um arquivo de configuração.
+const MUNICIPALITIES = [
+  { name: 'Campinas', ibge_code: 3509502 },
+  { name: 'São Paulo', ibge_code: 3550308 },
+  { name: 'Sumaré', ibge_code: 3552403 },
+  { name: 'Rio de Janeiro', ibge_code: 3304557 },
+  { name: 'Belo Horizonte', ibge_code: 3106200 },
+];
 
-const chartData = {
-  Campinas: [
-    { month: "Jan", cases: 200 },
-    { month: "Fev", cases: 220 },
-    { month: "Mar", cases: 280 },
-    { month: "Abr", cases: 250 },
-    { month: "Mai", cases: 180 },
-    { month: "Jun", cases: 150 },
-    { month: "Jul", cases: 130 },
-    { month: "Ago", cases: 160 },
-    { month: "Set", cases: 210 },
-    { month: "Out", cases: 270 },
-    { month: "Nov", cases: 300 },
-    { month: "Dez", cases: 260 },
-  ],
-  SãoPaulo: [
-    { month: "Jan", cases: 800 },
-    { month: "Fev", cases: 950 },
-    { month: "Mar", cases: 1100 },
-    { month: "Abr", cases: 1000 },
-    { month: "Mai", cases: 700 },
-    { month: "Jun", cases: 600 },
-    { month: "Jul", cases: 550 },
-    { month: "Ago", cases: 680 },
-    { month: "Set", cases: 850 },
-    { month: "Out", cases: 1050 },
-    { month: "Nov", cases: 1200 },
-    { month: "Dez", cases: 980 },
-  ],
-  RioDeJaneiro: [
-    { month: "Jan", cases: 500 },
-    { month: "Fev", cases: 620 },
-    { month: "Mar", cases: 750 },
-    { month: "Abr", cases: 680 },
-    { month: "Mai", cases: 450 },
-    { month: "Jun", cases: 300 },
-    { month: "Jul", cases: 280 },
-    { month: "Ago", cases: 350 },
-    { month: "Set", cases: 480 },
-    { month: "Out", cases: 600 },
-    { month: "Nov", cases: 720 },
-    { month: "Dez", cases: 590 },
-  ],
-};
+// --- Componentes de UI (Estilo Shadcn/ui) ---
+const Card = ({ children, className = '' }) => (
+  <div className={`bg-zinc-900 border border-zinc-800 rounded-2xl shadow-lg transition-all duration-300 hover:border-blue-500/50 ${className}`}>
+    {children}
+  </div>
+);
+const CardHeader = ({ children }) => <div className="p-6">{children}</div>;
+const CardTitle = ({ children, icon: Icon }) => (
+  <div className="flex items-center gap-3">
+    {Icon && <Icon className="h-7 w-7 text-blue-400" />}
+    <h3 className="text-xl font-bold text-white tracking-tight">{children}</h3>
+  </div>
+);
+const CardDescription = ({ children }) => <p className="text-sm text-zinc-400 mt-1.5">{children}</p>;
+const CardContent = ({ children, className = '' }) => <div className={`p-6 pt-0 ${className}`}>{children}</div>;
 
-export default function ChartSection() {
-  const [selectedCity, setSelectedCity] = useState("Campinas");
-  const [predictionWeeks, setPredictionWeeks] = useState(12);
+// --- Componente Principal do Dashboard ---
+const App = () => {
+  const [selectedIbgeCode, setSelectedIbgeCode] = useState(MUNICIPALITIES[0].ibge_code);
+  const [weeksToPredict, setWeeksToPredict] = useState(8);
+  const [apiData, setApiData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleCityChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    setSelectedCity(e.target.value);
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch('http://127.0.0.1:8000/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ibge_code: parseInt(selectedIbgeCode, 10),
+            weeks_to_predict: parseInt(weeksToPredict, 10) || 4,
+          }),
+        });
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.detail || `HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setApiData(data);
+      } catch (e) {
+        console.error("Falha ao buscar dados da API:", e);
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [selectedIbgeCode, weeksToPredict]);
 
-  const handleWeeksChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value, 10);
-    setPredictionWeeks(isNaN(value) ? 0 : value);
+  const chartData = useMemo(() => {
+    if (!apiData) return [];
+    
+    const formattedHistoric = apiData.historic_data.map(d => ({
+      date: new Date(d.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
+      casos_reais: d.cases,
+      casos_previstos: null,
+    }));
+
+    const formattedPrediction = apiData.predicted_data.map(d => ({
+      date: new Date(d.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
+      casos_reais: null,
+      casos_previstos: d.predicted_cases
+    }));
+
+    // Conecta a última data histórica com a primeira previsão para uma linha contínua
+    if (formattedHistoric.length > 0 && formattedPrediction.length > 0) {
+        const lastHistoricPoint = formattedHistoric[formattedHistoric.length - 1];
+        formattedPrediction.unshift({
+            ...formattedPrediction[0],
+            date: lastHistoricPoint.date, // Usa a mesma data para o ponto de conexão
+            casos_previstos: lastHistoricPoint.casos_reais
+        });
+    }
+
+    return [...formattedHistoric, ...formattedPrediction];
+  }, [apiData]);
+
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="flex flex-col items-center justify-center h-96 text-zinc-400">
+          <Bot className="h-16 w-16 animate-pulse text-blue-500" />
+          <p className="mt-4 text-lg">Analisando dados e gerando previsões...</p>
+        </div>
+      );
+    }
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center h-96 text-red-400 bg-red-900/20 rounded-lg">
+          <AlertTriangle className="h-16 w-16" />
+          <p className="mt-4 text-lg font-semibold">Erro ao carregar análise</p>
+          <p className="text-sm text-red-300">{error}</p>
+        </div>
+      );
+    }
+    if (!apiData) {
+      return (
+        <div className="flex flex-col items-center justify-center h-96 text-zinc-500">
+          <p>Selecione um município para iniciar a análise.</p>
+        </div>
+      );
+    }
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Coluna Principal: Gráfico e Sumário */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle icon={BarChart3}>Previsão de Casos de Dengue para {apiData.municipality_name}</CardTitle>
+              <CardDescription>Dados históricos (último ano) e previsão gerada pela IA para as próximas semanas.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="colorHistoric" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.7}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorPrediction" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.7}/>
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                      borderColor: '#374151',
+                      color: '#d1d5db',
+                      borderRadius: '0.75rem'
+                    }}
+                  />
+                  <Legend wrapperStyle={{fontSize: "14px"}}/>
+                  <Area type="monotone" dataKey="casos_reais" name="Casos Reais" stroke="#3b82f6" fillOpacity={1} fill="url(#colorHistoric)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="casos_previstos" name="Previsão da IA" stroke="#f59e0b" fillOpacity={1} fill="url(#colorPrediction)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+                <CardTitle icon={Lightbulb}>Sumário Estratégico da IA</CardTitle>
+                <CardDescription>A conclusão principal do modelo para planejamento de ações.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <p className="text-zinc-300 text-base leading-relaxed">{apiData.insights.strategic_summary}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Coluna Lateral: Insights e Gatilhos */}
+        <div className="flex flex-col gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle icon={BrainCircuit}>Análise de Gatilhos (Lag)</CardTitle>
+              <CardDescription>Correlação entre fatores climáticos e os casos de dengue ao longo do tempo.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <img
+                src={`data:image/png;base64,${apiData.insights.lag_analysis_plot_base64}`}
+                alt="Gráfico de Análise de Defasagem"
+                className="w-full h-auto rounded-md bg-zinc-800"
+              />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle icon={CalendarClock}>Pontos de Inflexão</CardTitle>
+              <CardDescription>Fatores chave e seus tempos de impacto máximo.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-4">
+                {apiData.insights.tipping_points.map((point, index) => {
+                  const Icon = point.factor === 'Temperatura' ? Thermometer : point.factor === 'Precipitação' ? CloudRain : Droplets;
+                  return (
+                    <li key={index} className="flex items-start gap-4">
+                      <div className="flex-shrink-0 bg-zinc-800 p-2 rounded-full mt-1">
+                        <Icon className="h-5 w-5 text-amber-400" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-zinc-200">{point.factor}</p>
+                        <p className="text-sm text-zinc-400">{point.value}</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   };
 
   return (
-    <section className="flex flex-col lg:flex-row gap-4 mb-12">
-      <div className="flex-1 p-6 bg-zinc-900 rounded-xl shadow-lg border border-zinc-800">
-        <h4 className="text-xl font-bold mb-4 text-white">Análise Preditiva e Fatores de Risco</h4>
-        <p className="text-zinc-400 mb-4 text-sm">
-          Esta seção apresenta insights baseados em modelos de IA. Fatores ambientais como temperatura média, umidade relativa e precipitação são analisados para entender sua correlação com a incidência de casos.
-        </p>
-        <ul className="space-y-3 text-zinc-300 text-sm">
-          <li className="flex items-center gap-2">
-            <span className="text-yellow-500 font-bold">Temperatura:</span>
-            <span>Aumento de 1°C pode levar a um crescimento de 3% nos casos na próxima semana.</span>
-          </li>
-          <li className="flex items-center gap-2">
-            <span className="text-blue-500 font-bold">Precipitação:</span>
-            <span>Aumento de 20mm de chuva está associado a um pico de focos 15 dias depois.</span>
-          </li>
-          <li className="flex items-center gap-2">
-            <span className="text-green-500 font-bold">Densidade Populacional:</span>
-            <span>Áreas com mais de 500 hab/km² tendem a ter uma propagação 40% mais rápida.</span>
-          </li>
-        </ul>
-        <p className="mt-4 text-xs text-zinc-500">
-          *Dados e correlações fictícias para demonstração.
-        </p>
-      </div>
+    <div className="min-h-screen bg-zinc-950 text-zinc-300 font-sans p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto">
+        <header className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-extrabold text-white text-center tracking-tight">
+            Painel Preditivo de Dengue
+          </h1>
+          <p className="text-center mt-2 text-lg text-zinc-400">
+            Inteligência Artificial para Antecipação de Riscos e Planejamento Estratégico
+          </p>
+        </header>
 
-      <div className="flex-3 p-6 bg-zinc-900 rounded-xl shadow-lg border border-zinc-800">
-        <h3 className="text-2xl font-bold mb-6 text-white text-center">
-          Previsão de Casos de Dengue por Município
-        </h3>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-          <div className="flex items-center gap-2">
-            <label htmlFor="city-select" className="text-zinc-300">
-              Município:
-            </label>
-            <select
-              id="city-select"
-              value={selectedCity}
-              onChange={handleCityChange}
-              className="p-2 rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {Object.keys(chartData).map((city) => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </select>
+        <Card className="mb-8">
+          <div className="p-4 flex flex-col sm:flex-row items-center gap-4">
+            <div className="w-full sm:w-1/2 flex items-center gap-3">
+              <label htmlFor="municipality" className="text-zinc-300 font-medium whitespace-nowrap">
+                <MapPin className="inline h-5 w-5 mr-1" />
+                Município:
+              </label>
+              <select
+                id="municipality"
+                value={selectedIbgeCode}
+                onChange={(e) => setSelectedIbgeCode(e.target.value)}
+                className="flex-grow h-10 rounded-md border border-zinc-700 bg-zinc-800 px-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {MUNICIPALITIES.map(m => (
+                  <option key={m.ibge_code} value={m.ibge_code}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="w-full sm:w-1/2 flex items-center gap-3">
+              <label htmlFor="weeks" className="text-zinc-300 font-medium whitespace-nowrap">
+                <CalendarClock className="inline h-5 w-5 mr-1" />
+                Prever Semanas:
+              </label>
+              <input
+                id="weeks"
+                type="range"
+                min="4"
+                max="16"
+                step="4"
+                value={weeksToPredict}
+                onChange={(e) => setWeeksToPredict(e.target.value)}
+                className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+              />
+              <span className="font-bold text-white bg-zinc-800 px-3 py-1 rounded-md">{weeksToPredict}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <label htmlFor="weeks-input" className="text-zinc-300">
-              Semanas a Prever:
-            </label>
-            <input
-              id="weeks-input"
-              type="number"
-              value={predictionWeeks}
-              onChange={handleWeeksChange}
-              min="0"
-              max="52"
-              className="w-20 p-2 rounded bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-        <SimpleLineChart
-          data={chartData[selectedCity as keyof typeof chartData]}
-          predictionWeeks={predictionWeeks}
-        />
-      </div>
+        </Card>
 
-      <div className="flex-1 p-6 bg-zinc-900 rounded-xl shadow-lg border border-zinc-800">
-        <h4 className="text-xl font-bold mb-4 text-white">Plano de Ação Inteligente</h4>
-        <p className="text-zinc-400 mb-4 text-sm">
-          Com base na previsão e na análise de focos, o sistema sugere ações estratégicas para mitigar a propagação da dengue. Estas recomendações são personalizadas para cada município.
-        </p>
-        <div className="space-y-4">
-          <div className="bg-zinc-800 p-3 rounded-lg border border-zinc-700">
-            <h5 className="font-semibold text-orange-400 mb-1">Risco Iminente</h5>
-            <p className="text-sm text-zinc-300">
-              A cidade de Campinas apresenta um aumento previsto de 15% nos casos nas próximas 4 semanas. Recomenda-se intensificar a fiscalização em 3 bairros de alto risco.
-            </p>
-          </div>
-          <div className="bg-zinc-800 p-3 rounded-lg border border-zinc-700">
-            <h5 className="font-semibold text-blue-400 mb-1">Recursos Alocados</h5>
-            <p className="text-sm text-zinc-300">
-              Para esta semana, 12 equipes de campo e 45 agentes comunitários de saúde foram mobilizados para as áreas com maior intensidade de focos.
-            </p>
-          </div>
-        </div>
-        <p className="mt-4 text-xs text-zinc-500">
-          *Exemplos de recomendações fictícias geradas pelo sistema.
-        </p>
+        {renderContent()}
+
       </div>
-    </section>
+    </div>
   );
-}
+};
+
+export default App;

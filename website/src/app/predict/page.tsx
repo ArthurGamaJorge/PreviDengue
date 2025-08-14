@@ -17,6 +17,6 @@ export default function Home() {
       <AISummarySection />
 
       <Footer />
-    </main>
+    </main> 
   );
 }
