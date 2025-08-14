@@ -1,4 +1,4 @@
-# uvicorn apiPredict:app --reload
+# apiPredict.py
 
 import os
 import numpy as np
@@ -34,42 +34,43 @@ app = FastAPI(
 # Configuração de CORS para permitir que o front-end React acesse a API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Em produção, restrinja para o domínio do seu front-end
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # --- Carregamento de Ativos (Modelo, Dados, Scalers) ---
-# Otimização: Carregar os ativos pesados apenas uma vez no início.
 @app.on_event("startup")
 def load_assets():
     global df_master, municipios, model, FEATURE_NAMES_PT, SEQUENCE_LENGTH
     
-    # --- Lógica de Caminhos Relativos ---
-    # O script da API está em /api/main.py
-    # Os ativos estão em /ai_predict/lstm_test_1/ e /data/
     API_DIR = Path(__file__).resolve().parent
     PROJECT_ROOT = API_DIR.parent 
     AI_ASSETS_DIR = PROJECT_ROOT / "ai_predict" / "lstm_test_1"
     
-    DATA_PATH = PROJECT_ROOT / "data" / "final_training_data.parquet"
+    # CORRIGIDO: O caminho agora aponta para a pasta 'ai_predict/data'
+    DATA_PATH = PROJECT_ROOT / "ai_predict" / "data" / "final_training_data.parquet"
     MODEL_PATH = AI_ASSETS_DIR / "checkpoints" / "model_checkpoint_best.keras"
     SCALER_DIR = AI_ASSETS_DIR / "scalers"
     
-    app.state.SCALER_DIR = SCALER_DIR # Salva o caminho para uso posterior
+    app.state.SCALER_DIR = SCALER_DIR
 
-    print("Carregando ativos da IA...")
+    print("\n--- INICIANDO APLICAÇÃO ---")
+    print(f"Caminho do projeto: {PROJECT_ROOT}")
+    print("Iniciando o carregamento dos ativos da IA...")
+    
     try:
+        print(f"-> Carregando dados de {DATA_PATH}...")
         df_master = pd.read_parquet(DATA_PATH)
         df_master['codigo_ibge'] = df_master['codigo_ibge'].astype(int)
-        df_master = df_master.sort_values(by=['codigo_ibge', 'ano', 'semana']).reset_index(drop=True)
-        
+        df_master['data_semana_iso'] = pd.to_datetime(df_master['ano'].astype(str) + '-' + df_master['semana'].astype(str) + '-1', format='%Y-%W-%w')
+        df_master = df_master.sort_values(by=['codigo_ibge', 'data_semana_iso']).reset_index(drop=True)
         municipios = df_master[['codigo_ibge', 'municipio']].drop_duplicates().sort_values('codigo_ibge')
         
+        print(f"-> Carregando modelo de {MODEL_PATH}...")
         model = tf.keras.models.load_model(MODEL_PATH)
-        print("Modelo carregado com sucesso.")
-
+        
         FEATURE_NAMES_PT = {
             "numero_casos": "Nº de Casos de Dengue", "T2M": "Temperatura Média (°C)",
             "T2M_MAX": "Temperatura Máxima (°C)", "T2M_MIN": "Temperatura Mínima (°C)",
@@ -77,13 +78,19 @@ def load_assets():
             "ALLSKY_SFC_SW_DWN": "Radiação Solar (W/m²)"
         }
         SEQUENCE_LENGTH = 12
+        print("-> Ativos carregados com sucesso!")
+        print(f"-> Total de municípios no dataset: {len(municipios)}")
+        print(f"-> Tamanho da sequência do modelo: {SEQUENCE_LENGTH} semanas")
 
     except FileNotFoundError as e:
-        print(f"ERRO CRÍTICO: Arquivo não encontrado - {e}. Verifique os caminhos.")
+        print(f"\nERRO CRÍTICO: Arquivo não encontrado - {e}")
+        print("Verifique se os caminhos dos arquivos estão corretos.")
         raise RuntimeError(f"Falha ao carregar ativos essenciais: {e}")
     except Exception as e:
-        print(f"ERRO CRÍTICO ao carregar ativos: {e}")
+        print(f"\nERRO CRÍTICO ao carregar ativos: {e}")
+        print("Pode ser um problema com o TensorFlow. Verifique a instalação.")
         raise RuntimeError(f"Erro inesperado ao carregar ativos: {e}")
+    print("--- APLICAÇÃO PRONTA PARA RECEBER REQUISIÇÕES ---\n")
 
 # --- Modelos Pydantic para Validação de Requisição/Resposta ---
 class PredictionRequest(BaseModel):
@@ -91,11 +98,9 @@ class PredictionRequest(BaseModel):
     weeks_to_predict: int
 
 # --- Funções Auxiliares e de Análise ---
-# (Adaptadas do script anterior para retornar dados em vez de salvar arquivos)
-
 def plot_to_base64():
     buf = BytesIO()
-    plt.savefig(buf, format='png', bbox_inches='tight', facecolor=plt.gcf().get_facecolor())
+    plt.savefig(buf, format='png', bbox_inches='tight', facecolor='#18181b')
     buf.seek(0)
     img_str = base64.b64encode(buf.read()).decode('utf-8')
     plt.close()
@@ -108,42 +113,48 @@ def inverse_transform_cases(scaler, data):
     return scaler.inverse_transform(dummy)[:, 0]
 
 def get_future_climate_data(df_mun, target_date):
-    """Assume que o clima futuro será similar ao da mesma semana do ano anterior."""
-    last_year_date = target_date - timedelta(days=364) # 52 semanas
+    last_year_date = target_date - timedelta(weeks=52)
     target_week = last_year_date.isocalendar()[1]
     target_year = last_year_date.year
     
     climate_data = df_mun[(df_mun['ano'] == target_year) & (df_mun['semana'] == target_week)]
     if not climate_data.empty:
         return climate_data.iloc[0]
-    return df_mun.iloc[-1] # Fallback para o último dado conhecido
+    return df_mun.iloc[-1]
 
 # --- Endpoint Principal da API ---
 @app.post("/predict")
 async def predict_dengue(request: PredictionRequest):
-    """
-    Recebe um código IBGE e o número de semanas, retorna a previsão e análises.
-    """
+    print(f"\n--- REQUISIÇÃO RECEBIDA ---")
+    print(f"-> Município (IBGE): {request.ibge_code}")
+    print(f"-> Semanas para prever: {request.weeks_to_predict}")
+
     ibge_code = request.ibge_code
     weeks_to_predict = request.weeks_to_predict
 
     if ibge_code not in municipios['codigo_ibge'].values:
+        print(f"ERRO: Código IBGE {ibge_code} não encontrado no dataset.")
         raise HTTPException(status_code=404, detail="Código IBGE não encontrado no dataset.")
 
     # 1. Filtrar e preparar os dados do município
     municipio_name = municipios[municipios['codigo_ibge'] == ibge_code].iloc[0]['municipio']
+    print(f"-> Iniciando a análise para o município: {municipio_name}")
+    
     df_mun = df_master[df_master['codigo_ibge'] == ibge_code].copy().reset_index(drop=True)
     
     try:
+        print("-> Carregando scalers do município...")
         scaler_dyn = joblib.load(app.state.SCALER_DIR / f"{ibge_code}_dynamic.pkl")
         scaler_static = joblib.load(app.state.SCALER_DIR / f"{ibge_code}_static.pkl")
+        print("-> Scalers carregados com sucesso.")
     except FileNotFoundError:
+        print(f"ERRO: Scalers para o município {ibge_code} não encontrados.")
         raise HTTPException(status_code=404, detail=f"Arquivos de scaler para o município {ibge_code} não encontrados.")
 
     # 2. Lógica de Previsão Iterativa
+    print("-> Iniciando o loop de previsão...")
     dynamic_features = list(FEATURE_NAMES_PT.keys())
     
-    # Pega a sequência mais recente de dados reais
     last_real_sequence = df_mun[dynamic_features].iloc[-SEQUENCE_LENGTH:].copy()
     current_sequence_scaled = scaler_dyn.transform(last_real_sequence)
     
@@ -151,28 +162,23 @@ async def predict_dengue(request: PredictionRequest):
     static_input = scaler_static.transform(static_data)
 
     predictions = []
-    last_date_str = f"{df_mun.iloc[-1]['ano']}-{df_mun.iloc[-1]['semana']}-1"
-    last_date = datetime.strptime(last_date_str, "%Y-%W-%w")
+    last_date = df_mun.iloc[-1]['data_semana_iso']
 
     for i in range(weeks_to_predict):
-        # Prepara o input para o modelo
         dynamic_input = np.array([current_sequence_scaled], dtype=np.float32)
         
-        # Faz a previsão
         pred_scaled = model.predict([dynamic_input, static_input], verbose=0)[0][0]
         pred_real = inverse_transform_cases(scaler_dyn, np.array([pred_scaled]))[0]
         
-        # Armazena a previsão
         future_date = last_date + timedelta(weeks=i + 1)
         predictions.append({
             "date": future_date.strftime('%Y-%m-%d'),
-            "predicted_cases": max(0, round(pred_real)) # Evita casos negativos
+            "predicted_cases": max(0, round(pred_real))
         })
         
-        # Atualiza a sequência para a próxima iteração
         future_climate = get_future_climate_data(df_mun, future_date)
         new_row = {
-            "numero_casos": pred_scaled, # Usa o valor escalado para manter a consistência
+            "numero_casos": pred_scaled,
             "T2M": future_climate["T2M"], "T2M_MAX": future_climate["T2M_MAX"],
             "T2M_MIN": future_climate["T2M_MIN"], "PRECTOTCORR": future_climate["PRECTOTCORR"],
             "RH2M": future_climate["RH2M"], "ALLSKY_SFC_SW_DWN": future_climate["ALLSKY_SFC_SW_DWN"]
@@ -181,20 +187,24 @@ async def predict_dengue(request: PredictionRequest):
         new_row_scaled = scaler_dyn.transform(new_row_df)[0]
         
         current_sequence_scaled = np.vstack([current_sequence_scaled[1:], new_row_scaled])
+        
+    print("-> Loop de previsão concluído.")
+    print(f"-> {len(predictions)} previsões geradas.")
 
     # 3. Preparar dados históricos para o front-end
+    print("-> Preparando dados históricos para o front-end...")
     historic_data = []
-    for _, row in df_mun.tail(52).iterrows(): # Envia o último ano de dados
-        date = datetime.strptime(f"{row['ano']}-{row['semana']}-1", "%Y-%W-%w")
+    for _, row in df_mun.tail(52).iterrows():
         historic_data.append({
-            "date": date.strftime('%Y-%m-%d'),
+            "date": row['data_semana_iso'].strftime('%Y-%m-%d'),
             "cases": row["numero_casos"]
         })
-        
+    print(f"-> {len(historic_data)} pontos de dados históricos selecionados.")
+
     # 4. Gerar Análises e Gráficos
+    print("-> Gerando análises e gráficos...")
     df_analysis = df_mun[dynamic_features].rename(columns=FEATURE_NAMES_PT)
     
-    # Gráfico de Correlação (Lag Analysis)
     max_lag = 12
     cases_col_name = 'Nº de Casos de Dengue'
     lag_correlations = {
@@ -214,8 +224,8 @@ async def predict_dengue(request: PredictionRequest):
     plt.legend(facecolor='#27272a', edgecolor='gray', labelcolor='white')
     plt.grid(True, which='both', linestyle='--', linewidth=0.5, color='#444')
     lag_plot_b64 = plot_to_base64()
+    print("-> Gráfico de análise de lag gerado.")
 
-    # Insights e Sumário
     lag_peaks = {
         feature: (np.argmax(np.abs(corrs)) + 1)
         for feature, corrs in lag_correlations.items()
@@ -228,9 +238,10 @@ async def predict_dengue(request: PredictionRequest):
         f"O impacto da temperatura é mais forte após **{temp_lag} semanas**, enquanto o da chuva ocorre após **{rain_lag} semanas**. "
         f"Ações preventivas devem ser intensificadas nesta janela de tempo após eventos climáticos extremos."
     )
+    print("-> Sumário estratégico gerado.")
     
     # 5. Montar e retornar a resposta final
-    return {
+    response_data = {
         "municipality_name": municipio_name,
         "historic_data": historic_data,
         "predicted_data": predictions,
@@ -244,3 +255,5 @@ async def predict_dengue(request: PredictionRequest):
             ]
         }
     }
+    print("--- REQUISIÇÃO CONCLUÍDA. RESPOSTA ENVIADA. ---\n")
+    return response_data
