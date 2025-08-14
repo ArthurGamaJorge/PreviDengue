@@ -30,7 +30,9 @@ const CardContent = ({ children, className = '' }) => <div className={`p-6 pt-0 
 
 // --- Componente Principal do Dashboard ---
 const App = () => {
-  const [selectedIbgeCode, setSelectedIbgeCode] = useState(MUNICIPALITIES[0].ibge_code);
+  const [selectedIbgeCode, setSelectedIbgeCode] = useState<string>(
+    MUNICIPALITIES[0].ibge_code.toString()
+  );
   const [weeksToPredict, setWeeksToPredict] = useState(8);
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -46,7 +48,7 @@ const App = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ibge_code: parseInt(selectedIbgeCode, 10),
-            weeks_to_predict: parseInt(weeksToPredict, 10) || 4,
+            weeks_to_predict: parseInt(weeksToPredict.toString(), 10) || 4,
           }),
         });
         if (!response.ok) {
@@ -255,7 +257,7 @@ const App = () => {
                 max="16"
                 step="4"
                 value={weeksToPredict}
-                onChange={(e) => setWeeksToPredict(e.target.value)}
+                onChange={(e) => setWeeksToPredict(Number(e.target.value))}
                 className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
               />
               <span className="font-bold text-white bg-zinc-800 px-3 py-1 rounded-md">{weeksToPredict}</span>
