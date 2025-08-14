@@ -18,11 +18,11 @@ def max_epi_week(year):
     # fallback caso algo dê errado
     return 52
 
-DATA_PREV_PATH = "ai_predict/data/prev"
-CLIMATE_PATH = "ai_predict/data/dadosClimaticos.parquet"
-STATES_JSON_PATH = "ai_predict/data/prev/estados.json"
-MUNICIPIOS_JSON_PATH = "ai_predict/data/prev/municipios.json"
-OUTPUT_PATH = "ai_predict/data/final_training_data.parquet"
+DATA_PREV_PATH = "./data/prev"
+CLIMATE_PATH = "./data/dadosClimaticos.parquet"
+STATES_JSON_PATH = "./data/prev/estados.json"
+MUNICIPIOS_JSON_PATH = "./data/prev/municipios.json"
+OUTPUT_PATH = "./data/final_training_data.parquet"
 
 def load_states(states_json_path):
     with open(states_json_path, "r", encoding="utf-8-sig") as f:

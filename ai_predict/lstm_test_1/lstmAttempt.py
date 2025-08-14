@@ -50,11 +50,16 @@ def main():
     df = pd.read_parquet(DATA_PATH)
     df = df.sort_values(by=["codigo_ibge", "ano", "semana"])
 
-    # Separate dynamic and static features
+    df["week_sin"] = np.sin(2 * np.pi * df["semana"] / 52)
+    df["week_cos"] = np.cos(2 * np.pi * df["semana"] / 52)
+    df["year_norm"] = (df["ano"] - df["ano"].min()) / (df["ano"].max() - df["ano"].min())
+
     dynamic_features = [
         "numero_casos", "T2M", "T2M_MAX", "T2M_MIN",
-        "PRECTOTCORR", "RH2M", "ALLSKY_SFC_SW_DWN"
+        "PRECTOTCORR", "RH2M", "ALLSKY_SFC_SW_DWN",
+        "week_sin", "week_cos", "year_norm"
     ]
+    
     static_features = ["latitude", "longitude"]
 
     municipios = df["codigo_ibge"].unique()
@@ -155,7 +160,7 @@ def main():
         input_static = Input(shape=(len(static_features),))
 
         concat = Concatenate()([lstm_out, input_static])
-        output = Dense(1)(concat)
+        output = Dense(1, activation="relu")(concat)
 
         model = Model(inputs=[input_dyn, input_static], outputs=output)
         model.compile(optimizer="adam", loss="mean_squared_error")
@@ -191,3 +196,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
