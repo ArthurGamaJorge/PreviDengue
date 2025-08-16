@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo, ChangeEvent } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { MapPin, Thermometer, CloudRain, Droplets, AlertTriangle, Lightbulb, BrainCircuit, BarChart3, CalendarClock, Bot } from 'lucide-react';
+import { API_URL } from "@/lib/config";
 
 // --- Interfaces de Tipagem para Dados da API ---
 interface TippingPoint {
@@ -101,7 +102,7 @@ const App = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch('http://127.0.0.1:8000/predict', {
+        const response = await fetch(API_URL + '/predict', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
