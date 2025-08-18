@@ -95,7 +95,7 @@ interface FAQItem {
 const faqs: FAQItem[] = [
   {
     question: "Como o PreviDengue detecta os focos do mosquito?",
-    answer: "Utilizamos algoritmos de visão computacional, treinados com um vasto dataset de imagens, para identificar padrões e objetos em imagens aéreas (drones e satélites) que são indicativos de potenciais criadouros do Aedes aegypti, como piscinas descobertas, caixas d'água sem tampa e acúmulo de resíduos. A tecnologia permite uma varredura eficiente e em larga escala, superando as limitações da inspeção manual."
+    answer: "Utilizamos algoritmos de visão computacional, treinados com um vasto dataset de imagens, para identificar padrões e objetos em imagens aéreas (drones e satélites) que são indicativos de potenciais criadouros do Aedes aegypti, como piscinas descobertas, caixas d&aposágua sem tampa e acúmulo de resíduos. A tecnologia permite uma varredura eficiente e em larga escala, superando as limitações da inspeção manual."
   },
   {
     question: "Qual a precisão do sistema na detecção e previsão?",
