@@ -5,7 +5,7 @@ import Link from "next/link";
 import React, { useState } from 'react';
 import Header from "@/components/Header"; // Componente de Cabeçalho
 import Footer from "@/components/Footer"; // Componente de Rodapé
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -59,6 +59,14 @@ const teamMembers = [
   },
 ];
 
+// --- Dados de Exemplo para Gráficos ---
+const dengueCasesData = [
+  { month: 'Jan', cases: 150 }, { month: 'Fev', cases: 180 }, { month: 'Mar', cases: 250 },
+  { month: 'Abr', cases: 220 }, { month: 'Mai', cases: 190 }, { month: 'Jun', cases: 160 },
+  { month: 'Jul', cases: 140 }, { month: 'Ago', cases: 170 }, { month: 'Set', cases: 200, forecast: 200 }, 
+  { month: 'Out', cases: null, forecast: 230 }, { month: 'Nov', cases: null, forecast: 270 }, { month: 'Dez', cases: null, forecast: 210 },
+];
+
 // --- Componente de Tooltip Customizado ---
 interface CustomTooltipProps {
   active?: boolean;
@@ -73,8 +81,8 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
         <p className="text-zinc-300 font-bold mb-1">{`Mês: ${label} (2024)`}</p>
         {payload.map((item, index) => (
           <p key={index} className="flex items-center text-sm">
-            <span style={{ color: item.color }} className="mr-2">•</span>
-            <span className="font-semibold" style={{ color: item.color }}>
+            <span style={{ color: item.stroke }} className="mr-2">•</span>
+            <span className="font-semibold" style={{ color: item.stroke }}>
               {`${item.name}: `}
             </span>
             <span className="text-white">{item.value} casos</span>
@@ -102,61 +110,6 @@ const faqs: FAQItem[] = [
     answer: "Nossos modelos de detecção atingem uma precisão superior a 90% na identificação de objetos, variando conforme a resolução da imagem e as condições ambientais. Para a previsão de surtos, integramos dados históricos, climáticos e sociodemográficos para gerar projeções robustas que auxiliam na alocação de recursos e em ações preventivas. A validação dos modelos é um processo contínuo."
   }
 ];
-
-
-// --- Função Geradora de Dados para Gráficos Dinâmicos ---
-const generateGraphData = () => {
-  // Define o tipo do array 'data' explicitamente para evitar o erro de tipagem.
-  // 'cases' e 'forecast' podem ser nulos, o que permite a mesma estrutura para todos os pontos.
-  const data: Array<{ month: string; cases: number | null; forecast: number | null }> = [];
-  const totalPoints = 30;
-  const historicPoints = 20; // 70% dos pontos são dados "reais"
-  const monthNames = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-  ];
-  
-  for (let i = 0; i < totalPoints; i++) {
-    const baseCases = Math.sin(i / 10) * 80 + Math.cos(i / 5) * 50 + 150;
-    const month = monthNames[i % 12];
-    
-    // Dados históricos
-    if (i < historicPoints) {
-      data.push({
-        month: month,
-        cases: Math.round(baseCases + (Math.random() - 0.5) * 30),
-        forecast: null, // Define como nulo para pontos históricos
-      });
-    } 
-    // Dados de previsão
-    else {
-      const forecastCases = baseCases + (i - historicPoints) * 5 + (Math.random() - 0.5) * 10;
-      
-      // Conecta a linha da previsão ao último ponto histórico
-      if (i === historicPoints) {
-        // Ponto de transição: 'cases' tem o valor do último ponto real, e 'forecast' tem seu próprio valor
-        data.push({
-          month: month,
-          cases: data[historicPoints - 1].cases,
-          forecast: Math.round(forecastCases),
-        });
-      } else {
-        // Pontos de previsão: 'cases' é nulo e 'forecast' tem um valor
-        data.push({
-          month: month,
-          cases: null,
-          forecast: Math.round(forecastCases),
-        });
-      }
-    }
-  }
-  return data;
-};
-
-// --- Dados de Exemplo para Gráficos (agora gerados por função) ---
-const dengueCasesData = generateGraphData();
-
-
 
 export default function About() {
   const [openFAQIndex, setOpenFAQIndex] = useState<number | null>(null);
@@ -196,8 +149,8 @@ export default function About() {
 
         <hr className="border-zinc-800 mb-24" />
 
-                {/* --- 2. Seção de Ferramentas --- */}
-                <section id="ferramentas" className="max-w mx-auto mb-24 text-center">
+        {/* --- 2. Seção de Ferramentas --- */}
+        <section id="ferramentas" className="max-w mx-auto mb-24 text-center">
           <div className="mb-12 animate-fade-in-up">
             <h2 className="text-sm font-bold uppercase text-blue-400 mb-2">PARA AGENTES DE SAÚDE E GESTORES</h2>
             <h3 className="text-4xl font-bold text-white">Nossas Ferramentas de Análise</h3>
@@ -206,8 +159,8 @@ export default function About() {
             </p>
           </div>
           
-          <div className="flex flex-col md:flex-row items-center justify-center gap-8">
-            <Link href="/detect" className="group flex flex-col p-6 rounded-2xl bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 shadow-xl transition-all duration-300 hover:border-blue-500/80 animate-fade-in-up relative overflow-hidden card-hover-glow max-w-sm w-full">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <Link href="/detect" className="group flex flex-col p-6 rounded-2xl bg-zinc-900/80 border border-zinc-800 shadow-xl transition-all duration-300 hover:border-blue-500/80 animate-fade-in-up relative overflow-hidden card-hover-glow">
               <div className="flex-grow">
                 <div className="flex items-center justify-center bg-blue-900/50 border border-blue-700 w-14 h-14 rounded-full mb-6 mx-auto text-blue-300 group-hover:bg-blue-800/50 transition-colors duration-300">
                   <Crosshair size={32} />
@@ -218,34 +171,29 @@ export default function About() {
               <span className="mt-6 text-sm font-semibold text-blue-400 group-hover:text-blue-300 transition-colors">Acessar ferramenta →</span>
             </Link>
 
-            <span className="hidden md:block text-5xl text-white font-light mx-4 animate-fade-in-up delay-100">+</span>
-
-            <Link href="/predict" className="group flex flex-col p-6 rounded-2xl bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 shadow-xl transition-all duration-300 hover:border-green-500/80 animate-fade-in-up delay-200 relative overflow-hidden card-hover-glow max-w-sm w-full">
+            <Link href="/predict" className="group flex flex-col p-6 rounded-2xl bg-zinc-900/80 border border-zinc-800 shadow-xl transition-all duration-300 hover:border-green-500/80 animate-fade-in-up delay-100 relative overflow-hidden card-hover-glow">
                <div className="flex-grow">
                 <div className="flex items-center justify-center bg-green-900/50 border border-green-700 w-14 h-14 rounded-full mb-6 mx-auto text-green-300 group-hover:bg-green-800/50 transition-colors duration-300">
                   <ChartSpline size={32} />
                 </div>
                 <h4 className="text-2xl font-semibold text-green-300 mb-3">Previsão de Surtos</h4>
-                <p className="text-zinc-300 leading-relaxed">Um modelo preditivo que antecipa áreas de diferentes riscos epidemiológicos.</p>
+                <p className="text-zinc-300 leading-relaxed">Modelos preditivos que antecipam áreas de maior risco epidemiológico.</p>
               </div>
               <span className="mt-6 text-sm font-semibold text-green-400 group-hover:text-green-300 transition-colors">Acessar ferramenta →</span>
             </Link>
 
-            <span className="hidden md:block text-5xl text-white font-light mx-4 animate-fade-in-up delay-300">=</span>
-
-            <Link href="/dashboard" className="group flex flex-col p-6 rounded-2xl bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 shadow-xl transition-all duration-300 hover:border-indigo-500/80 animate-fade-in-up delay-400 relative overflow-hidden card-hover-glow max-w-sm w-full">
+            <Link href="/dashboard" className="group flex flex-col p-6 rounded-2xl bg-zinc-900/80 border border-zinc-800 shadow-xl transition-all duration-300 hover:border-indigo-500/80 animate-fade-in-up delay-200 relative overflow-hidden card-hover-glow">
               <div className="flex-grow">
                 <div className="flex items-center justify-center bg-indigo-900/50 border border-indigo-700 w-14 h-14 rounded-full mb-6 mx-auto text-indigo-300 group-hover:bg-indigo-800/50 transition-colors duration-300">
                   <LayoutDashboard size={32} />
                 </div>
-                <h4 className="text-2xl font-semibold text-indigo-300 mb-3">Painel de Análise</h4>
-                <p className="text-zinc-300 leading-relaxed">Visualize dados e insights de ambos os modelos para guiar a tomada de decisão e o planejamento.</p>
+                <h4 className="text-2xl font-semibold text-indigo-300 mb-3">Painel de Dados</h4>
+                <p className="text-zinc-300 leading-relaxed">Visualize dados e insights para guiar a tomada de decisão e o planejamento.</p>
               </div>
               <span className="mt-6 text-sm font-semibold text-indigo-400 group-hover:text-indigo-300 transition-colors">Explorar o painel →</span>
             </Link>
           </div>
         </section>
-
         
         <hr className="border-zinc-800 mb-24" />
 
@@ -253,22 +201,20 @@ export default function About() {
         <section className="max-w-6xl mx-auto mb-24 px-4">
           <h3 className="text-4xl font-bold text-white mb-12 text-center animate-fade-in-up">Nosso Propósito</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            {/* Missão Card */}
-            <div className="bg-zinc-900/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-zinc-800">
-              <div className="flex items-center justify-center bg-blue-900/50 border border-blue-700 w-16 h-16 rounded-full mb-6 mx-auto text-blue-300">
+            <div className="bg-zinc-900/80 p-8 rounded-2xl shadow-2xl border border-zinc-800">
+              <div className="flex items-center justify-center bg-blue-600 w-16 h-16 rounded-full mb-6 mx-auto text-white">
                 <Target size={32} />
               </div>
-              <h4 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 mb-4 text-center">Missão</h4>
+              <h4 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 mb-4 text-center">Missão</h4>
               <p className="text-zinc-300 text-lg leading-relaxed text-center">
                 Desenvolver e fornecer ferramentas de inteligência artificial que permitam a detecção precoce de focos, a previsão de surtos e a otimização de recursos no combate à dengue.
               </p>
             </div>
-            {/* Visão Card */}
-            <div className="bg-zinc-900/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-zinc-800">
-              <div className="flex items-center justify-center bg-green-900/50 border border-green-700 w-16 h-16 rounded-full mb-6 mx-auto text-green-300">
+            <div className="bg-zinc-900/80 p-8 rounded-2xl shadow-2xl border border-zinc-800">
+              <div className="flex items-center justify-center bg-green-600 w-16 h-16 rounded-full mb-6 mx-auto text-white">
                 <Lightbulb size={32} />
               </div>
-              <h4 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-teal-400 mb-4 text-center">Visão</h4>
+              <h4 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-teal-400 mb-4 text-center">Visão</h4>
               <p className="text-zinc-300 text-lg leading-relaxed text-center">
                 Tornar-se uma referência técnica na aplicação de IA para o monitoramento e controle de arboviroses, contribuindo para um futuro com sistemas de saúde mais resilientes e proativos.
               </p>
@@ -287,7 +233,7 @@ export default function About() {
               Da abordagem reativa à estratégia proativa e orientada por dados. Veja a diferença.
             </p>
           </div>
-          <div className="flex flex-col md:flex-row gap-8 bg-zinc-900/80 backdrop-blur-sm rounded-2xl shadow-lg border border-zinc-800 p-8">
+          <div className="flex flex-col md:flex-row gap-8 bg-zinc-900/80 rounded-2xl shadow-lg border border-zinc-800 p-8">
             {/* Bloco "Antes" */}
             <div className="flex-1 space-y-6 md:border-r md:border-zinc-700 md:pr-8">
               <h4 className="text-2xl font-bold text-red-400">Abordagem Tradicional</h4>
@@ -358,7 +304,7 @@ export default function About() {
                 </p>
             </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            <div className="bg-zinc-900/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-zinc-800 flex flex-col items-center group animate-fade-in-up delay-200">
+            <div className="bg-zinc-900/80 p-8 rounded-2xl shadow-xl border border-zinc-800 flex flex-col items-center group animate-fade-in-up delay-200">
               <div className="bg-blue-900/50 p-4 rounded-full mb-6 border border-blue-700">
                 <MapPin size={36} className="text-blue-300" />
               </div>
@@ -367,7 +313,7 @@ export default function About() {
                 Visão computacional analisa imagens de satélite e drones, identificando focos (piscinas, caixas d'água) para mapear áreas de risco.
               </p>
             </div>
-            <div className="bg-zinc-900/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-zinc-800 flex flex-col items-center group animate-fade-in-up delay-300">
+            <div className="bg-zinc-900/80 p-8 rounded-2xl shadow-xl border border-zinc-800 flex flex-col items-center group animate-fade-in-up delay-300">
               <div className="bg-green-900/50 p-4 rounded-full mb-6 border border-green-700">
                 <Brain size={36} className="text-green-300" />
               </div>
@@ -376,7 +322,7 @@ export default function About() {
                 Modelos de Machine Learning processam dados históricos, climáticos e geográficos para prever a incidência de casos futuros.
               </p>
             </div>
-            <div className="bg-zinc-900/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-zinc-800 flex flex-col items-center group animate-fade-in-up delay-400">
+            <div className="bg-zinc-900/80 p-8 rounded-2xl shadow-xl border border-zinc-800 flex flex-col items-center group animate-fade-in-up delay-400">
               <div className="bg-indigo-900/50 p-4 rounded-full mb-6 border border-indigo-700">
                 <GitMerge size={36} className="text-indigo-300" />
               </div>
@@ -390,52 +336,26 @@ export default function About() {
 
         <hr className="border-zinc-800 mb-24" />
 
-        
-
-
-
-
-
-
-
         {/* --- 6. Seção de Gráficos de Previsão --- */}
-        <section className="max-w-6xl mx-auto mb-24 p-8 bg-zinc-900/80 backdrop-blur-sm rounded-2xl shadow-lg border border-zinc-800 animate-fade-in-up">
+        <section className="max-w-6xl mx-auto mb-24 p-8 bg-zinc-900/80 rounded-2xl shadow-lg border border-zinc-800 animate-fade-in-up">
           <h3 className="text-4xl font-bold text-white mb-4 text-center">Projeção de Casos (Exemplo)</h3>
           <p className="text-zinc-300 text-lg mb-8 text-center max-w-3xl mx-auto">
             Este gráfico ilustra como nosso modelo compara dados históricos com projeções futuras, uma ferramenta vital para o planejamento antecipado.
           </p>
           <div className="mb-4">
             <ResponsiveContainer width="100%" height={400}>
-              <AreaChart data={dengueCasesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <defs>
-                  <linearGradient id="colorCases" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+              <LineChart data={dengueCasesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#444" />
                 <XAxis dataKey="month" stroke="#999" tick={{ fill: '#bbb' }} />
                 <YAxis stroke="#999" label={{ value: 'Número de Casos', angle: -90, position: 'insideLeft', fill: '#999', style: { textAnchor: 'middle' } }} tick={{ fill: '#bbb' }} />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(120, 119, 198, 0.1)' }} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(120, 119, 198, 0.1)' }}/>
                 <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                <Area type="monotone" dataKey="cases" name="Casos Reais" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorCases)" dot={{ r: 5, strokeWidth: 2 }} activeDot={{ r: 7 }} />
-                <Area type="monotone" dataKey="forecast" name="Previsão" stroke="#22c55e" strokeDasharray="5 5" strokeWidth={3} fillOpacity={1} fill="url(#colorForecast)" dot={{ r: 5, strokeWidth: 2 }} activeDot={{ r: 7 }} />
-              </AreaChart>
+                <Line type="monotone" dataKey="cases" name="Casos Reais" stroke="#3b82f6" strokeWidth={3} dot={{ r: 5, strokeWidth: 2 }} activeDot={{ r: 7 }} />
+                <Line type="monotone" dataKey="forecast" name="Previsão" stroke="#22c55e" strokeDasharray="5 5" strokeWidth={3} dot={{ r: 5, strokeWidth: 2 }} activeDot={{ r: 7 }} />
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </section>
-
-
-
-
-
-
-
-
 
         <hr className="border-zinc-800 mb-24" />
         
@@ -471,7 +391,7 @@ export default function About() {
             {teamMembers.map((member, index) => (
               <div
                 key={index}
-                className="p-8 rounded-2xl bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 shadow-xl flex flex-col items-center text-left transform transition-all duration-300 hover:scale-[1.03] hover:border-blue-500/80 animate-fade-in-up relative overflow-hidden card-hover-glow"
+                className="p-8 rounded-2xl bg-zinc-900/80 border border-zinc-800 shadow-xl flex flex-col items-center text-left transform transition-all duration-300 hover:scale-[1.03] hover:border-blue-500/80 animate-fade-in-up"
                 style={{ animationDelay: `${0.2 + index * 0.1}s` }}
               >
                 <Link href={`https://github.com/${member.github}`} target="_blank" rel="noopener noreferrer">
@@ -516,11 +436,11 @@ export default function About() {
             {faqs.map((faq, index) => (
               <div
                 key={index}
-                className="bg-zinc-900/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-zinc-800 cursor-pointer transition-all duration-300 hover:border-blue-600/80"
+                className="bg-zinc-900/80 p-6 rounded-2xl shadow-lg border border-zinc-800 cursor-pointer transition-all duration-300 hover:border-blue-600/80"
                 onClick={() => toggleFAQ(index)}
               >
                 <div className="flex justify-between items-center text-left">
-                  <h4 className="text-xl font-semibold text-indigo-400">{faq.question}</h4>
+                  <h4 className="text-xl font-semibold text-blue-300">{faq.question}</h4>
                   {openFAQIndex === index ? <ChevronUp size={24} className="text-blue-400" /> : <ChevronDown size={24} className="text-zinc-400" />}
                 </div>
                 {openFAQIndex === index && (
@@ -536,6 +456,7 @@ export default function About() {
       </main>
 
       <Footer />
+
     </div>
   );
 }

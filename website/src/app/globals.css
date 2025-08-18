@@ -166,3 +166,97 @@
 html {
   scroll-behavior: smooth;
 }
+
+
+/* EXTRAS ---------------------------------------------------------------------------------------- */
+
+
+html {
+  scroll-behavior: smooth;
+}
+/* Este código deve estar em um arquivo CSS global, como globals.css */
+
+:root {
+  --dot-size: 1px;
+  --dot-spacing: 25px;
+  --dot-color: rgba(255, 255, 255, 0.1);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: #000;
+  color: #fff;
+  min-height: 100vh;
+  text-align: center;
+  overflow-x: hidden; /* Garante que não haja barra de rolagem horizontal */
+}
+
+/* Fundo principal com gradiente e pontilhados */
+.background-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  /* Gradiente de fundo escuro com brilho roxo sutil */
+  background: radial-gradient(circle at top, rgba(1, 46, 9, 0.6) 0%, rgba(0, 0, 0, 1) 70%);
+}
+
+/* Pontilhados leves */
+.background-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(circle, var(--dot-color) var(--dot-size), transparent var(--dot-size));
+  background-size: var(--dot-spacing) var(--dot-spacing);
+  opacity: 0.8;
+  z-index: 1;
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+  opacity: 0;
+}
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+
+@keyframes fade-in-down {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-down {
+  animation: fade-in-down 0.4s ease-out forwards;
+}
+
+.border-glow {
+  position: relative;
+  z-index: 1;
+}
+
+.border-glow::before {
+  content: "";
+  position: absolute;
+  inset: -2px; /* Aumente o valor para um brilho mais espesso */
+  background: linear-gradient(to right, #3b82f6, #22c55e); /* Exemplo de gradiente de brilho */
+  z-index: -1;
+  opacity: 0;
+  filter: blur(8px); /* Ajuste o blur para a intensidade do brilho */
+  transition: opacity 0.3s ease;
+}
+
+.card-hover-glow:hover .border-glow::before {
+  opacity: 1;
+}
