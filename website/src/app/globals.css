@@ -162,3 +162,7 @@
 .scroll-left-invisible > * {
   direction: ltr; /* content remains left-to-right */
 }
+
+html {
+  scroll-behavior: smooth;
+}

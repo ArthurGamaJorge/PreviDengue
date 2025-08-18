@@ -85,7 +85,7 @@ const AISummarySection = () => {
           <tr className="border-b border-zinc-700">
             <td className="py-2">municipio</td>
             <td className="py-2">object</td>
-            <td className="py-2">"Campinas"</td>
+            <td className="py-2">Campinas</td>
             <td className="py-2">Nome do município onde os casos foram notificados.</td>
           </tr>
           <tr className="border-b border-zinc-700">

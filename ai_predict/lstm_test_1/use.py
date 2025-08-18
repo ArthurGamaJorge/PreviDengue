@@ -5,128 +5,174 @@ import matplotlib.pyplot as plt
 import joblib
 from tensorflow.keras.models import load_model
 
-# --- Local paths config ---
-DATA_PATH = "../data/final_training_data.parquet"
-MODEL_PATH = "./checkpoints/model_checkpoint_best.keras"
-SCALER_DIR = "./scalers/"
+# --- Paths ---
+INFERENCE_PATH = "../data/inference_data.parquet"   # novo arquivo de inferência
+MODEL_PATH     = "./checkpoints/model_checkpoint_best.keras"
+SCALER_DIR     = "./scalers/"
+
+# --- Configuração da previsão ---
 SEQUENCE_LENGTH = 12
+CUTOFF_YEAR  = 2025  
+CUTOFF_WEEK  = 20
+FORECAST_END_WEEK = 31 
+
+# Features (iguais às do treino)
+DYN_FEATS = [
+    "numero_casos", "T2M", "T2M_MAX", "T2M_MIN",
+    "PRECTOTCORR", "RH2M", "ALLSKY_SFC_SW_DWN"
+]
+STATIC_FEATS = ["latitude", "longitude"]
 
 def inverse_transform_cases(scaler, data, feature_index=0):
-    """
-    Inverse transform the scaled target (numero_casos) using the given scaler.
-    """
-    dummy_data = np.zeros((len(data), scaler.n_features_in_))
-    dummy_data[:, feature_index] = data
-    return scaler.inverse_transform(dummy_data)[:, feature_index]
+    """Desfaz a normalização apenas da coluna alvo (numero_casos)."""
+    dummy = np.zeros((len(data), scaler.n_features_in_), dtype=np.float32)
+    dummy[:, feature_index] = data
+    return scaler.inverse_transform(dummy)[:, feature_index]
+
+def epi_key(year, week):
+    """Chave ordenável (ano, semana)."""
+    return (int(year), int(week))
+
+def find_index_of_year_week(df_mun, year, week):
+    mask = (df_mun["ano"].astype(int) == int(year)) & (df_mun["semana"].astype(int) == int(week))
+    idxs = np.flatnonzero(mask.values)
+    return int(idxs[0]) if len(idxs) else None
 
 def main():
-    print("--- Loading model and data ---")
+    # --- Checagens básicas ---
     if not os.path.exists(MODEL_PATH):
-        print(f"Error: Model file '{MODEL_PATH}' not found.")
+        print(f"Erro: modelo '{MODEL_PATH}' não encontrado.")
         return
-    if not os.path.exists(DATA_PATH):
-        print(f"Error: Data file '{DATA_PATH}' not found.")
+    if not os.path.exists(INFERENCE_PATH):
+        print(f"Erro: arquivo de inferência '{INFERENCE_PATH}' não encontrado.")
         return
 
+    # Carrega modelo e dados
     model = load_model(MODEL_PATH)
-    df = pd.read_parquet(DATA_PATH)
+    df = pd.read_parquet(INFERENCE_PATH)
 
-    # Check required columns
-    for col in ['codigo_ibge', 'municipio', 'ano', 'semana']:
-        if col not in df.columns:
-            print(f"Error: Required column '{col}' not found in data.")
-            return
+    # Valida colunas necessárias
+    required_cols = {"codigo_ibge","municipio","ano","semana", *DYN_FEATS, *STATIC_FEATS}
+    missing = required_cols - set(df.columns)
+    if missing:
+        print(f"Erro: colunas faltando no inference_data: {missing}")
+        return
 
-    # Convert codigo_ibge to int (important for matching)
-    df['codigo_ibge'] = df['codigo_ibge'].astype(int)
+    # Tipos e ordenação temporal
+    df["codigo_ibge"] = df["codigo_ibge"].astype(int)
+    df["ano"] = df["ano"].astype(int)
+    df["semana"] = df["semana"].astype(int)
+    df = df.sort_values(by=["codigo_ibge","ano","semana"]).reset_index(drop=True)
 
-    # Sort data temporally per municipality
-    df = df.sort_values(by=['codigo_ibge', 'ano', 'semana'])
-
-    # Features used in training
-    dynamic_features = [
-        "numero_casos", "T2M", "T2M_MAX", "T2M_MIN",
-        "PRECTOTCORR", "RH2M", "ALLSKY_SFC_SW_DWN"
-    ]
-    static_features = ["latitude", "longitude"]
-
-    # Unique municipios with names, sorted by codigo_ibge
-    municipios = df[['codigo_ibge', 'municipio']].drop_duplicates().sort_values('codigo_ibge').reset_index(drop=True)
-
-    # Input IBGE code
-    print("\n--- Enter the IBGE code of the municipality for prediction ---")
+    # Seleção do município por IBGE
+    municipios = df[["codigo_ibge","municipio"]].drop_duplicates().sort_values("codigo_ibge")
     try:
-        input_code = int(input("Digite o código IBGE: ").strip())
+        ibge = int(input("Digite o código IBGE do município: ").strip())
     except ValueError:
-        print("Invalid input. Please enter a valid integer IBGE code. Exiting.")
+        print("Código inválido.")
+        return
+    if ibge not in municipios["codigo_ibge"].values:
+        print("Município não encontrado no arquivo de inferência.")
         return
 
-    if input_code not in municipios['codigo_ibge'].values:
-        print(f"IBGE code {input_code} not found in dataset. Exiting.")
+    mun_name = municipios.loc[municipios["codigo_ibge"] == ibge, "municipio"].iloc[0]
+    df_mun = df[df["codigo_ibge"] == ibge].copy().reset_index(drop=True)
+
+    # Índices de corte e fim
+    cutoff_idx = find_index_of_year_week(df_mun, CUTOFF_YEAR, CUTOFF_WEEK)
+    if cutoff_idx is None:
+        print(f"Não encontrei {CUTOFF_YEAR}/{CUTOFF_WEEK:02d} para este município.")
+        return
+    end_idx = find_index_of_year_week(df_mun, CUTOFF_YEAR, FORECAST_END_WEEK)
+    if end_idx is None:
+        # caso o arquivo não chegue até a semana desejada, ajusta
+        end_idx = len(df_mun) - 1
+        print(f"Aviso: não encontrei {CUTOFF_YEAR}/{FORECAST_END_WEEK:02d}; "
+              f"vou prever até o último registro disponível ({df_mun.loc[end_idx,'ano']}/{df_mun.loc[end_idx,'semana']:02d}).")
+
+    # Verifica histórico suficiente
+    if cutoff_idx + 1 < SEQUENCE_LENGTH:
+        print(f"Histórico insuficiente: preciso de {SEQUENCE_LENGTH} semanas antes da semana {CUTOFF_WEEK}.")
         return
 
-    selected_row = municipios[municipios['codigo_ibge'] == input_code].iloc[0]
-    selected_municipio_code = selected_row['codigo_ibge']
-    selected_municipio_name = selected_row['municipio']
-    print(f"Selected municipality: {selected_municipio_code} - {selected_municipio_name}")
-
-    # Filter data for selected municipio
-    df_mun = df[df['codigo_ibge'] == selected_municipio_code]
-
-    # Load scalers for this municipality
-    scaler_dyn_path = os.path.join(SCALER_DIR, f"{selected_municipio_code}_dynamic.pkl")
-    scaler_static_path = os.path.join(SCALER_DIR, f"{selected_municipio_code}_static.pkl")
-    if not os.path.exists(scaler_dyn_path) or not os.path.exists(scaler_static_path):
-        print(f"Scaler files for municipio {selected_municipio_code} not found. Cannot proceed.")
+    # Carrega scalers do município
+    scaler_dyn_path = os.path.join(SCALER_DIR, f"{ibge}_dynamic.pkl")
+    scaler_static_path = os.path.join(SCALER_DIR, f"{ibge}_static.pkl")
+    if not (os.path.exists(scaler_dyn_path) and os.path.exists(scaler_static_path)):
+        print("Scalers deste município não encontrados.")
         return
     scaler_dyn = joblib.load(scaler_dyn_path)
     scaler_static = joblib.load(scaler_static_path)
 
-    # Prepare dynamic data sequences (scaled)
-    dynamic_data = df_mun[dynamic_features].values
-    static_data = df_mun[static_features].iloc[0].values.reshape(1, -1)  # static data fixed for municipality
-    static_scaled = scaler_static.transform(static_data)
+    # Dados estáticos (1x2) e escalonados
+    static_raw = df_mun[STATIC_FEATS].iloc[0].values.reshape(1, -1)
+    static_scaled = scaler_static.transform(static_raw)  # (1,2)
 
-    # Scale dynamic data using saved scaler (do NOT fit)
-    dynamic_scaled = scaler_dyn.transform(dynamic_data)
+    # Dados dinâmicos:
+    dyn_raw = df_mun[DYN_FEATS].copy()
 
-    X_mun = []
-    static_mun = []
+    # Para transformar com MinMaxScaler, precisamos substituir NaNs temporariamente na coluna 'numero_casos'
+    # (não usaremos esses valores como entrada no futuro — serão substituídos pelas previsões)
+    dyn_filled = dyn_raw.copy()
+    if dyn_filled["numero_casos"].isna().any():
+        dyn_filled["numero_casos"] = dyn_filled["numero_casos"].fillna(0.0)
 
-    for i in range(len(dynamic_scaled) - SEQUENCE_LENGTH):
-        X_mun.append(dynamic_scaled[i : i + SEQUENCE_LENGTH, :])
-        static_mun.append(static_scaled[0])  # same static data for all sequences
+    dyn_scaled = scaler_dyn.transform(dyn_filled.values).astype(np.float32)  # (T, 7)
 
-    if len(X_mun) == 0:
-        print("Not enough data to create sequences for prediction.")
-        return
+    # --- Previsão direta multi-passo (sem usar casos reais do futuro) ---
+    history = dyn_scaled[:cutoff_idx+1].tolist()  # até semana 20 inclusive
+    forecast_idxs = list(range(cutoff_idx + 1, end_idx + 1))
+    preds_scaled = []
 
-    X_mun = np.array(X_mun, dtype=np.float32)
-    static_mun = np.array(static_mun, dtype=np.float32)
+    for idx in forecast_idxs:
+        seq_input = np.array(history[-SEQUENCE_LENGTH:], dtype=np.float32).reshape(1, SEQUENCE_LENGTH, -1)
+        yhat_scaled = model.predict([seq_input, static_scaled], verbose=0)[0, 0]
+        preds_scaled.append(yhat_scaled)
 
-    # Predict
-    predictions_scaled = model.predict([X_mun, static_mun], verbose=1).flatten()
+        # monta a "próxima semana": clima da semana idx + y previsto
+        next_row = dyn_scaled[idx].copy()
+        next_row[0] = yhat_scaled  # substitui numero_casos pelo previsto (em escala)
+        history.append(next_row)
 
-    # True targets scaled
-    y_true_scaled = dynamic_scaled[SEQUENCE_LENGTH:, 0]  # first feature is 'numero_casos'
+    # Inversões de escala
+    y_pred = inverse_transform_cases(scaler_dyn, np.array(preds_scaled))
+    y_real_full = df_mun["numero_casos"].values.astype("float32")  # pode ter NaN nas últimas semanas
 
-    # Inverse transform both predictions and true values
-    predictions = inverse_transform_cases(scaler_dyn, predictions_scaled)
-    y_true = inverse_transform_cases(scaler_dyn, y_true_scaled)
-
-    # Plot results
-    import matplotlib.pyplot as plt
+    # --- Gráfico ---
+    x = np.arange(len(df_mun))
     plt.figure(figsize=(15, 7))
-    plt.plot(range(len(y_true)), y_true, label="Real Cases", marker='o', linestyle='--', color='blue')
-    plt.plot(range(len(predictions)), predictions, label="Predicted Cases", marker='x', color='red')
-    plt.title(f"Dengue Cases Prediction for Municipality {selected_municipio_name} ({selected_municipio_code})")
-    plt.xlabel("Weeks")
-    plt.ylabel("Number of Cases")
+
+    # Histórico real (até a semana 20)
+    plt.plot(x[:cutoff_idx+1], y_real_full[:cutoff_idx+1],
+             label="Histórico (Real)", linestyle="--")
+
+    # Futuro real (apenas para comparação visual; NÃO foi usado na entrada)
+    plt.plot(x[cutoff_idx+1:end_idx+1], y_real_full[cutoff_idx+1:end_idx+1],
+             label="Futuro (Real - comparação)")
+
+    # Futuro previsto (21→31)
+    plt.plot(x[cutoff_idx+1:end_idx+1], y_pred,
+             label="Futuro (Previsto pela IA)", linestyle="--")
+
+    # Linhas de corte
+    plt.axvline(x=cutoff_idx, color="black", linestyle=":", linewidth=2,
+                label=f"Corte {CUTOFF_YEAR}/{CUTOFF_WEEK:02d}")
+    plt.axvline(x=end_idx, color="gray", linestyle=":", linewidth=1)
+
+    # Título e eixos
+    w_start = f"{int(df_mun.loc[0,'ano'])}/{int(df_mun.loc[0,'semana']):02d}"
+    w_cut   = f"{CUTOFF_YEAR}/{CUTOFF_WEEK:02d}"
+    w_end   = f"{int(df_mun.loc[end_idx,'ano'])}/{int(df_mun.loc[end_idx,'semana']):02d}"
+    plt.title(f"Previsão Multi-passo (sem teacher forcing)\n"
+              f"{mun_name} ({ibge}) — de {w_cut} até {w_end}")
+    plt.xlabel("Semanas (ordenadas no tempo)")
+    plt.ylabel("Número de casos")
     plt.legend()
     plt.grid(True)
+    plt.tight_layout()
     plt.show()
 
-    print("\n--- Done ---")
+    print("Concluído.")
 
 if __name__ == "__main__":
     main()

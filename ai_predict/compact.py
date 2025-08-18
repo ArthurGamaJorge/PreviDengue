@@ -1,8 +1,8 @@
 # pip install pyarrow
 import pandas as pd
 
-csv_path = 'ai_predict/data/final_training_data.csv'
-parquet_path = 'ai_predict/data/final_training_data.parquet'
+csv_path = './data/inference_data.csv'
+parquet_path = './data/inference_data.parquet'
 
 # Compactar
 #df = pd.read_csv(csv_path)
