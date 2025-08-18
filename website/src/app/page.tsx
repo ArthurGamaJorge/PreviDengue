@@ -364,7 +364,7 @@ export default function About() {
               </div>
               <h4 className="text-2xl font-semibold text-blue-300 mb-3">1. Detecção Inteligente</h4>
               <p className="text-zinc-300 leading-relaxed">
-                Visão computacional analisa imagens de satélite e drones, identificando focos (piscinas, caixas d'água) para mapear áreas de risco.
+                Visão computacional analisa imagens de satélite e drones, identificando focos (piscinas, caixas d&aposágua) para mapear áreas de risco.
               </p>
             </div>
             <div className="bg-zinc-900/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-zinc-800 flex flex-col items-center group animate-fade-in-up delay-300">
