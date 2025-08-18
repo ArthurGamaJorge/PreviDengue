@@ -37,7 +37,7 @@ const teamMembers = [
       "Otimização de performance da aplicação",
     ],
   },
-  {
+  {ç
     name: "Daniel Dorigan de Carvalho Campos",
     github: "danieldorigancc",
     avatar: "/images/daniel.png",
