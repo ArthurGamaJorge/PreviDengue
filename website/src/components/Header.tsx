@@ -6,8 +6,7 @@ import { Gauge, Info, House } from 'lucide-react'; // Importar ícones
 export default function Header() {
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-zinc-900/80 backdrop-blur-sm border-b border-zinc-800 flex justify-between items-center px-8 py-4 text-white">
-      {/* Logo do PreviDengue */}
-      <Link href="/" className="flex items-center gap-2 cursor-pointer transition-transform hover:scale-105">
+      <Link href="/" className="flex items-center gap-2 cursor-pointer">
         <Image 
           src="/favicon.ico" 
           alt="Logo PreviDengue"

@@ -22,8 +22,12 @@ import {
   Satellite,
   ShieldCheck,
   GitMerge,
-  ArrowRight
+  ArrowRight,
+  BrainCircuit
 } from 'lucide-react';
+// Adicione esta importação no topo do seu arquivo para usar as animações
+import { motion } from "framer-motion";
+
 
 // --- Dados da Equipe ---
 const teamMembers = [
@@ -175,77 +179,93 @@ export default function About() {
 
       <main className="pt-28 max-w-7xl mx-auto px-4">
 
-        {/* --- 1. Seção de Hero / Introdução --- */}
-        <section id="inicio" className="h-[calc(100vh-100px)] flex flex-col items-center justify-center text-center gap-6 mb-32">
-          <h1 className="text-5xl sm:text-7xl font-extrabold leading-tight text-transparent bg-clip-text bg-gradient-to-br from-white to-zinc-400 animate-fade-in-up">
-            Tecnologia e IA na Linha de Frente Contra a Dengue
-          </h1>
-          <p className="max-w-3xl text-zinc-300 text-lg sm:text-xl leading-relaxed animate-fade-in-up delay-200">
-            O PreviDengue é uma plataforma estratégica que une detecção de focos por imagem e previsão de surtos para fortalecer as ações de saúde pública.
-          </p>
-          <div className="mt-8 animate-fade-in-up delay-300 flex flex-col items-center gap-4">
-            <Link 
-              href="#ferramentas" 
-              className="bg-zinc-800 text-white font-bold py-3 px-8 rounded-full border border-zinc-700 shadow-lg transform transition-all duration-300 hover:bg-zinc-700 hover:border-zinc-500 hover:shadow-xl flex items-center gap-2"
-            >
-              Explore o Projeto
-              <ArrowRight size={20} />
-            </Link>
-          </div>
-        </section>
+      {/* --- 1. Seção de Hero / Introdução --- */}
+      <section id="inicio" className="h-[calc(100vh-100px)] flex flex-col items-center justify-center text-center gap-6 mb-32">
+        <h1 className="text-5xl sm:text-7xl font-extrabold leading-tight text-transparent bg-clip-text bg-gradient-to-br from-white to-zinc-400 animate-fade-in-up">
+          Tecnologia Apoiando na Linha de Frente Contra a Dengue
+        </h1>
+        <p className="max-w-3xl text-zinc-300 text-lg sm:text-xl leading-relaxed animate-fade-in-up delay-200">
+          Ações inteligentes e proativas contra a dengue, com IAs que preveem surtos e detectam focos do mosquito com eficiência.
+        </p>
+        <div className="mt-8 animate-fade-in-up delay-300 flex flex-col items-center gap-4">
+          <Link 
+            href="#ferramentas" 
+            className="bg-zinc-800 text-white font-bold py-3 px-8 rounded-full border border-zinc-700 shadow-lg transform transition-all duration-300 hover:bg-zinc-700 hover:border-zinc-500 hover:shadow-xl flex items-center gap-2"
+          >
+            Explore o Projeto
+          </Link>
+        </div>
+      </section>
 
-        <hr className="border-zinc-800 mb-24" />
 
-                {/* --- 2. Seção de Ferramentas --- */}
-                <section id="ferramentas" className="max-w mx-auto mb-24 text-center">
-          <div className="mb-12 animate-fade-in-up">
-            <h2 className="text-sm font-bold uppercase text-blue-400 mb-2">PARA AGENTES DE SAÚDE E GESTORES</h2>
-            <h3 className="text-4xl font-bold text-white">Nossas Ferramentas de Análise</h3>
-            <p className="text-zinc-300 text-lg mt-4 max-w-3xl mx-auto">
-              A combinação de nossas ferramentas gera um ecossistema de dados poderoso para o planejamento de ações preventivas.
-            </p>
-          </div>
-          
-          <div className="flex flex-col md:flex-row items-center justify-center gap-8">
-            <Link href="/detect" className="group flex flex-col p-6 rounded-2xl bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 shadow-xl transition-all duration-300 hover:border-blue-500/80 animate-fade-in-up relative overflow-hidden card-hover-glow max-w-sm w-full">
-              <div className="flex-grow">
-                <div className="flex items-center justify-center bg-blue-900/50 border border-blue-700 w-14 h-14 rounded-full mb-6 mx-auto text-blue-300 group-hover:bg-blue-800/50 transition-colors duration-300">
-                  <Crosshair size={32} />
-                </div>
-                <h4 className="text-2xl font-semibold text-blue-300 mb-3">Detecção de Focos</h4>
-                <p className="text-zinc-300 leading-relaxed">Nossa IA identifica potenciais criadouros do Aedes aegypti em imagens aéreas.</p>
-              </div>
-              <span className="mt-6 text-sm font-semibold text-blue-400 group-hover:text-blue-300 transition-colors">Acessar ferramenta →</span>
-            </Link>
+      <hr className="border-zinc-800 mb-24" />
 
-            <span className="hidden md:block text-5xl text-white font-light mx-4 animate-fade-in-up delay-100">+</span>
+        
+      <section id="ferramentas" className="max-w mx-auto mb-24 text-center">
+  <div className="mb-12 animate-fade-in-up">
+    <h2 className="text-2xl font-bold text-blue-400 mb-2">Para Agentes de Saúde e Gestores</h2>
+    <h3 className="text-4xl font-bold text-white">Nossas Ferramentas de Análise</h3>
+    <p className="text-zinc-300 text-lg mt-4 max-w-3xl mx-auto">
+      A combinação de nossas ferramentas gera um ecossistema de dados poderoso para o planejamento de ações preventivas.
+    </p>
+  </div>
+  
+  <div className="flex flex-col md:flex-row items-center justify-center gap-8">
 
-            <Link href="/predict" className="group flex flex-col p-6 rounded-2xl bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 shadow-xl transition-all duration-300 hover:border-green-500/80 animate-fade-in-up delay-200 relative overflow-hidden card-hover-glow max-w-sm w-full">
-               <div className="flex-grow">
-                <div className="flex items-center justify-center bg-green-900/50 border border-green-700 w-14 h-14 rounded-full mb-6 mx-auto text-green-300 group-hover:bg-green-800/50 transition-colors duration-300">
-                  <ChartSpline size={32} />
-                </div>
-                <h4 className="text-2xl font-semibold text-green-300 mb-3">Previsão de Surtos</h4>
-                <p className="text-zinc-300 leading-relaxed">Um modelo preditivo que antecipa áreas de diferentes riscos epidemiológicos.</p>
-              </div>
-              <span className="mt-6 text-sm font-semibold text-green-400 group-hover:text-green-300 transition-colors">Acessar ferramenta →</span>
-            </Link>
 
-            <span className="hidden md:block text-5xl text-white font-light mx-4 animate-fade-in-up delay-300">=</span>
+    <Link href="/predict" className="group relative flex flex-col p-6 rounded-2xl bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 shadow-xl transition-all duration-300 animate-fade-in-up delay-200 overflow-hidden max-w-sm w-full">
+      <div className="flex-grow">
+        <div className="flex items-center justify-center bg-green-900/50 border border-green-700 w-14 h-14 rounded-full mb-6 mx-auto text-green-300 group-hover:bg-green-800/50 transition-colors duration-300">
+          <ChartSpline size={32} />
+        </div>
+        <h4 className="text-2xl font-semibold text-green-300 mb-3">Previsão de Surtos</h4>
+        <p className="text-zinc-300 leading-relaxed">Um modelo preditivo que antecipa áreas de diferentes riscos epidemiológicos.</p>
+      </div>
+      <span className="mt-6 text-sm font-semibold text-green-400 group-hover:text-green-300 transition-colors">Acessar ferramenta</span>
+    </Link>
 
-            <Link href="/dashboard" className="group flex flex-col p-6 rounded-2xl bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 shadow-xl transition-all duration-300 hover:border-indigo-500/80 animate-fade-in-up delay-400 relative overflow-hidden card-hover-glow max-w-sm w-full">
-              <div className="flex-grow">
-                <div className="flex items-center justify-center bg-indigo-900/50 border border-indigo-700 w-14 h-14 rounded-full mb-6 mx-auto text-indigo-300 group-hover:bg-indigo-800/50 transition-colors duration-300">
-                  <LayoutDashboard size={32} />
-                </div>
-                <h4 className="text-2xl font-semibold text-indigo-300 mb-3">Painel de Análise</h4>
-                <p className="text-zinc-300 leading-relaxed">Visualize dados e insights de ambos os modelos para guiar a tomada de decisão e o planejamento.</p>
-              </div>
-              <span className="mt-6 text-sm font-semibold text-indigo-400 group-hover:text-indigo-300 transition-colors">Explorar o painel →</span>
-            </Link>
-          </div>
-        </section>
+    <span className="hidden md:block text-5xl text-white font-light mx-4 animate-fade-in-up delay-100">+</span>
 
+    <Link href="/detect" className="group relative flex flex-col p-6 rounded-2xl bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 shadow-xl transition-all duration-300 animate-fade-in-up relative overflow-hidden max-w-sm w-full">
+      <div className="flex-grow">
+        <div className="flex items-center justify-center bg-blue-900/50 border border-blue-700 w-14 h-14 rounded-full mb-6 mx-auto text-blue-300 group-hover:bg-blue-800/50 transition-colors duration-300">
+          <Crosshair size={32} />
+        </div>
+        <h4 className="text-2xl font-semibold text-blue-300 mb-3">Detecção de Focos</h4>
+        <p className="text-zinc-300 leading-relaxed">Nossa IA identifica potenciais criadouros do Aedes aegypti em imagens aéreas.</p>
+      </div>
+      <span className="mt-6 text-sm font-semibold text-blue-400 group-hover:text-blue-300 transition-colors">Acessar ferramenta</span>
+    </Link>
+
+    <span className="hidden md:block text-5xl text-white font-light mx-4 animate-fade-in-up delay-300">=</span>
+
+    <Link href="/dashboard" className="group relative flex flex-col p-6 rounded-2xl bg-zinc-900/80 backdrop-blur-sm border border-indigo-500/80 shadow-xl animate-fade-in-up delay-400 relative overflow-hidden max-w-sm w-full">
+      <motion.span
+        className="absolute inset-0 block h-full w-full bg-no-repeat"
+        style={{
+          backgroundImage: "linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, 0.1) 50%, transparent 60%)",
+          backgroundSize: "250% 250%",
+        }}
+        animate={{ backgroundPosition: ["100% 100%", "0% 0%"] }}
+        transition={{
+          duration: 5,
+          repeat: Infinity,
+          ease: "easeOut",
+        }}
+      />
+      <div className="flex-grow">
+        <div className="flex items-center justify-center bg-indigo-900/50 border border-indigo-700 w-14 h-14 rounded-full mb-6 mx-auto text-indigo-300 group-hover:bg-indigo-800/50 transition-colors duration-300">
+          <LayoutDashboard size={32} />
+        </div>
+        <h4 className="text-2xl font-semibold text-indigo-300 mb-3">Painel de Análise</h4>
+        <p className="text-zinc-300 leading-relaxed">Visualize dados e insights de ambos os modelos para guiar a tomada de decisão e o planejamento.</p>
+      </div>
+      <span className="mt-6 text-sm font-semibold text-indigo-400 group-hover:text-indigo-300 transition-colors">Explorar o painel</span>
+    </Link>
+  </div>
+</section>
+
+   
         
         <hr className="border-zinc-800 mb-24" />
 
@@ -281,7 +301,7 @@ export default function About() {
         {/* --- 4. Seção Antes e Depois --- */}
         <section className="max-w-6xl mx-auto mb-24 px-4 animate-fade-in-up">
            <div className="text-center mb-12">
-            <h2 className="text-sm font-bold uppercase text-green-400 mb-2">INOVAÇÃO EM SAÚDE PÚBLICA</h2>
+            <h2 className="text-2xl font-bold text-green-400 mb-2">Inovação em Saúde Pública</h2>
             <h3 className="text-4xl font-bold text-white">Uma Mudança de Paradigma no Combate à Dengue</h3>
             <p className="text-zinc-300 text-lg mt-4 max-w-3xl mx-auto">
               Da abordagem reativa à estratégia proativa e orientada por dados. Veja a diferença.
@@ -351,7 +371,7 @@ export default function About() {
         {/* --- 5. Seção Como Funciona --- */}
         <section className="max-w-6xl mx-auto mb-24 text-center">
             <div className="mb-12 animate-fade-in-up">
-                <h2 className="text-sm font-bold uppercase text-indigo-400 mb-2">PARA AVALIADORES E CURIOSOS</h2>
+                <h2 className="text-2xl font-bold text-indigo-400 mb-2">Para Avaliadores e Curiosos</h2>
                 <h3 className="text-4xl font-bold text-white">A Metodologia por Trás do PreviDengue</h3>
                 <p className="text-zinc-300 text-lg mt-4 max-w-3xl mx-auto">
                     Nossa abordagem combina tecnologias de ponta em um fluxo de três etapas para máxima eficácia.
@@ -390,51 +410,36 @@ export default function About() {
 
         <hr className="border-zinc-800 mb-24" />
 
-        
-
-
-
-
-
-
-
-        {/* --- 6. Seção de Gráficos de Previsão --- */}
-        <section className="max-w-6xl mx-auto mb-24 p-8 bg-zinc-900/80 backdrop-blur-sm rounded-2xl shadow-lg border border-zinc-800 animate-fade-in-up">
-          <h3 className="text-4xl font-bold text-white mb-4 text-center">Projeção de Casos (Exemplo)</h3>
-          <p className="text-zinc-300 text-lg mb-8 text-center max-w-3xl mx-auto">
-            Este gráfico ilustra como nosso modelo compara dados históricos com projeções futuras, uma ferramenta vital para o planejamento antecipado.
-          </p>
-          <div className="mb-4">
-            <ResponsiveContainer width="100%" height={400}>
-              <AreaChart data={dengueCasesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <defs>
-                  <linearGradient id="colorCases" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                <XAxis dataKey="month" stroke="#999" tick={{ fill: '#bbb' }} />
-                <YAxis stroke="#999" label={{ value: 'Número de Casos', angle: -90, position: 'insideLeft', fill: '#999', style: { textAnchor: 'middle' } }} tick={{ fill: '#bbb' }} />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(120, 119, 198, 0.1)' }} />
-                <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                <Area type="monotone" dataKey="cases" name="Casos Reais" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorCases)" dot={{ r: 5, strokeWidth: 2 }} activeDot={{ r: 7 }} />
-                <Area type="monotone" dataKey="forecast" name="Previsão" stroke="#22c55e" strokeDasharray="5 5" strokeWidth={3} fillOpacity={1} fill="url(#colorForecast)" dot={{ r: 5, strokeWidth: 2 }} activeDot={{ r: 7 }} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-
-
-
-
-
-
-
+{/* --- 6. Seção de Gráficos de Previsão --- */}
+<section className="max-w-6xl mx-auto mb-24 p-8 bg-zinc-900/80 backdrop-blur-sm rounded-2xl shadow-lg border border-zinc-800 animate-fade-in-up">
+  <h3 className="text-4xl font-bold text-white mb-4 text-center">Projeção de Casos (Exemplo)</h3>
+  <p className="text-zinc-300 text-lg mb-8 text-center max-w-3xl mx-auto">
+    Este gráfico ilustra como nosso modelo compara dados históricos com projeções futuras, uma ferramenta vital para o planejamento antecipado.
+  </p>
+  <div className="mb-4">
+    <ResponsiveContainer width="100%" height={400}>
+      <AreaChart data={dengueCasesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+        <defs>
+          <linearGradient id="colorCases" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
+            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+          </linearGradient>
+          <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4} />
+            <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+        <XAxis dataKey="month" stroke="#999" tick={{ fill: '#bbb' }} />
+        <YAxis stroke="#999" label={{ value: 'Número de Casos', angle: -90, position: 'insideLeft', fill: '#999', style: { textAnchor: 'middle' } }} tick={{ fill: '#bbb' }} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(120, 119, 198, 0.1)' }} />
+        <Legend wrapperStyle={{ paddingTop: '20px' }} />
+        <Area type="monotone" dataKey="cases" name="Casos Reais" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorCases)" />
+        <Area type="monotone" dataKey="forecast" name="Previsão" stroke="#22c55e" strokeDasharray="5 5" strokeWidth={3} fillOpacity={1} fill="url(#colorForecast)" />
+      </AreaChart>
+    </ResponsiveContainer>
+  </div>
+</section>
 
 
         <hr className="border-zinc-800 mb-24" />
@@ -520,7 +525,7 @@ export default function About() {
                 onClick={() => toggleFAQ(index)}
               >
                 <div className="flex justify-between items-center text-left">
-                  <h4 className="text-xl font-semibold text-indigo-400">{faq.question}</h4>
+                  <h4 className="text-xl font-semibold text-white">{faq.question}</h4>
                   {openFAQIndex === index ? <ChevronUp size={24} className="text-blue-400" /> : <ChevronDown size={24} className="text-zinc-400" />}
                 </div>
                 {openFAQIndex === index && (

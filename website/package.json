@@ -11,9 +11,11 @@
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.1.5",
     "@radix-ui/react-slider": "^1.2.4",
+    "@tailwindcss/typography": "^0.5.16",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "d3-geo": "^3.1.1",
+    "framer-motion": "^12.23.12",
     "leaflet": "^1.9.4",
     "leaflet-defaulticon-compatibility": "^0.1.2",
     "leaflet.heat": "^0.2.0",
@@ -22,7 +24,9 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-leaflet": "^5.0.0",
+    "react-markdown": "^10.1.0",
     "recharts": "^2.15.4",
+    "rehype-raw": "^7.0.0",
     "tailwind-merge": "^3.3.0"
   },
   "devDependencies": {

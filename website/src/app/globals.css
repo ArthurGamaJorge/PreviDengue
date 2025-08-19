@@ -174,11 +174,10 @@ html {
 html {
   scroll-behavior: smooth;
 }
-/* Este código deve estar em um arquivo CSS global, como globals.css */
 
 :root {
-  --dot-size: 1px;
-  --dot-spacing: 25px;
+  --dot-size: 1.6px;
+  --dot-spacing: 40px;
   --dot-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -203,7 +202,7 @@ body {
   height: 100%;
   z-index: -1;
   /* Gradiente de fundo escuro com brilho roxo sutil */
-  background: radial-gradient(circle at top, rgba(1, 46, 9, 0.6) 0%, rgba(0, 0, 0, 1) 70%);
+  background: radial-gradient(circle at top, rgb(1, 94, 18, 0.5) 0%, rgba(0, 0, 0, 1) 70%);
 }
 
 /* Pontilhados leves */
@@ -216,7 +215,7 @@ body {
   height: 100%;
   background-image: radial-gradient(circle, var(--dot-color) var(--dot-size), transparent var(--dot-size));
   background-size: var(--dot-spacing) var(--dot-spacing);
-  opacity: 0.8;
+  opacity: 1;
   z-index: 1;
 }
 
