@@ -29,40 +29,6 @@ import {
 import { motion } from "framer-motion";
 
 
-// --- Dados da Equipe ---
-const teamMembers = [
-  {
-    name: "Arthur Gama Jorge",
-    github: "arthurgamajorge",
-    avatar: "/images/arthur.png",
-    contributions: [
-      "Criação da interface do usuário (UI/UX) e design de componentes",
-      "Implementação do front-end com Next.js",
-      "Otimização de performance da aplicação",
-    ],
-  },
-  {
-    name: "Daniel Dorigan de Carvalho Campos",
-    github: "danieldorigancc",
-    avatar: "/images/daniel.png",
-    contributions: [
-      "Desenvolvimento do back-end da API de previsão",
-      "Integração do modelo de IA",
-      "Gerenciamento de banco de dados e pipelines de ETL",
-    ],
-  },
-  {
-    name: "Ion Mateus Nunes Oprea",
-    github: "ionmateus",
-    avatar: "/images/ion.png",
-    contributions: [
-      "Desenvolvimento do modelo de detecção de foco por IA",
-      "Processamento e análise de dados geoespaciais",
-      "Validação e ajuste de algoritmos de Machine Learning",
-    ],
-  },
-];
-
 // --- Componente de Tooltip Customizado ---
 interface CustomTooltipProps {
   active?: boolean;
@@ -466,51 +432,142 @@ export default function About() {
 
         <hr className="border-zinc-800 mb-24" />
 
-        {/* --- 8. Seção da Equipe --- */}
+
         <section className="max-w-6xl mx-auto mb-24 text-center">
           <h3 className="text-4xl font-bold text-white mb-4 animate-fade-in-up">Nossa Equipe</h3>
           <p className="text-zinc-300 text-lg mb-12 max-w-3xl mx-auto animate-fade-in-up delay-100">
-            Uma equipe multidisciplinar com conhecimentos em IA, desenvolvimento e análise de dados, dedicada a construir soluções com impacto significativo.
+            Estudantes de informática dedicados a construir soluções com impacto significativo.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {teamMembers.map((member, index) => (
-              <div
-                key={index}
-                className="p-8 rounded-2xl bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 shadow-xl flex flex-col items-center text-left transform transition-all duration-300 hover:scale-[1.03] hover:border-blue-500/80 animate-fade-in-up relative overflow-hidden card-hover-glow"
-                style={{ animationDelay: `${0.2 + index * 0.1}s` }}
-              >
-                <Link href={`https://github.com/${member.github}`} target="_blank" rel="noopener noreferrer">
-                  <Image
-                    src={member.avatar}
-                    alt={`Foto de perfil de ${member.name}`}
-                    width={120}
-                    height={120}
-                    className="rounded-full mx-auto mb-5 border-4 border-zinc-700 group-hover:border-blue-500 shadow-lg transition-all duration-300 hover:scale-105"
-                  />
-                </Link>
-                <h4 className="text-white font-bold text-2xl mb-1">{member.name}</h4>
-                <div className="text-sm mt-3 text-zinc-400">
-                  <ul className="list-disc list-inside space-y-1">
-                    {member.contributions.map((contribution, contribIndex) => (
-                      <li key={contribIndex}>{contribution}</li>
-                    ))}
-                  </ul>
-                </div>
-                <Link
-                  href={`https://github.com/${member.github}`}
+            <div
+              className="p-8 rounded-2xl bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 shadow-xl flex flex-col items-center text-left transform transition-all duration-300 hover:scale-[1.03] hover:border-blue-500/80 animate-fade-in-up relative overflow-hidden card-hover-glow"
+              style={{ animationDelay: `0.2s` }}
+            >
+              <a href={`https://github.com/arthurgamajorge`} target="_blank" rel="noopener noreferrer">
+                <Image
+                  src="/images/arthur.png"
+                  alt="Foto de perfil de Arthur Gama Jorge"
+                  width={120}
+                  height={120}
+                  className="rounded-full mx-auto mb-5 border-4 border-zinc-700 group-hover:border-blue-500 shadow-lg transition-all duration-300 hover:scale-105"
+                />
+              </a>
+              <h4 className="text-white font-bold text-1xl mb-1">Arthur Gama Jorge</h4>
+              {/* Subtítulo adicionado conforme a solicitação */}
+              <p className="text-zinc-400 mt-1">Estudante de Informática</p>
+              {/* Links de GitHub e LinkedIn */}
+              <div className="flex justify-center gap-4 mt-6">
+                <a
+                  href={`https://github.com/arthurgamajorge`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-6 flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 transition-colors duration-300"
+                  className="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 transition-colors duration-300"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.046.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.8.576 4.765-1.589 8.197-6.094 8.197-11.387 0-6.627-5.373-12-12-12z" />
                   </svg>
-                  <span className="font-semibold">@{member.github}</span>
-                </Link>
+                  <span className="font-semibold">GitHub</span>
+                </a>
+                <a
+                  href={`https://www.linkedin.com/in/arthurgamajorge`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 transition-colors duration-300"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.765s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.765-1.75 1.765zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+                  </svg>
+                  <span className="font-semibold">LinkedIn</span>
+                </a>
               </div>
-            ))}
+            </div>
+            <div
+              className="p-8 rounded-2xl bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 shadow-xl flex flex-col items-center text-left transform transition-all duration-300 hover:scale-[1.03] hover:border-blue-500/80 animate-fade-in-up relative overflow-hidden card-hover-glow"
+              style={{ animationDelay: `0.3s` }}
+            >
+              <a href={`https://github.com/danieldorigancc`} target="_blank" rel="noopener noreferrer">
+                <Image
+                  src="/images/daniel.png"
+                  alt="Foto de perfil de Daniel Dorigan de Carvalho Campos"
+                  width={120}
+                  height={120}
+                  className="rounded-full mx-auto mb-5 border-4 border-zinc-700 group-hover:border-blue-500 shadow-lg transition-all duration-300 hover:scale-105"
+                />
+              </a>
+              <h4 className="text-white font-bold text-1xl mb-1">Daniel Dorigan de Carvalho Campos</h4>
+              {/* Subtítulo adicionado conforme a solicitação */}
+              <p className="text-zinc-400 mt-1">Estudante de Informática</p>
+              {/* Links de GitHub e LinkedIn */}
+              <div className="flex justify-center gap-4 mt-6">
+                <a
+                  href={`https://github.com/danieldorigancc`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 transition-colors duration-300"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.046.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.8.576 4.765-1.589 8.197-6.094 8.197-11.387 0-6.627-5.373-12-12-12z" />
+                    </svg>
+                  <span className="font-semibold">GitHub</span>
+                </a>
+                <a
+                  href={`https://www.linkedin.com/in/danieldorigancc`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 transition-colors duration-300"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.765s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.765-1.75 1.765zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+                  </svg>
+                  <span className="font-semibold">LinkedIn</span>
+                </a>
+              </div>
+            </div>
+            <div
+              className="p-8 rounded-2xl bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 shadow-xl flex flex-col items-center text-left transform transition-all duration-300 hover:scale-[1.03] hover:border-blue-500/80 animate-fade-in-up relative overflow-hidden card-hover-glow"
+              style={{ animationDelay: `0.4s` }}
+            >
+              <a href={`https://github.com/ionmateus`} target="_blank" rel="noopener noreferrer">
+                <Image
+                  src="/images/ion.png"
+                  alt="Foto de perfil de Ion Mateus Nunes Oprea"
+                  width={120}
+                  height={120}
+                  className="rounded-full mx-auto mb-5 border-4 border-zinc-700 group-hover:border-blue-500 shadow-lg transition-all duration-300 hover:scale-105"
+                />
+              </a>
+              <h4 className="text-white font-bold text-1xl mb-1">Ion Mateus Nunes Oprea</h4>
+              {/* Subtítulo adicionado conforme a solicitação */}
+              <p className="text-zinc-400 mt-1">Estudante de Informática</p>
+              {/* Links de GitHub e LinkedIn */}
+              <div className="flex justify-center gap-4 mt-6">
+                <a
+                  href={`https://github.com/ionmateus`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 transition-colors duration-300"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.046.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.8.576 4.765-1.589 8.197-6.094 8.197-11.387 0-6.627-5.373-12-12-12z" />
+                  </svg>
+                  <span className="font-semibold">GitHub</span>
+                </a>
+                <a
+                  href={`https://www.linkedin.com/in/ionmateus`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 transition-colors duration-300"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.765s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.765-1.75 1.765zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+                  </svg>
+                  <span className="font-semibold">LinkedIn</span>
+                </a>
+              </div>
+            </div>
           </div>
         </section>
+
 
         <hr className="border-zinc-800 mb-24" />
 
