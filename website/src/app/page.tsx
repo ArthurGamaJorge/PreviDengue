@@ -391,8 +391,8 @@ export default function About() {
             <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
           </linearGradient>
           <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.4} />
-            <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+          <stop offset="95%" stopColor="#fef08a" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#444" />
@@ -401,7 +401,7 @@ export default function About() {
         <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(120, 119, 198, 0.1)' }} />
         <Legend wrapperStyle={{ paddingTop: '20px' }} />
         <Area type="monotone" dataKey="cases" name="Casos Reais" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorCases)" />
-        <Area type="monotone" dataKey="forecast" name="Previsão" stroke="#22c55e" strokeDasharray="5 5" strokeWidth={3} fillOpacity={1} fill="url(#colorForecast)" />
+        <Area type="monotone" dataKey="forecast" name="Previsão" stroke="#f59e0b" strokeDasharray="5 5" strokeWidth={3} fillOpacity={1} fill="url(#colorForecast)" />
       </AreaChart>
     </ResponsiveContainer>
   </div>

@@ -1,7 +1,7 @@
 // @/components/App.tsx
 import React, { useState, useEffect, useMemo, ChangeEvent } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { MapPin, Thermometer, CloudRain, Droplets, AlertTriangle, Lightbulb, BrainCircuit, BarChart3, CalendarClock, Bot } from 'lucide-react';
+import { MapPin, Thermometer, CloudRain, Droplets, AlertTriangle, Lightbulb, BrainCircuit, BarChart3, CalendarClock, Bot, Bell, ActivitySquare, CheckCircle, Car, Download } from 'lucide-react';
 import { API_URL } from "@/lib/config";
 
 // --- Interfaces de Tipagem para Dados da API ---
@@ -26,11 +26,18 @@ interface PredictedData {
   predicted_cases: number;
 }
 
+interface Alert {
+  title: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high';
+}
+
 interface ApiData {
   municipality_name: string;
   historic_data: HistoricData[];
   predicted_data: PredictedData[];
   insights: Insights;
+  alerts: Alert[];
 }
 
 // --- Dados de Configuração ---
@@ -41,6 +48,46 @@ const MUNICIPALITIES = [
   { name: 'Rio de Janeiro', ibge_code: 3304557 },
   { name: 'Belo Horizonte', ibge_code: 3106200 },
 ];
+
+const mockAlerts: Alert[] = [
+  {
+    title: "Previsão de Chuva Forte",
+    description: "Prepare-se para agir: a IA prevê um aumento de casos nas próximas semanas, relacionado ao volume de chuva.",
+    severity: 'high',
+  },
+  {
+    title: "Casos Estáveis",
+    description: "Sem picos de alerta. Continue as ações de rotina, mas mantenha a vigilância.",
+    severity: 'low',
+  },
+  {
+    title: "Atenção nos Bairros Centrais",
+    description: "A IA identificou maior sensibilidade climática nestas áreas. Redobre a atenção nas visitas de campo.",
+    severity: 'medium',
+  },
+];
+
+type RiskLevel = 'Alto' | 'Médio' | 'Baixo';
+
+interface MockAddress {
+  street: string;
+  neighborhood: string;
+  coords: string;
+  risk_level: RiskLevel;
+  main_risk_factor: string;
+}
+
+const mockAddresses: MockAddress[] = [
+  { street: "Rua das Laranjeiras, 123", neighborhood: "Centro", coords: "-22.9056, -47.0608", risk_level: 'Alto', main_risk_factor: 'Histórico de Casos' },
+  { street: "Avenida João Pessoa, 456", neighborhood: "Vila Mariana", coords: "-22.9112, -47.0543", risk_level: 'Médio', main_risk_factor: 'Previsão de Temperatura Elevada' },
+  { street: "Travessa da Paz, 789", neighborhood: "Jardim Planalto", coords: "-22.9234, -47.0671", risk_level: 'Alto', main_risk_factor: 'Proximidade a Áreas de Acúmulo de Água' },
+  { street: "Rua dos Pinheiros, 101", neighborhood: "Parque Industrial", coords: "-22.9089, -47.0722", risk_level: 'Baixo', main_risk_factor: 'Risco Geral Reduzido' },
+  { street: "Rua do Sol, 202", neighborhood: "Distrito Verde", coords: "-22.9150, -47.0700", risk_level: 'Médio', main_risk_factor: 'Padrões de Vento e Umidade' },
+  { street: "Rua dos Eucaliptos, 333", neighborhood: "São João", coords: "-22.9001, -47.0505", risk_level: 'Alto', main_risk_factor: 'Histórico de Casos' },
+  { street: "Avenida Brasil, 777", neighborhood: "Bosque", coords: "-22.9080, -47.0590", risk_level: 'Alto', main_risk_factor: 'Previsão de Chuva Forte' },
+  { street: "Rua das Flores, 45", neighborhood: "Nova Campinas", coords: "-22.8988, -47.0655", risk_level: 'Baixo', main_risk_factor: 'Risco Geral Reduzido' },
+];
+
 
 // --- Componentes de UI (Estilo Shadcn/ui) com Tipagem ---
 interface CardProps {
@@ -96,7 +143,9 @@ const App = () => {
   const [apiData, setApiData] = useState<ApiData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [filterRisk, setFilterRisk] = useState<RiskLevel | 'Todos'>('Todos');
 
+  // Efeito para buscar dados da API sempre que o município ou semanas mudarem
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -116,7 +165,7 @@ const App = () => {
           throw new Error(errData.detail || `HTTP error! status: ${response.status}`);
         }
         const data: ApiData = await response.json();
-        setApiData(data);
+        setApiData({ ...data, alerts: mockAlerts });
       } catch (e: any) {
         console.error("Falha ao buscar dados da API:", e);
         setError(e.message);
@@ -127,27 +176,27 @@ const App = () => {
     fetchData();
   }, [selectedIbgeCode, weeksToPredict]);
 
+  // Memoização dos dados do gráfico para evitar renderizações desnecessárias
   const chartData = useMemo(() => {
     if (!apiData?.historic_data || !apiData?.predicted_data) return [];
-    
-    // Mapeia dados históricos para o novo tipo unificado
+
+    // Formata os dados históricos
     const formattedHistoric: ChartPoint[] = apiData.historic_data.map(d => ({
       date: new Date(d.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
       'Casos Reais': d.cases,
       'Previsão da IA': null,
     }));
 
-    // Mapeia dados de previsão para o novo tipo unificado
+    // Formata os dados de previsão
     const formattedPrediction: ChartPoint[] = apiData.predicted_data.map(d => ({
       date: new Date(d.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
       'Casos Reais': null,
       'Previsão da IA': d.predicted_cases
     }));
 
-    // O array final que vai para o gráfico
     let finalChartData = [...formattedHistoric];
 
-    // Adiciona o ponto de conexão para unir os dois gráficos
+    // Cria um ponto de conexão entre os dados reais e a previsão
     if (formattedHistoric.length > 0 && formattedPrediction.length > 0) {
       const lastHistoricCases = formattedHistoric[formattedHistoric.length - 1]['Casos Reais'];
       const connectionPoint: ChartPoint = {
@@ -155,16 +204,15 @@ const App = () => {
         'Casos Reais': lastHistoricCases,
         'Previsão da IA': lastHistoricCases,
       };
-      // Adiciona o ponto de conexão no final do histórico
       finalChartData.push(connectionPoint);
     }
 
-    // Adiciona o restante das previsões
     finalChartData = finalChartData.concat(formattedPrediction);
 
     return finalChartData;
   }, [apiData]);
 
+  // Funções de manipulação para os controles de entrada
   const handleMunicipalityChange = (e: ChangeEvent<HTMLSelectElement>) => {
     setSelectedIbgeCode(Number(e.target.value));
   };
@@ -173,6 +221,99 @@ const App = () => {
     setWeeksToPredict(Number(e.target.value));
   };
 
+  const handleWeeksInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value);
+    if (!isNaN(value) && value >= 1 && value <= 100) {
+      setWeeksToPredict(value);
+    } else if (e.target.value === '') {
+      setWeeksToPredict(1);
+    }
+  };
+
+  // Funções utilitárias para classes e ícones
+  const getSeverityClasses = (severity: 'low' | 'medium' | 'high') => {
+    switch (severity) {
+      case 'low':
+        return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+      case 'medium':
+        return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+      case 'high':
+        return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+    }
+  };
+
+  const getSeverityIcon = (severity: 'low' | 'medium' | 'high') => {
+    switch (severity) {
+      case 'low':
+        return <CheckCircle className="h-5 w-5" />;
+      case 'medium':
+        return <ActivitySquare className="h-5 w-5" />;
+      case 'high':
+        return <AlertTriangle className="h-5 w-5" />;
+    }
+  };
+
+  const getRiskColor = (risk: RiskLevel) => {
+    switch(risk) {
+        case 'Alto': return 'text-rose-500 font-bold';
+        case 'Médio': return 'text-amber-500 font-medium';
+        case 'Baixo': return 'text-emerald-500';
+    }
+  };
+
+  // Função para gerar o relatório de texto e forçar o download
+  const handleDownloadReport = () => {
+    let content = `
+RELATÓRIO DE FISCALIZAÇÃO - PONTOS DE ATENÇÃO
+
+Data de Emissão: ${new Date().toLocaleDateString('pt-BR')}
+Município: ${apiData?.municipality_name || 'Desconhecido'}
+
+---
+    
+Este documento contém uma lista de locais priorizados pela inteligência artificial para inspeção de campo. A priorização é baseada na análise de fatores climáticos e no histórico de casos.
+
+---
+
+LOCAIS SUGERIDOS PARA INSPEÇÃO:
+
+`;
+
+    mockAddresses.forEach((address, index) => {
+      content += `
+${index + 1}. Endereço: ${address.street}, ${address.neighborhood}
+   Nível de Risco: ${address.risk_level}
+   Fator Principal: ${address.main_risk_factor}
+   Coordenadas: ${address.coords}
+`;
+    });
+
+    content += `
+---
+
+Este relatório é uma ferramenta de apoio. Use seu julgamento profissional e informações de campo para a tomada de decisões.
+    `;
+
+    // Cria um Blob do conteúdo e força o download como um arquivo de texto
+    const blob = new Blob([content], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `relatorio_fiscalizacao_${selectedIbgeCode}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Filtra a lista de endereços com base no estado `filterRisk`
+  const filteredAddresses = useMemo(() => {
+    if (filterRisk === 'Todos') {
+      return mockAddresses;
+    }
+    return mockAddresses.filter(addr => addr.risk_level === filterRisk);
+  }, [filterRisk]);
+
+
+  // Renderiza o conteúdo principal do dashboard
   const renderContent = () => {
     if (loading) {
       return (
@@ -184,10 +325,10 @@ const App = () => {
     }
     if (error) {
       return (
-        <div className="flex flex-col items-center justify-center h-96 text-red-400 bg-red-900/20 rounded-lg">
+        <div className="flex flex-col items-center justify-center h-96 text-red-400 bg-red-900/20 rounded-lg p-6">
           <AlertTriangle className="h-16 w-16" />
           <p className="mt-4 text-lg font-semibold">Erro ao carregar análise</p>
-          <p className="text-sm text-red-300">{error}</p>
+          <p className="text-sm text-red-300 text-center">{error}</p>
         </div>
       );
     }
@@ -199,16 +340,57 @@ const App = () => {
       );
     }
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Coluna Principal: Gráfico e Sumário */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Painel da Esquerda: Gatilhos e Impacto */}
+        <div className="flex flex-col gap-6 order-1 lg:order-1">
           <Card>
             <CardHeader>
-              <CardTitle icon={BarChart3}>Previsão de Casos de Dengue para {apiData.municipality_name}</CardTitle>
-              <CardDescription>Dados históricos (último ano) e previsão gerada pela IA para as próximas semanas.</CardDescription>
+              <CardTitle icon={BrainCircuit}>Gatilhos e Impacto</CardTitle>
+              <CardDescription>Veja a relação entre eventos climáticos e o surgimento dos casos de dengue no tempo.</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <img
+                src={`data:image/png;base64,${apiData.insights.lag_analysis_plot_base64}`}
+                alt="Gráfico de Análise de Gatilhos e Impacto"
+                className="w-full h-auto rounded-md bg-zinc-800"
+              />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle icon={CalendarClock}>Pontos de Atenção</CardTitle>
+              <CardDescription>Saiba quais fatores, como chuva e temperatura, têm o maior impacto e quando agir.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-4">
+                {apiData.insights.tipping_points.map((point, index) => {
+                  const Icon = point.factor === 'Temperatura' ? Thermometer : point.factor === 'Precipitação' ? CloudRain : Droplets;
+                  return (
+                    <li key={index} className="flex items-start gap-4">
+                      <div className="flex-shrink-0 bg-zinc-800 p-2 rounded-full mt-1">
+                        <Icon className="h-5 w-5 text-amber-400" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-zinc-200">{point.factor}</p>
+                        <p className="text-sm text-zinc-400">{point.value}</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Coluna Central: Gráfico de Previsão (bem mais largo) */}
+        <div className="lg:col-span-2 flex flex-col gap-6 order-2 lg:order-2">
+          <Card>
+            <CardHeader>
+              <CardTitle icon={BarChart3}>Previsão de Casos de Dengue</CardTitle>
+              <CardDescription>Dados históricos e previsão da IA para {apiData.municipality_name}.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
                 <AreaChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                   <defs>
                     <linearGradient id="colorHistoric" x1="0" y1="0" x2="0" y2="1">
@@ -238,79 +420,75 @@ const App = () => {
               </ResponsiveContainer>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle icon={Lightbulb}>Sumário Estratégico da IA</CardTitle>
-              <CardDescription>A conclusão principal do modelo para planejamento de ações.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-zinc-300 text-base leading-relaxed">{apiData.insights.strategic_summary}</p>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Coluna Lateral: Insights e Gatilhos */}
-        <div className="flex flex-col gap-6">
+        {/* Painel da Direita: Alertas e Notificações */}
+        <div className="flex flex-col gap-6 order-3 lg:order-3">
           <Card>
             <CardHeader>
-              <CardTitle icon={BrainCircuit}>Análise de Gatilhos (Lag)</CardTitle>
-              <CardDescription>Correlação entre fatores climáticos e os casos de dengue ao longo do tempo.</CardDescription>
+              <CardTitle icon={Bell}>Alertas para Ação</CardTitle>
+              <CardDescription>Sinais importantes para guiar suas ações de campo nas próximas semanas.</CardDescription>
             </CardHeader>
             <CardContent>
-              <img
-                src={`data:image/png;base64,${apiData.insights.lag_analysis_plot_base64}`}
-                alt="Gráfico de Análise de Defasagem"
-                className="w-full h-auto rounded-md bg-zinc-800"
-              />
+              <ul className="space-y-4 mb-4">
+                {apiData.alerts.map((alert, index) => (
+                  <li key={index} className={`flex items-start gap-4 p-4 rounded-lg border ${getSeverityClasses(alert.severity)}`}>
+                    <div className="flex-shrink-0 mt-1">
+                      {getSeverityIcon(alert.severity)}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-zinc-200">{alert.title}</p>
+                      <p className="text-sm text-zinc-400">{alert.description}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </CardContent>
           </Card>
+          
           <Card>
             <CardHeader>
-                <CardTitle icon={CalendarClock}>Pontos de Inflexão</CardTitle>
-                {/* CORRIGIDO: Tag de fechamento com o nome correto */}
-                <CardDescription>Fatores chave e seus tempos de impacto máximo.</CardDescription>
+              <CardTitle icon={Car}>Pontos para Inspeção Prioritária</CardTitle>
+              <CardDescription>Locais com maior probabilidade de foco, baseada na análise da IA. Clique para filtrar por nível de risco.</CardDescription>
             </CardHeader>
-            <CardContent>
-                <ul className="space-y-4">
-                    {apiData.insights.tipping_points.map((point, index) => {
-                        const Icon = point.factor === 'Temperatura' ? Thermometer : point.factor === 'Precipitação' ? CloudRain : Droplets;
-                        return (
-                            <li key={index} className="flex items-start gap-4">
-                                <div className="flex-shrink-0 bg-zinc-800 p-2 rounded-full mt-1">
-                                    <Icon className="h-5 w-5 text-amber-400" />
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-zinc-200">{point.factor}</p>
-                                    <p className="text-sm text-zinc-400">{point.value}</p>
-                                </div>
-                            </li>
-                        );
-                    })}
-                </ul>
+            <CardContent className="space-y-4">
+                <div className="flex gap-2 mb-4">
+                    <button onClick={() => setFilterRisk('Todos')} className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${filterRisk === 'Todos' ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}>Todos</button>
+                    <button onClick={() => setFilterRisk('Alto')} className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${filterRisk === 'Alto' ? 'bg-rose-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}>Alto Risco</button>
+                    <button onClick={() => setFilterRisk('Médio')} className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${filterRisk === 'Médio' ? 'bg-amber-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}>Médio Risco</button>
+                    <button onClick={() => setFilterRisk('Baixo')} className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${filterRisk === 'Baixo' ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}>Baixo Risco</button>
+                </div>
+              <ul className="space-y-4 max-h-64 overflow-y-auto pr-2">
+                {filteredAddresses.map((address, index) => (
+                  <li key={index} className="border border-zinc-800 p-4 rounded-lg flex flex-col gap-1">
+                    <p className="font-semibold text-zinc-200">{address.street}, {address.neighborhood}</p>
+                    <p className="text-sm text-zinc-400">Risco: <span className={`${getRiskColor(address.risk_level)}`}>{address.risk_level}</span></p>
+                    <p className="text-sm text-zinc-400">Fator Principal: {address.main_risk_factor}</p>
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={handleDownloadReport}
+                className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-blue-600 text-white font-semibold rounded-md transition-colors hover:bg-blue-700"
+              >
+                <Download className="h-5 w-5" />
+                Gerar Relatório de Fiscalização
+              </button>
             </CardContent>
-        </Card>
+          </Card>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-300 font-sans p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-extrabold text-white text-center tracking-tight">
-            Painel Preditivo de Dengue
-          </h1>
-          <p className="text-center mt-2 text-lg text-zinc-400">
-            Inteligência Artificial para Antecipação de Riscos e Planejamento Estratégico
-          </p>
-        </header>
-
-        <Card className="mb-8">
-          <div className="p-4 flex flex-col sm:flex-row items-center gap-4">
+    <div className="min-h-screen text-zinc-300 font-sans px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">   
+       <div>
+        <Card className="mb-8 p-4">
+          <div className="flex flex-col sm:flex-row items-center gap-4 justify-between">
             <div className="w-full sm:w-1/2 flex items-center gap-3">
               <label htmlFor="municipality" className="text-zinc-300 font-medium whitespace-nowrap">
-                <MapPin className="inline h-5 w-5 mr-1" />
+                <MapPin className="inline h-5 w-5 mr-1 text-blue-400" />
                 Município:
               </label>
               <select
@@ -325,21 +503,27 @@ const App = () => {
               </select>
             </div>
             <div className="w-full sm:w-1/2 flex items-center gap-3">
-              <label htmlFor="weeks" className="text-zinc-300 font-medium whitespace-nowrap">
-                <CalendarClock className="inline h-5 w-5 mr-1" />
+              <label htmlFor="weeks-slider" className="text-zinc-300 font-medium whitespace-nowrap">
+                <CalendarClock className="inline h-5 w-5 mr-1 text-amber-400" />
                 Prever Semanas:
               </label>
               <input
-                id="weeks"
+                id="weeks-slider"
                 type="range"
-                min="4"
-                max="16"
-                step="4"
+                min="1"
+                max="100"
                 value={weeksToPredict}
                 onChange={handleWeeksChange}
                 className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
               />
-              <span className="font-bold text-white bg-zinc-800 px-3 py-1 rounded-md">{weeksToPredict}</span>
+              <input
+                type="number"
+                value={weeksToPredict}
+                onChange={handleWeeksInputChange}
+                className="w-16 h-10 rounded-md border border-zinc-700 bg-zinc-800 text-center text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                min="1"
+                max="100"
+              />
             </div>
           </div>
         </Card>

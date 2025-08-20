@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import * as Slider from "@radix-ui/react-slider";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import YoloDetectionSection from "@/components/YOLOSummarySection";
 import { FileImage, Info, X, MapPin, Box } from "lucide-react";
 import { API_URL } from "@/lib/config";
 
@@ -227,7 +228,6 @@ export default function Detectar() {
 
         {/* Imagens e resultados */}
         <section className="flex-1">
-          <h2 className="text-4xl font-bold text-center mb-12 animate-fade-in-up">Identificação de Focos</h2>
 
           <div className="space-y-8">
             {images.length === 0 ? (
@@ -358,6 +358,8 @@ export default function Detectar() {
           </div>
         </section>
       </main>
+
+      <YoloDetectionSection></YoloDetectionSection>
 
       <Footer />
 
