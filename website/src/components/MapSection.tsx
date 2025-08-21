@@ -2,17 +2,13 @@
 
 import dynamic from "next/dynamic";
 import { useState, ChangeEvent } from "react";
-import KPIs from "@/components/KPIs";
-import IntensityForm from "@/components/IntensityForm";
-import municipiosData from '../../public/data/municipios.json'; // Importando o arquivo JSON diretamente
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import municipiosData from '../../public/data/municipios.json';
 import { useEffect } from "react";
 import { API_URL } from "@/lib/config";
-import { Crosshair, Plus, Equal, LayoutDashboard, Search, FileJson, Upload, ChevronDown, Download, X } from 'lucide-react';
+import { Search, Upload, ChevronDown, Download, X, FileBarChart2, FileJson } from 'lucide-react';
 
-const DynamicMap = dynamic(() => import("@/components/HeatMap"), {
-  ssr: false,
-});
-
+// Interfaces de Dados
 interface DataPoint {
   lat: number;
   lng: number;
@@ -22,7 +18,6 @@ interface DataPoint {
   detectedObjects: Record<string, number>;
 }
 
-// Interface para os dados do município
 interface Municipio {
   codigo_ibge: number;
   nome: string;
@@ -35,6 +30,53 @@ interface Municipio {
   fuso_horario: string;
 }
 
+const DynamicMap = dynamic(() => import("@/components/HeatMap"), {
+  ssr: false,
+});
+
+const IntensityForm = dynamic(() => import("@/components/IntensityForm"), {
+  ssr: false,
+});
+
+// Componente de Tooltip Customizado para o Gráfico de Barras
+const CustomBarTooltip = ({ active, payload }: { active: boolean; payload: any[] }) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="p-2 bg-zinc-800/90 backdrop-blur-sm rounded-lg border border-zinc-700 shadow-xl text-white text-sm">
+        <p className="font-bold">{`Intensidade ${data.intensity}`}</p>
+        <p className="mt-1">{`Total de Focos: ${data.count}`}</p>
+      </div>
+    );
+  }
+  return null;
+};
+
+// Funções de Análise e Geração de Dados
+const getIntensityColor = (intensity: number) => {
+  const h = (1 - intensity / 10) * 240; // 240 é o valor do matiz para o azul
+  return `hsl(${h}, 80%, 60%)`;
+};
+
+const getIntensityData = (dataPoints: DataPoint[]) => {
+  const intensityCounts = dataPoints.reduce((acc, point) => {
+    const intensity = Math.round(point.intensity);
+    acc[intensity] = (acc[intensity] || 0) + 1;
+    return acc;
+  }, {});
+
+  const data = [];
+  for (let i = 0; i <= 10; i++) {
+    data.push({
+      intensity: i,
+      count: intensityCounts[i] || 0,
+      color: getIntensityColor(i), // Pré-calcula a cor aqui
+    });
+  }
+  return data;
+};
+
+// Componente principal da seção do Mapa
 export default function MapSection() {
   const [dataPoints, setDataPoints] = useState<DataPoint[]>([]);
   const [selectedCoords, setSelectedCoords] = useState<[number, number] | null>(null);
@@ -46,12 +88,9 @@ export default function MapSection() {
   const [jsonImageFilenames, setJsonImageFilenames] = useState<Set<string>>(new Set());
   const [imageFileNames, setImageFileNames] = useState<Set<string>>(new Set());
   const [importWarnings, setImportWarnings] = useState<string[]>([]);
-
-  // Novos estados para a funcionalidade de busca
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCities, setFilteredCities] = useState<Municipio[]>([]);
   const [selectedCityData, setSelectedCityData] = useState<Municipio | null>(null);
-
   const [mapCenter, setMapCenter] = useState<[number, number]>([-15.7801, -47.9292]);
   const [isClient, setIsClient] = useState(false);
 
@@ -63,7 +102,6 @@ export default function MapSection() {
   const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     setSearchTerm(term);
-
     if (term.length > 0) {
       setFilteredCities(
         municipiosData.filter(city =>
@@ -129,7 +167,6 @@ export default function MapSection() {
       };
 
       setDataPoints((prev) => [...prev, newPoint]);
-
       setSelectedCoords(null);
       setImageFile(null);
     } catch {
@@ -149,11 +186,9 @@ export default function MapSection() {
         detectedObjects,
       })
     );
-
     const dataStr = JSON.stringify(exportData, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-
     const a = document.createElement("a");
     a.href = url;
     a.download = "map_data_points.json";
@@ -292,232 +327,282 @@ export default function MapSection() {
     dataPoints.length > 0
       ? (totalIntensity / dataPoints.length).toFixed(2)
       : "0.00";
+  const intensityData = getIntensityData(dataPoints);
 
-      return (
-        <>
-          <section className="text-center mt-8 mb-12 max-w-3xl mx-auto animate-fade-in-up">
-            <h2 className="text-4xl font-bold mb-4 text-white">Análise Inteligente de Focos</h2>
-            <p className="text-zinc-300 text-lg">
-              Essa página tem como principal funcionalidade oferecer uma visão ampla das cidades e focos de possível dengue. Além disso, o upload de imagens e coordenadas possibilita a importação de dados em massa, algo necessário para a avaliação de uma cidade inteira.
-            </p>
-          </section>
-      
-          <div className="flex flex-col lg:flex-row gap-4 mb-12 items-stretch animate-fade-in-up">
-            <div className="flex flex-col gap-4 lg:w-1/5">
-              <div className="flex flex-col gap-4 p-6 bg-zinc-900/80 backdrop-blur-sm rounded-2xl shadow-xl border border-zinc-800">
-                <button
-                  onClick={() => setShowImportModal(true)}
-                  className="bg-green-600 px-4 py-2 rounded-lg text-white font-semibold transition-colors duration-200 hover:bg-green-700 flex items-center justify-center gap-2"
-                >
-                  <Upload size={20} />
-                  Importar Dados
-                </button>
-                <button
-                  onClick={handleExportJson}
-                  className="bg-zinc-700 px-4 py-2 rounded-lg text-white font-semibold transition-colors duration-200 hover:bg-zinc-600 flex items-center justify-center gap-2"
-                >
-                  <Download size={20} />
-                  Exportar JSON
-                </button>
-              </div>
-              <KPIs
-                totalCases={totalIntensity}
-                pointCount={dataPoints.length}
-                avgIntensity={averageIntensity}
+  return (
+    <>
+<div className="w-full p-8 animate-fade-in-up">        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
+          <h2 className="text-4xl font-bold text-white">Análise Inteligente de Focos</h2>
+          <form onSubmit={handleSearchSubmit} className="relative w-full md:w-auto">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Buscar município..."
+                className="w-full p-3 pl-4 pr-12 rounded-full bg-zinc-800 border-2 border-transparent text-white text-base focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                value={searchTerm}
+                onChange={handleSearchChange}
               />
-              <div className="bg-zinc-900/80 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-zinc-800">
-                <h4 className="text-xl font-bold mb-3 text-white">Buscar Município</h4>
-                <form onSubmit={handleSearchSubmit} className="relative">
-                  <input
-                    type="text"
-                    placeholder="Nome do município..."
-                    className="w-full p-3 pl-4 pr-12 rounded-full bg-zinc-800 border-2 border-transparent text-white text-base focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                  />
-                  <button
-                    type="submit"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-colors"
-                  >
-                    <Search size={20} />
-                  </button>
-                </form>
-                {searchTerm && filteredCities.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 z-10 mt-2 p-2 bg-zinc-800 rounded-xl shadow-lg border border-zinc-700 max-h-40 overflow-y-auto">
-                    <ul>
-                      {filteredCities.map((city) => (
-                        <li
-                          key={city.codigo_ibge}
-                          onClick={() => handleSelectCity(city)}
-                          className="p-2 text-zinc-300 text-sm hover:bg-zinc-700 cursor-pointer rounded-lg transition-colors"
-                        >
-                          {city.nome}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+              <button
+                type="submit"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-colors"
+              >
+                <Search size={20} />
+              </button>
+            </div>
+            {searchTerm && filteredCities.length > 0 && (
+              <div className="absolute top-full left-0 right-0 z-10 mt-2 p-2 bg-zinc-800 rounded-lg shadow-lg border border-zinc-700 max-h-40 overflow-y-auto">
+                <ul>
+                  {filteredCities.map((city) => (
+                    <li
+                      key={city.codigo_ibge}
+                      onClick={() => handleSelectCity(city)}
+                      className="p-2 text-zinc-300 text-sm hover:bg-zinc-700 cursor-pointer rounded-lg transition-colors text-left"
+                    >
+                      {city.nome}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </form>
+        </div>
+      
+        <div className="flex flex-col lg:flex-row gap-8 items-stretch">
+          {/* Painel Lateral */}
+          <div className="flex flex-col gap-6 lg:w-1/4 p-6 bg-zinc-900/80 backdrop-blur-sm rounded-lg shadow-xl border border-zinc-800">
+            {/* Botões de Ação */}
+            <div className="flex flex-col gap-4">
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="bg-green-600 px-4 py-3 rounded-lg text-white font-semibold transition-colors duration-200 hover:bg-green-700 flex items-center justify-center gap-2"
+              >
+                <Upload size={20} />
+                Importar Dados
+              </button>
+              <button
+                onClick={handleExportJson}
+                className="bg-zinc-700 px-4 py-3 rounded-lg text-white font-semibold transition-colors duration-200 hover:bg-zinc-600 flex items-center justify-center gap-2"
+              >
+                <Download size={20} />
+                Exportar JSON
+              </button>
+            </div>
+            {/* KPIs */}
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div className="p-4 bg-zinc-800 rounded-lg border border-zinc-700">
+                <p className="text-3xl font-bold text-blue-400">{dataPoints.length}</p>
+                <p className="text-zinc-400 text-sm mt-1">Total de Focos</p>
+              </div>
+              <div className="p-4 bg-zinc-800 rounded-lg border border-zinc-700">
+                <p className="text-3xl font-bold text-red-400">{averageIntensity}</p>
+                <p className="text-zinc-400 text-sm mt-1">Média de Intensidade</p>
               </div>
             </div>
-      
-            <div className="flex-1 rounded-2xl overflow-hidden shadow-xl border border-zinc-800">
-              {isClient ? (
-                <DynamicMap
-                  points={dataPoints}
-                  onMapClick={handleMapClick}
-                  onRemovePoint={handleRemovePoint}
-                  centerCoords={mapCenter}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full min-h-[600px] bg-zinc-900/80 backdrop-blur-sm text-zinc-400 text-lg">
-                  <p>Carregando mapa...</p>
-                </div>
-              )}
+            
+            {/* Gráfico de Barras */}
+            <div>
+              <h4 className="flex items-center gap-2 text-xl font-bold mb-3 text-white">
+                <FileBarChart2 size={20} />
+                Focos por Intensidade
+              </h4>
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={intensityData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                    <XAxis type="number" stroke="#999" tick={{ fill: '#bbb' }} hide />
+                    <YAxis type="category" dataKey="intensity" stroke="#999" tick={{ fill: '#bbb' }} />
+                    <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(120, 119, 198, 0.1)' }} />
+                    <Bar dataKey="count"
+                      fillOpacity={1}
+                      background={{ fill: '#444' }}
+                      fill={(entry) => entry.color} // Agora usa a cor pré-calculada do dado
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
+
+            {/* Legenda de Gradiente */}
+            <div>
+              <div className="flex justify-between items-center text-sm mb-1 text-zinc-400">
+                <span>0</span>
+                <span>10</span>
+              </div>
+              <div className="h-4 w-full rounded-full"
+                style={{
+                  background: "linear-gradient(to right, #3b82f6, #ef4444)",
+                }}
+              />
+              <p className="text-xs text-zinc-500 mt-2 italic">
+                A intensidade do foco varia de 0 (risco baixo) a 10 (risco alto).
+              </p>
+            </div>
+            
+            {/* Informação de atualização */}
+            <p className="text-xs text-zinc-500 mt-auto italic text-center">
+              Última atualização: {new Date().toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}
+            </p>
           </div>
       
-          {showImportModal && (
-            <div
-              className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
-              onClick={closeModal}
-            >
-              <div className="bg-zinc-900/80 backdrop-blur-sm p-8 rounded-2xl w-full max-w-lg relative shadow-xl border border-zinc-800 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
-                <button
-                  onClick={closeModal}
-                  className="absolute top-4 right-4 text-white text-xl hover:text-red-400 transition-colors p-2 rounded-full hover:bg-zinc-800"
-                >
-                  <X size={24} />
-                </button>
-                <h3 className="mb-6 text-2xl font-bold text-white">
-                  Importar JSON + Imagens
-                </h3>
-                <div className="mb-6">
-                  <label
-                    htmlFor="jsonFileInput"
-                    className="flex items-center gap-3 mb-3 text-white font-semibold text-lg"
-                  >
-                    <FileJson size={24} className="text-indigo-400" />
-                    Arquivo JSON
-                  </label>
-                  <input
-                    id="jsonFileInput"
-                    type="file"
-                    accept=".json"
-                    onChange={handleJsonChange}
-                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800 text-zinc-300 p-3 cursor-pointer transition duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                  />
-                </div>
-                <div className="mb-6">
-                  <label
-                    htmlFor="imageFilesInput"
-                    className="flex items-center gap-3 mb-3 text-white font-semibold text-lg"
-                  >
-                    <Upload size={24} className="text-green-400" />
-                    Imagens (múltiplas)
-                  </label>
-                  <input
-                    id="imageFilesInput"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleImagesChange}
-                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800 text-zinc-300 p-3 cursor-pointer transition duration-200 focus:outline-none focus:ring-2 focus:ring-green-500/50"
-                  />
-                </div>
-                {jsonFile && imageFiles && importWarnings.length > 0 && (
-                  <div className="mb-6 p-4 rounded-lg bg-red-900/50 text-red-200 text-sm max-h-40 overflow-auto border border-red-800">
-                    {importWarnings.map((msg, idx) => (
-                      <p key={idx}>{msg}</p>
-                    ))}
-                  </div>
-                )}
-                <details className="mb-6 bg-zinc-800/80 backdrop-blur-sm rounded-lg p-4 text-sm text-zinc-300 border border-zinc-700">
-                  <summary className="cursor-pointer font-bold text-base mb-2 text-white flex items-center gap-2">
-                    <ChevronDown size={20} className="text-zinc-500"/>
-                    Ver modelo de JSON aceito
-                  </summary>
-                  <div className="mt-2 space-y-3 text-zinc-400">
-                    <p>O arquivo JSON deve conter uma lista com as chaves:</p>
-                    <ul className="list-disc list-inside space-y-2 text-zinc-400">
-                      <li>
-                        <strong>lat</strong> e <strong>lng</strong>: coordenadas do
-                        ponto, no formato decimal.
-                      </li>
-                      <li>
-                        <strong>imageFilename</strong>: nome do arquivo da imagem
-                        correspondente.
-                      </li>
-                      <li>
-                        <strong>intensity</strong> (opcional):
-                        <span className="text-yellow-400">
-                          ⚠️ Se você estiver criando o JSON externamente, **não
-                          manipule esse campo**.
-                        </span>
-                      </li>
-                      <li>
-                        <strong>detectedObjects</strong> (opcional):
-                        <span className="text-yellow-400">
-                          ⚠️ Se você estiver criando o JSON externamente, **não
-                          manipule esse campo**.
-                        </span>
-                      </li>
-                    </ul>
-                    <p className="text-zinc-500">
-                      Caso algum campo opcional não esteja presente, a IA calculará
-                      os valores.
-                    </p>
-                    <pre className="whitespace-pre-wrap font-mono bg-zinc-900/50 p-3 rounded-lg border border-zinc-700 overflow-auto text-zinc-300 text-xs">
-                      {`[
-        {
-          "lat": -23.54395455873987,
-          "lng": -46.625904487997225,
-          "intensity": 9,
-          "imageFilename": "img-54.png",
-          "detectedObjects": {
-            "caixa_agua": 3
-          }
-        },
-        {
-          "lat": -23.555206120737367,
-          "lng": -46.66365382056169,
-          "imageFilename": "img-8.png",
-          "detectedObjects": {
-            "carro": 94,
-            "piscina": 9
-          }
-        }
-      ]`}
-                    </pre>
-                  </div>
-                </details>
-                <button
-                  onClick={handleImport}
-                  disabled={!jsonFile || !imageFiles || imageFiles.length === 0}
-                  className={`w-full py-3 rounded-xl text-white font-bold transition-colors duration-200 ${
-                    jsonFile && imageFiles?.length
-                      ? "bg-green-600 hover:bg-green-700"
-                      : "bg-zinc-700 text-zinc-400 cursor-not-allowed"
-                  }`}
-                >
-                  Importar
-                </button>
+          {/* Seção do Mapa */}
+          <div className="flex-1 rounded-lg overflow-hidden shadow-xl border border-zinc-800 min-h-[600px]">
+            {isClient ? (
+              <DynamicMap
+                points={dataPoints}
+                onMapClick={handleMapClick}
+                onRemovePoint={handleRemovePoint}
+                centerCoords={mapCenter}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full min-h-[600px] bg-zinc-900/80 backdrop-blur-sm text-zinc-400 text-lg">
+                <p>Carregando mapa...</p>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+        </div>
+      </div>
       
-          {selectedCoords && (
-            <IntensityForm
-              selectedCoords={selectedCoords}
-              onAdd={handleAddPoint}
-              onCancel={() => {
-                setSelectedCoords(null);
-                setImageFile(null);
-              }}
-              imageFile={imageFile}
-              setImageFile={setImageFile}
-              uploading={uploading}
-            />
-          )}
-        </>
-      );
+      {showImportModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+          onClick={closeModal}
+        >
+          <div className="bg-zinc-900/80 backdrop-blur-sm p-8 rounded-lg w-full max-w-lg relative shadow-xl border border-zinc-800 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={closeModal}
+              className="absolute top-4 right-4 text-white text-xl hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-zinc-800"
+            >
+              <X size={24} />
+            </button>
+            <h3 className="mb-6 text-2xl font-bold text-white">
+              Importar JSON + Imagens
+            </h3>
+            <div className="mb-6">
+              <label
+                htmlFor="jsonFileInput"
+                className="flex items-center gap-3 mb-3 text-white font-semibold text-lg"
+              >
+                <FileJson size={24} className="text-indigo-400" />
+                Arquivo JSON
+              </label>
+              <input
+                id="jsonFileInput"
+                type="file"
+                accept=".json"
+                onChange={handleJsonChange}
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 text-zinc-300 p-3 cursor-pointer transition duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              />
+            </div>
+            <div className="mb-6">
+              <label
+                htmlFor="imageFilesInput"
+                className="flex items-center gap-3 mb-3 text-white font-semibold text-lg"
+              >
+                <Upload size={24} className="text-green-400" />
+                Imagens (múltiplas)
+              </label>
+              <input
+                id="imageFilesInput"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImagesChange}
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 text-zinc-300 p-3 cursor-pointer transition duration-200 focus:outline-none focus:ring-2 focus:ring-green-500/50"
+              />
+            </div>
+            {jsonFile && imageFiles && importWarnings.length > 0 && (
+              <div className="mb-6 p-4 rounded-lg bg-red-900/50 text-red-200 text-sm max-h-40 overflow-auto border border-red-800">
+                {importWarnings.map((msg, idx) => (
+                  <p key={idx}>{msg}</p>
+                ))}
+              </div>
+            )}
+            <details className="mb-6 bg-zinc-800/80 backdrop-blur-sm rounded-lg p-4 text-sm text-zinc-300 border border-zinc-700">
+              <summary className="cursor-pointer font-bold text-base mb-2 text-white flex items-center gap-2">
+                <ChevronDown size={20} className="text-zinc-500"/>
+                Ver modelo de JSON aceito
+              </summary>
+              <div className="mt-2 space-y-3 text-zinc-400">
+                <p>O arquivo JSON deve conter uma lista com as chaves:</p>
+                <ul className="list-disc list-inside space-y-2 text-zinc-400">
+                  <li>
+                    <strong>lat</strong> e <strong>lng</strong>: coordenadas do
+                    ponto, no formato decimal.
+                  </li>
+                  <li>
+                    <strong>imageFilename</strong>: nome do arquivo da imagem
+                    correspondente.
+                  </li>
+                  <li>
+                    <strong>intensity</strong> (opcional):
+                    <span className="text-yellow-400">
+                      ⚠️ Se você estiver criando o JSON externamente, **não
+                      manipule esse campo**.
+                    </span>
+                  </li>
+                  <li>
+                    <strong>detectedObjects</strong> (opcional):
+                    <span className="text-yellow-400">
+                      ⚠️ Se você estiver criando o JSON externamente, **não
+                      manipule esse campo**.
+                    </span>
+                  </li>
+                </ul>
+                <p className="text-zinc-500">
+                  Caso algum campo opcional não esteja presente, a IA calculará
+                  os valores.
+                </p>
+                <pre className="whitespace-pre-wrap font-mono bg-zinc-900/50 p-3 rounded-lg border border-zinc-700 overflow-auto text-zinc-300 text-xs">
+                  {`[
+    {
+      "lat": -23.54395455873987,
+      "lng": -46.625904487997225,
+      "intensity": 9,
+      "imageFilename": "img-54.png",
+      "detectedObjects": {
+        "caixa_agua": 3
+      }
+    },
+    {
+      "lat": -23.555206120737367,
+      "lng": -46.66365382056169,
+      "imageFilename": "img-8.png",
+      "detectedObjects": {
+        "carro": 94,
+        "piscina": 9
+      }
+    }
+  ]`}
+                </pre>
+              </div>
+            </details>
+            <button
+              onClick={handleImport}
+              disabled={!jsonFile || !imageFiles || imageFiles.length === 0}
+              className={`w-full py-3 rounded-lg text-white font-bold transition-colors duration-200 ${
+                jsonFile && imageFiles?.length
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+              }`}
+            >
+              Importar
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {selectedCoords && (
+        <IntensityForm
+          selectedCoords={selectedCoords}
+          onAdd={handleAddPoint}
+          onCancel={() => {
+            setSelectedCoords(null);
+            setImageFile(null);
+          }}
+          imageFile={imageFile}
+          setImageFile={setImageFile}
+          uploading={uploading}
+        />
+      )}
+    </>
+  );
 }
