@@ -1,0 +1,51 @@
+[
+  {
+    "lat": -15.789,
+    "lng": -47.9297,
+    "imageFilename": "img1.png"
+  },
+  {
+    "lat": -15.788,
+    "lng": -47.9297,
+    "imageFilename": "img2.png"
+  },
+  {
+    "lat": -15.787,
+    "lng": -47.9297,
+    "imageFilename": "img3.png"
+  },
+  {
+    "lat": -15.786,
+    "lng": -47.9297,
+    "imageFilename": "img4.png"
+  },
+  {
+    "lat": -15.785,
+    "lng": -47.9297,
+    "imageFilename": "img1.png"
+  },
+  {
+    "lat": -15.784,
+    "lng": -47.9297,
+    "imageFilename": "img2.png"
+  },
+  {
+    "lat": -15.783,
+    "lng": -47.9297,
+    "imageFilename": "img3.png"
+  },
+  {
+    "lat": -15.782,
+    "lng": -47.9297,
+    "imageFilename": "img4.png"
+  },
+  {
+    "lat": -15.782,
+    "lng": -47.928,
+    "intensity": 10,
+    "imageFilename": "img1.png",
+    "detectedObjects": {
+      "caixa_agua": 999
+    }
+  }
+]

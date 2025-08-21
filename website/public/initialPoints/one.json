@@ -1,0 +1,11 @@
+[
+    {
+      "lat": -22.8954,
+      "lng": -47.0743,
+      "intensity": 9,
+      "imageFilename": "img1.png",
+      "detectedObjects": {
+        "caixa_agua": 999
+      }
+    }
+  ]

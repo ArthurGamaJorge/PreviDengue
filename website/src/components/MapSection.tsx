@@ -1,12 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState, ChangeEvent } from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { useState, ChangeEvent, useEffect, useMemo, use } from "react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, TooltipProps, Cell } from 'recharts';
 import municipiosData from '../../public/data/municipios.json';
-import { useEffect } from "react";
 import { API_URL } from "@/lib/config";
-import { Search, Upload, ChevronDown, Download, X, FileBarChart2, FileJson } from 'lucide-react';
+import { Search, Upload, ChevronDown, Download, X, FileBarChart2, FileJson, Loader2 } from 'lucide-react';
 
 // Interfaces de Dados
 interface DataPoint {
@@ -30,6 +29,20 @@ interface Municipio {
   fuso_horario: string;
 }
 
+interface ChartData {
+  intensity: number;
+  count: number;
+  color: string;
+}
+
+// NOVO: Interface para as props do componente MapSection
+interface MapSectionProps {
+  dataPoints: DataPoint[];
+  onDataChange: (newData: DataPoint[]) => void;
+  selectedCity: Municipio;
+  onCityChange: (newCity: Municipio) => void;
+}
+
 const DynamicMap = dynamic(() => import("@/components/HeatMap"), {
   ssr: false,
 });
@@ -39,9 +52,9 @@ const IntensityForm = dynamic(() => import("@/components/IntensityForm"), {
 });
 
 // Componente de Tooltip Customizado para o Gráfico de Barras
-const CustomBarTooltip = ({ active, payload }: { active: boolean; payload: any[] }) => {
+const CustomBarTooltip = ({ active, payload }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
-    const data = payload[0].payload;
+    const data = payload[0].payload as ChartData;
     return (
       <div className="p-2 bg-zinc-800/90 backdrop-blur-sm rounded-lg border border-zinc-700 shadow-xl text-white text-sm">
         <p className="font-bold">{`Intensidade ${data.intensity}`}</p>
@@ -54,31 +67,31 @@ const CustomBarTooltip = ({ active, payload }: { active: boolean; payload: any[]
 
 // Funções de Análise e Geração de Dados
 const getIntensityColor = (intensity: number) => {
-  const h = (1 - intensity / 10) * 240; // 240 é o valor do matiz para o azul
-  return `hsl(${h}, 80%, 60%)`;
+  const hue = (1 - intensity / 10) * 240;
+  return `hsl(${hue}, 80%, 50%)`;
 };
 
 const getIntensityData = (dataPoints: DataPoint[]) => {
-  const intensityCounts = dataPoints.reduce((acc, point) => {
+  const intensityCounts = dataPoints.reduce((acc: Record<number, number>, point) => {
     const intensity = Math.round(point.intensity);
     acc[intensity] = (acc[intensity] || 0) + 1;
     return acc;
   }, {});
 
-  const data = [];
+  const data: ChartData[] = [];
   for (let i = 0; i <= 10; i++) {
     data.push({
       intensity: i,
       count: intensityCounts[i] || 0,
-      color: getIntensityColor(i), // Pré-calcula a cor aqui
+      color: getIntensityColor(i),
     });
   }
   return data;
 };
 
 // Componente principal da seção do Mapa
-export default function MapSection() {
-  const [dataPoints, setDataPoints] = useState<DataPoint[]>([]);
+export default function MapSection({ dataPoints, onDataChange, selectedCity, onCityChange }: MapSectionProps) {
+  const [isImporting, setIsImporting] = useState(false);
   const [selectedCoords, setSelectedCoords] = useState<[number, number] | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -88,16 +101,22 @@ export default function MapSection() {
   const [jsonImageFilenames, setJsonImageFilenames] = useState<Set<string>>(new Set());
   const [imageFileNames, setImageFileNames] = useState<Set<string>>(new Set());
   const [importWarnings, setImportWarnings] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(selectedCity.nome);
   const [filteredCities, setFilteredCities] = useState<Municipio[]>([]);
-  const [selectedCityData, setSelectedCityData] = useState<Municipio | null>(null);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([-15.7801, -47.9292]);
+  
+  // NOVO: mapa já começa na cidade selecionada
+  const [mapCenter, setMapCenter] = useState<[number, number]>([selectedCity.latitude, selectedCity.longitude]);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
+  // NOVO: Atualiza o centro do mapa quando a cidade selecionada muda
+  useEffect(() => {
+    setMapCenter([selectedCity.latitude, selectedCity.longitude]);
+  }, [selectedCity]);
+  
   // Lógica de busca e seleção de municípios
   const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
@@ -114,23 +133,26 @@ export default function MapSection() {
   };
 
   const handleSelectCity = (city: Municipio) => {
-    setSelectedCityData(city);
+    // NOVO: Chama a função do componente pai para atualizar a cidade
+    onCityChange(city);
     setSearchTerm(city.nome);
     setFilteredCities([]);
   };
 
   const handleSearchSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (selectedCityData) {
-      setMapCenter([selectedCityData.latitude, selectedCityData.longitude]);
+    const city = municipiosData.find(c => c.nome.toLowerCase() === searchTerm.toLowerCase());
+    if (city) {
+      onCityChange(city);
     }
   };
 
-  // Lógica de manipulação de dados para a seção do mapa
+  // Lógica de manipulação de dados para a seção do Mapa
   const handleMapClick = (e: [number, number]) => setSelectedCoords(e);
 
   const handleRemovePoint = (index: number) => {
-    setDataPoints((prev) => prev.filter((_, i) => i !== index));
+    // Usa a prop onDataChange para atualizar o estado no componente pai
+    onDataChange(dataPoints.filter((_, i) => i !== index));
   };
 
   const handleAddPoint = async () => {
@@ -166,7 +188,8 @@ export default function MapSection() {
         detectedObjects: data.contagem ?? {},
       };
 
-      setDataPoints((prev) => [...prev, newPoint]);
+      // Usa a prop onDataChange para atualizar o estado no componente pai
+      onDataChange([...dataPoints, newPoint]);
       setSelectedCoords(null);
       setImageFile(null);
     } catch {
@@ -254,6 +277,7 @@ export default function MapSection() {
 
   const handleImport = async () => {
     if (!jsonFile || !imageFiles) return;
+    setIsImporting(true);
     try {
       const reader = new FileReader();
       reader.onload = async () => {
@@ -298,10 +322,12 @@ export default function MapSection() {
               intensity,
             });
           }
-          setDataPoints(updatedData);
+          // Usa a prop onDataChange para atualizar o estado no componente pai
+          onDataChange(updatedData);
           setShowImportModal(false);
           setJsonFile(null);
           setImageFiles(null);
+          setIsImporting(false); 
         } catch (err) {
           console.error(err);
           alert("Erro ao importar dados. Verifique o JSON e as imagens.");
@@ -310,7 +336,7 @@ export default function MapSection() {
       reader.readAsText(jsonFile);
     } catch {
       alert("Erro ao processar arquivo.");
-    }
+    } 
   };
 
   const closeModal = () => {
@@ -322,16 +348,14 @@ export default function MapSection() {
     setImageFileNames(new Set());
   };
 
-  const totalIntensity = dataPoints.reduce((sum, p) => sum + p.intensity, 0);
-  const averageIntensity =
-    dataPoints.length > 0
-      ? (totalIntensity / dataPoints.length).toFixed(2)
-      : "0.00";
-  const intensityData = getIntensityData(dataPoints);
+  const totalIntensity = useMemo(() => dataPoints.reduce((sum, p) => sum + p.intensity, 0), [dataPoints]);
+  const averageIntensity = useMemo(() => dataPoints.length > 0 ? (totalIntensity / dataPoints.length).toFixed(2) : "0.00", [totalIntensity, dataPoints.length]);
+  const intensityData = useMemo(() => getIntensityData(dataPoints), [dataPoints]);
 
   return (
     <>
-<div className="w-full p-8 animate-fade-in-up">        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
+      <div className="w-full p-8 animate-fade-in-up">        
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
           <h2 className="text-4xl font-bold text-white">Análise Inteligente de Focos</h2>
           <form onSubmit={handleSearchSubmit} className="relative w-full md:w-auto">
             <div className="relative">
@@ -411,11 +435,11 @@ export default function MapSection() {
                     <XAxis type="number" stroke="#999" tick={{ fill: '#bbb' }} hide />
                     <YAxis type="category" dataKey="intensity" stroke="#999" tick={{ fill: '#bbb' }} />
                     <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(120, 119, 198, 0.1)' }} />
-                    <Bar dataKey="count"
-                      fillOpacity={1}
-                      background={{ fill: '#444' }}
-                      fill={(entry) => entry.color} // Agora usa a cor pré-calculada do dado
-                    />
+                    <Bar dataKey="count" fill="#8884d8" background={{ fill: '#444' }}>
+                        {intensityData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -429,7 +453,7 @@ export default function MapSection() {
               </div>
               <div className="h-4 w-full rounded-full"
                 style={{
-                  background: "linear-gradient(to right, #3b82f6, #ef4444)",
+                  background: "linear-gradient(to right, hsl(240, 80%, 50%), hsl(120, 80%, 50%), hsl(60, 80%, 50%), hsl(30, 80%, 50%), hsl(0, 80%, 50%))",
                 }}
               />
               <p className="text-xs text-zinc-500 mt-2 italic">
@@ -577,14 +601,21 @@ export default function MapSection() {
             </details>
             <button
               onClick={handleImport}
-              disabled={!jsonFile || !imageFiles || imageFiles.length === 0}
-              className={`w-full py-3 rounded-lg text-white font-bold transition-colors duration-200 ${
-                jsonFile && imageFiles?.length
+              disabled={!jsonFile || !imageFiles || imageFiles.length === 0 || isImporting}
+              className={`w-full py-3 rounded-lg text-white font-bold transition-colors duration-200 flex items-center justify-center ${
+                (jsonFile && imageFiles?.length && !isImporting)
                   ? "bg-green-600 hover:bg-green-700"
                   : "bg-zinc-700 text-zinc-400 cursor-not-allowed"
               }`}
             >
-              Importar
+              {isImporting ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Importando...
+                </>
+              ) : (
+                'Importar'
+              )}
             </button>
           </div>
         </div>
