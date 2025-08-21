@@ -8,15 +8,15 @@ import httpx
 import aiofiles
 import aiofiles.os
 
-INPUT_FILE = "./data/prev/municipios.json"
-OUTPUT_FILE = "./data/dadosClimaticos.csv"
+INPUT_FILE = "../municipios/municipios.json"
+OUTPUT_FILE = "../dadosClimaticos.csv"
 PARAMETERS = ["T2M", "T2M_MAX", "T2M_MIN", "PRECTOTCORR", "RH2M", "ALLSKY_SFC_SW_DWN"]
 MAX_REQUESTS_PER_MINUTE = 125
 CONCURRENT_TASKS = 30
 MAX_RETRIES = 5
 
 # Aqui você coloca a semana final que quer atualizar, tipo 2025 semana 32
-UPDATE_UNTIL_WEEK = Week(2025, 32)
+UPDATE_UNTIL_WEEK = Week(2025, 33)
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
