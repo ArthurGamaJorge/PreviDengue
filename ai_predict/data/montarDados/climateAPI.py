@@ -15,7 +15,6 @@ MAX_REQUESTS_PER_MINUTE = 125
 CONCURRENT_TASKS = 30
 MAX_RETRIES = 5
 
-# Aqui você coloca a semana final que quer atualizar, tipo 2025 semana 32
 UPDATE_UNTIL_WEEK = Week(2025, 33)
 
 logging.getLogger("httpx").setLevel(logging.WARNING)

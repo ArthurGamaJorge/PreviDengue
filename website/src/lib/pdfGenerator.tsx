@@ -141,8 +141,8 @@ const getOptimizedRoute = (addresses: PrioritizedAddress[]) => {
     }
 
     const startPoint = addresses.find(addr => addr.risk_level === 'Alto') || addresses[0];
-    let unvisited = [...addresses].filter(addr => addr !== startPoint);
-    let route = [startPoint];
+    const unvisited = [...addresses].filter(addr => addr !== startPoint);
+    const route = [startPoint];
     let currentPoint = startPoint;
 
     while (unvisited.length > 0) {

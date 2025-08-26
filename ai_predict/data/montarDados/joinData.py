@@ -11,9 +11,10 @@ DATA_PREV_PATH = "./data/prev"
 CLIMATE_PATH = "./data/dadosClimaticos.parquet"
 STATES_JSON_PATH = "./data/prev/estados.json"
 MUNICIPIOS_JSON_PATH = "./data/prev/municipios.json"
-OUTPUT_PATH = "./data/inference_data.parquet" # Nome do arquivo de saída alterado
 
-# --- Funções auxiliares (sem alteração) ---
+OUTPUT_PATH = "./data/final_training_data.parquet" 
+#OUTPUT_PATH = "./data/inference_data.parquet" 
+
 def max_epi_week(year):
     day = datetime.date(year, 12, 31)
     while day.year >= year - 1:
@@ -186,9 +187,6 @@ def create_inference_df(df_prev, df_climate, municipios_list, limit_year, last_c
 
 
 def main():
-    ### MODIFICADO: Defina aqui o ano e a última semana com dados de casos ###
-    # Exemplo: Usar casos até a semana 20 de 2025.
-    # As semanas 21, 22, 23... de 2025 terão 'numero_casos' como NaN.
     LIMIT_YEAR = 2025
     LAST_CASES_WEEK = 20
 

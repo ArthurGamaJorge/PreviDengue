@@ -97,7 +97,7 @@ const YoloDetectionSection = () => {
                   </span>
                   <h4 className="font-semibold text-white mb-1">Visão Holística</h4>
                   <p className="text-xs text-zinc-400">
-                    O modelo 'vê' a imagem inteira de uma só vez, o que reduz erros de contexto.
+                    O modelo &apos;vê&apos; a imagem inteira de uma só vez, o que reduz erros de contexto.
                   </p>
                 </div>
               </div>
@@ -174,7 +174,7 @@ const YoloDetectionSection = () => {
                     <tr className="border-b border-zinc-700 text-zinc-300">
                       <td className="py-3 px-4 font-mono">image_path</td>
                       <td className="py-3 px-4">string</td>
-                      <td className="py-3 px-4">"car_01.jpg"</td>
+                      <td className="py-3 px-4">&quot;car_01.jpg&quot;</td>
                       <td className="py-3 px-4">Localização do arquivo de imagem.</td>
                     </tr>
                     <tr className="border-b border-zinc-700 bg-zinc-850 text-zinc-300">

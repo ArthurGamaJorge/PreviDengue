@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useMemo, ChangeEvent } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { BarChart3, Bot, AlertTriangle } from 'lucide-react';
-import { API_URL } from "@/lib/config";
+
+// ✅ CORREÇÃO: A variável API_URL foi movida para cá para resolver o erro de importação.
+// Substitua este valor pelo endereço do seu backend se for diferente.
+const API_URL = "http://127.0.0.1:8000";
 
 // --- Interfaces de Tipagem para Dados da API ---
 interface HistoricData {
   date: string;
-  cases: number;
+  cases: number | null;
 }
 
 interface PredictedData {
@@ -23,7 +26,6 @@ interface ApiData {
 interface Municipality {
   codigo_ibge: number;
   nome: string;
-  // Outros campos do JSON podem ser adicionados aqui se necessário
 }
 
 // --- Componentes de UI (Estilo Shadcn/ui) com Tipagem ---
@@ -39,27 +41,25 @@ const Card = ({ children, className = '' }: CardProps) => (
 
 interface CardHeaderProps {
   children: React.ReactNode;
-  className?: string; // Adicionado a propriedade className
+  className?: string;
 }
 const CardHeader = ({ children, className = '' }: CardHeaderProps) => <div className={`p-6 ${className}`}>{children}</div>;
 
 interface CardTitleProps {
   children: React.ReactNode;
   icon?: React.ComponentType<{ className?: string }>;
-  className?: string;
 }
-const CardTitle = ({ children, icon: Icon, className = '' }: CardTitleProps) => (
+const CardTitle = ({ children, icon: Icon }: CardTitleProps) => (
   <div className="flex items-center gap-3">
-    {Icon && <Icon className={`h-7 w-7 text-blue-400 ${className}`} />}
-    <h3 className={`text-xl font-bold text-white tracking-tight ${className}`}>{children}</h3>
+    {Icon && <Icon className="h-7 w-7 text-blue-400" />}
+    <h3 className="text-xl font-bold text-white tracking-tight">{children}</h3>
   </div>
 );
 
 interface CardContentProps {
   children: React.ReactNode;
-  className?: string;
 }
-const CardContent = ({ children, className = '' }: CardContentProps) => <div className={`p-6 pt-0 ${className}`}>{children}</div>;
+const CardContent = ({ children }: CardContentProps) => <div className="p-6 pt-0">{children}</div>;
 
 // --- Novo tipo unificado para os dados do gráfico ---
 interface ChartPoint {
@@ -71,23 +71,28 @@ interface ChartPoint {
 const ChartSectionExample = () => {
   const [allMunicipalities, setAllMunicipalities] = useState<Municipality[]>([]);
   // Define Campinas (3509502) como valor inicial padrão
-  const [selectedIbgeCode, setSelectedIbgeCode] = useState<number>(3509502); 
-  const [weeksToPredict, setWeeksToPredict] = useState<number>(4);
+  const [selectedIbgeCode, setSelectedIbgeCode] = useState<number>(3509502);
   const [apiData, setApiData] = useState<ApiData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentWeeks, setCurrentWeeks] = useState<number>(4);
+  const [weeksToDisplay, setWeeksToDisplay] = useState<number>(8); // Controla a exibição
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // Efeito para buscar a lista de municípios e definir a cidade inicial
+  // Efeito para buscar a lista de municípios
   useEffect(() => {
     const fetchMunicipalities = async () => {
       try {
+        // Ajuste o caminho se o seu arquivo estiver em outro local
         const response = await fetch('/data/municipios.json');
         if (!response.ok) throw new Error("Failed to fetch municipalities data.");
         const data: Municipality[] = await response.json();
         setAllMunicipalities(data);
+        // Pré-preenche o campo de busca com o nome da cidade inicial
+        const initialCity = data.find(m => m.codigo_ibge === 3509502);
+        if (initialCity) {
+          setSearchQuery(initialCity.nome);
+        }
       } catch (e: any) {
         console.error("Erro ao carregar lista de municípios:", e);
       }
@@ -95,28 +100,30 @@ const ChartSectionExample = () => {
     fetchMunicipalities();
   }, []);
 
-  // Efeito para buscar dados da API sempre que o município ou semanas mudarem
+  // Efeito para buscar dados da API sempre que o município mudar
   useEffect(() => {
+    if (!selectedIbgeCode) return;
+
     const fetchData = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(API_URL + '/predict/', {
+        const response = await fetch(`${API_URL}/predict/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ibge_code: selectedIbgeCode,
-            weeks_to_predict: weeksToPredict,
           }),
         });
 
         if (!response.ok) {
           const errData = await response.json();
-          throw new Error(errData.detail || `HTTP error! status: ${response.status}`);
+          throw new Error(errData.error || `HTTP error! status: ${response.status}`);
         }
         const data: ApiData = await response.json();
         setApiData(data);
-      } catch (e: any) {
+      } catch (e: any)
+      {
         console.error("Falha ao buscar dados da API:", e);
         setError(e.message);
       } finally {
@@ -124,45 +131,45 @@ const ChartSectionExample = () => {
       }
     };
     fetchData();
-  }, [selectedIbgeCode, weeksToPredict]);
+  }, [selectedIbgeCode]);
 
   // Memoização dos dados do gráfico
   const chartData = useMemo(() => {
     if (!apiData?.historic_data || !apiData?.predicted_data) return [];
 
-    const formattedHistoric: ChartPoint[] = apiData.historic_data.map(d => ({
+    const historicDataCleaned = apiData.historic_data.filter(d => d.cases !== null);
+
+    const formattedHistoric: ChartPoint[] = historicDataCleaned.map(d => ({
       date: new Date(d.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
       'Casos Reais': d.cases,
       'Previsão da IA': null,
     }));
 
-    const formattedPrediction: ChartPoint[] = apiData.predicted_data.map(d => ({
+    const slicedPrediction = apiData.predicted_data.slice(0, weeksToDisplay);
+
+    const formattedPrediction: ChartPoint[] = slicedPrediction.map(d => ({
       date: new Date(d.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
       'Casos Reais': null,
       'Previsão da IA': d.predicted_cases
     }));
 
-    let finalChartData = [...formattedHistoric];
-
     if (formattedHistoric.length > 0 && formattedPrediction.length > 0) {
-      const lastHistoricCases = formattedHistoric[formattedHistoric.length - 1]['Casos Reais'];
+      const lastHistoricPoint = formattedHistoric[formattedHistoric.length - 1];
       const connectionPoint: ChartPoint = {
-        date: formattedHistoric[formattedHistoric.length - 1].date,
-        'Casos Reais': lastHistoricCases,
-        'Previsão da IA': lastHistoricCases,
+        ...lastHistoricPoint,
+        'Previsão da IA': lastHistoricPoint['Casos Reais'],
       };
-      finalChartData.push(connectionPoint);
+      formattedPrediction.unshift(connectionPoint);
     }
 
-    finalChartData = finalChartData.concat(formattedPrediction);
-    return finalChartData;
-  }, [apiData]);
+    return [...formattedHistoric, ...formattedPrediction];
+  }, [apiData, weeksToDisplay]);
 
   // Memoização da lista de municípios filtrados
   const filteredMunicipalities = useMemo(() => {
     if (searchQuery.length < 2) return [];
     return allMunicipalities.filter(m => 
-      m.nome.toLowerCase().startsWith(searchQuery.toLowerCase())
+      m.nome.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [allMunicipalities, searchQuery]);
 
@@ -173,12 +180,8 @@ const ChartSectionExample = () => {
   };
   
   const handleWeeksChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setCurrentWeeks(Number(e.target.value));
+    setWeeksToDisplay(Number(e.target.value));
   };
-  
-  const handleSliderMouseUp = () => {
-      setWeeksToPredict(currentWeeks);
-  }
   
   const getMunicipalityName = (ibgeCode: number) => {
     return allMunicipalities.find(m => m.codigo_ibge === ibgeCode)?.nome || "Carregando...";
@@ -235,8 +238,8 @@ const ChartSectionExample = () => {
             }}
           />
           <Legend wrapperStyle={{ fontSize: "14px" }} />
-          <Area type="monotone" dataKey="Casos Reais" name="Casos Reais" stroke="#3b82f6" fillOpacity={1} fill="url(#colorHistoric)" strokeWidth={2} />
-          <Area type="monotone" dataKey="Previsão da IA" name="Previsão da IA" stroke="#f59e0b" fillOpacity={1} fill="url(#colorPrediction)" strokeWidth={2} />
+          <Area type="monotone" dataKey="Casos Reais" stroke="#3b82f6" fillOpacity={1} fill="url(#colorHistoric)" strokeWidth={2} connectNulls />
+          <Area type="monotone" dataKey="Previsão da IA" stroke="#f59e0b" fillOpacity={1} fill="url(#colorPrediction)" strokeWidth={2} />
         </AreaChart>
       </ResponsiveContainer>
     );
@@ -245,20 +248,20 @@ const ChartSectionExample = () => {
   return (
     <div className="mt-6 text-zinc-300 font-sans">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col md:flex-row items-center justify-between gap-4">
           <CardTitle icon={BarChart3}>
-            Previsão de Casos de Dengue de {getMunicipalityName(selectedIbgeCode)}
+            Previsão de Casos de Dengue: {getMunicipalityName(selectedIbgeCode)}
           </CardTitle>
-          <div className="flex items-center gap-4">
-            <div className="relative">
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+            <div className="relative w-full sm:w-48">
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setShowDropdown(true); }}
                 onFocus={() => setShowDropdown(true)}
                 onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                 placeholder="Pesquisar cidade..."
-                className="bg-zinc-800 border border-zinc-700 text-white rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+                className="bg-zinc-800 border border-zinc-700 text-white rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
               />
               {showDropdown && filteredMunicipalities.length > 0 && (
                 <ul className="absolute z-10 w-full bg-zinc-800 border border-zinc-700 rounded-md mt-1 max-h-48 overflow-y-auto">
@@ -274,28 +277,20 @@ const ChartSectionExample = () => {
                 </ul>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <label htmlFor="weeks-slider" className="text-zinc-300 text-sm whitespace-nowrap">Prever Semanas:</label>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <label htmlFor="weeks-slider" className="text-zinc-300 text-sm whitespace-nowrap">Semanas:</label>
               <input
                 id="weeks-slider"
                 type="range"
                 min="1"
-                max="4"
-                value={currentWeeks}
+                max="8"
+                value={weeksToDisplay}
                 onChange={handleWeeksChange}
-                onMouseUp={handleSliderMouseUp}
-                onTouchEnd={handleSliderMouseUp}
-                className="w-24 h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                className="w-full sm:w-24 h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
               />
-              <input
-                type="number"
-                value={currentWeeks}
-                onChange={(e) => setCurrentWeeks(Number(e.target.value))}
-                onBlur={handleSliderMouseUp}
-                className="w-12 h-8 rounded-md border border-zinc-700 bg-zinc-800 text-center text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                min="1"
-                max="4"
-              />
+              <span className="w-12 h-8 flex items-center justify-center rounded-md border border-zinc-700 bg-zinc-800 text-white text-sm">
+                {weeksToDisplay}
+              </span>
             </div>
           </div>
         </CardHeader>

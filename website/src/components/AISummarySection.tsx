@@ -57,7 +57,7 @@ const AISummarySection = () => {
                 <h3 className="text-2xl font-bold text-white">Arquitetura da IA: LSTM</h3>
               </div>
               <p className="text-zinc-400 text-sm md:text-base mb-6 text-left">
-                O coração da nossa solução é uma rede neural com arquitetura <span className="font-bold text-white">Long Short-Term Memory (LSTM)</span>. Essa arquitetura é especialista em identificar padrões e tendências em dados que ocorrem em sequência, como a evolução do número de casos ao longo do tempo. É como ter uma 'memória' que se lembra de eventos passados para fazer previsões mais precisas no futuro.
+                O coração da nossa solução é uma rede neural com arquitetura <span className="font-bold text-white">Long Short-Term Memory (LSTM)</span>. Essa arquitetura é especialista em identificar padrões e tendências em dados que ocorrem em sequência, como a evolução do número de casos ao longo do tempo. É como ter uma &apos;memória&apos; que se lembra de eventos passados para fazer previsões mais precisas no futuro.
               </p>
               
               {/* Cards de Módulos da Arquitetura */}
