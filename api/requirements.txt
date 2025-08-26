@@ -12,4 +12,4 @@ matplotlib==3.10.3
 tensorflow==2.20.0
 epiweeks==2.3.0
 scikit-learn==1.6.1
-pyarrow==20.0.0
+fastparquet
