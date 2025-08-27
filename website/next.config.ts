@@ -1,8 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  transpilePackages: ['@react-pdf/renderer'],
   images: {
-    domains: ['picsum.photos','avatars.githubusercontent.com'],
+    domains: ['picsum.photos', 'avatars.githubusercontent.com'],
   },
 };
 

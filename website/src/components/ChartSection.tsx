@@ -5,10 +5,21 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { MapPin, AlertTriangle, Lightbulb, BrainCircuit, BarChart3, CalendarClock, Bot, Bell, ActivitySquare, CheckCircle, Car, Download, HandPlatter, Frown, XCircle, ChevronUp, ChevronDown, Flame, Flag, Users, Leaf, Umbrella, TrendingUp, TrendingDown, Minus, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { API_URL } from "@/lib/config";
-import { ReportDocument } from '@/lib/pdfGenerator';
+import { Console } from 'console';
 
-// Importa o componente do botão de forma dinâmica, garantindo que seja renderizado apenas no cliente
-const PdfButton = dynamic(() => import('./PdfButton').then(mod => mod.PdfButton), { ssr: false });
+// --- Importação Dinâmica do PdfButton ---
+const PdfButton = dynamic(() => import('./PdfButton').then(mod => mod.PdfButton), { 
+  ssr: false,
+  loading: () => (
+    <button
+      className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-zinc-500 text-white font-semibold rounded-md cursor-wait"
+      disabled
+    >
+      <Loader2 className="h-5 w-5 animate-spin" />
+      Carregando PDF...
+    </button>
+  ),
+});
 
 // --- Interfaces de Tipagem para Dados da API ---
 interface TippingPoint {
@@ -150,6 +161,7 @@ const CardContent = ({ children, className = '' }: CardContentProps) => <div cla
 // -------------------------------------------------------------------------------------------------
 
 // --- Novo tipo unificado para os dados do gráfico ---
+// Define a single type that can handle both historic and predicted data
 interface ChartPoint {
   date: string;
   'Casos Reais': number | null;
@@ -200,6 +212,7 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
           throw new Error(errData.detail || `HTTP error! status: ${response.status}`);
         }
         const data: ApiData = await response.json();
+        console.log(data)
         setApiData({ ...data, alerts: mockAlerts });
       } catch (e: any) {
         console.error("Falha ao buscar dados da API:", e);
@@ -263,36 +276,46 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
     fetchAddresses();
   }, [mapDataPoints]);
 
-  // Memoização dos dados do gráfico para evitar renderizações desnecessárias
   const chartData = useMemo(() => {
-    if (!apiData?.historic_data || !apiData?.predicted_data) return [];
-    
+    if (!apiData?.historic_data || !apiData?.predicted_data) {
+      return [];
+    }
+
+    apiData.historic_data[apiData.historic_data.length-1].cases = apiData.predicted_data[0].predicted_cases
+  
+    // Use the unified ChartPoint type for all arrays
     const formattedHistoric: ChartPoint[] = apiData.historic_data.map(d => ({
       date: new Date(d.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
       'Casos Reais': d.cases,
       'Previsão da IA': null,
     }));
-
+  
     const formattedPrediction: ChartPoint[] = apiData.predicted_data.map(d => ({
       date: new Date(d.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
       'Casos Reais': null,
       'Previsão da IA': d.predicted_cases
     }));
-
-    let finalChartData = [...formattedHistoric];
+  
+    // Create the final array with the connection point
+    let finalChartData: ChartPoint[] = [...formattedHistoric];
+  
     if (formattedHistoric.length > 0 && formattedPrediction.length > 0) {
-      const lastHistoricCases = formattedHistoric[formattedHistoric.length - 1]['Casos Reais'];
+      // Add a connection point to link the last historic and first predicted points
       const connectionPoint: ChartPoint = {
         date: formattedHistoric[formattedHistoric.length - 1].date,
-        'Casos Reais': lastHistoricCases,
-        'Previsão da IA': lastHistoricCases,
+        'Casos Reais': formattedHistoric[formattedHistoric.length - 1]['Casos Reais'],
+        'Previsão da IA': formattedPrediction[0]['Previsão da IA']
       };
       finalChartData.push(connectionPoint);
     }
+  
+    // Concatenate the remaining predicted data
     finalChartData = finalChartData.concat(formattedPrediction);
+  
     return finalChartData;
   }, [apiData]);
 
+  
   const handleWeeksChange = (e: ChangeEvent<HTMLInputElement>) => {
     setCurrentWeeks(Number(e.target.value));
   };
@@ -329,20 +352,20 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
   const isMutiraoNeeded = highIntensityPercentage > 5;
 
   const trend = useMemo(() => {
-    if (!apiData || !apiData.predicted_data || apiData.historic_data.length === 0) return 'indefinida';
+    if (!apiData || !apiData.predicted_data || apiData.historic_data.length < currentWeeks) return 'indefinida';
 
-    const lastHistoricValue = apiData.historic_data[apiData.historic_data.length - 1].cases;
-    
-    // Verifica se algum ponto da previsão é 20% maior
-    const isIncreasing = apiData.predicted_data.some(p => p.predicted_cases > lastHistoricValue * 1.2);
-    // Verifica se algum ponto da previsão é 20% menor
-    const isDecreasing = apiData.predicted_data.some(p => p.predicted_cases < lastHistoricValue * 0.8);
+    const historicScore = apiData.historic_data.slice(-currentWeeks).reduce((sum, d) => sum + d.cases, 0);
+    const predictedScore = apiData.predicted_data.slice(0, currentWeeks).reduce((sum, d) => sum + d.predicted_cases, 0);
 
-    if (isIncreasing) return 'crescente';
-    if (isDecreasing) return 'decrescente';
+    const difference = Math.abs(predictedScore - historicScore);
+    const percentageDifference = (historicScore === 0) ? 100 : (difference / historicScore) * 100;
 
-    return 'estável';
-  }, [apiData]);
+    if (percentageDifference <= 50) return 'estável';
+    if (predictedScore > historicScore) return 'crescente';
+    if (predictedScore < historicScore) return 'decrescente';
+
+    return 'indefinida';
+  }, [apiData, currentWeeks]);
 
   const isPeakPredicted = useMemo(() => {
     if (!apiData || !apiData.predicted_data || apiData.historic_data.length < 3) return false;
@@ -378,7 +401,7 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
     }
     
     // Apenas os endereços do filtro atual serão passados para o PDF
-    const addressesForPdf = filteredAddresses;
+    const addressesForPdf = prioritizedAddresses;
 
     return (
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
@@ -437,10 +460,6 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
                 )}
               </div>
             </div>
-            
-            <p className="text-xs text-zinc-500 mt-auto italic text-center pt-6">
-              Última atualização: {new Date().toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}
-            </p>
           </Card>
         </div>
 
@@ -526,7 +545,7 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
                   </p>
                   <ul className="space-y-2 text-sm text-zinc-400 pl-4 list-disc">
                     {apiData.insights.tipping_points.map((point, index) => (
-                      <li key={index}>
+                      <li key={index} className="text-left">
                         <p><span className="font-semibold text-zinc-200">{point.factor}</span>: {point.value}</p>
                       </li>
                     ))}
@@ -560,11 +579,10 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
                       ))}
                     </ul>
                   )}
-                  {apiData && filteredAddresses.length > 0 && (
+                  {apiData && addressesForPdf.length > 0 && (
                     <PdfButton 
                       municipalityName={apiData.municipality_name} 
-                      addresses={filteredAddresses} 
-                      document={<ReportDocument municipalityName={apiData.municipality_name} addresses={filteredAddresses} />} 
+                      addresses={addressesForPdf} 
                     />
                   )}
                 </div>

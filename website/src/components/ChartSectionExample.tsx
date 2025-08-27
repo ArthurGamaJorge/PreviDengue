@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useMemo, ChangeEvent } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { BarChart3, Bot, AlertTriangle } from 'lucide-react';
-
+import { API_URL } from "@/lib/config";
 // ✅ CORREÇÃO: A variável API_URL foi movida para cá para resolver o erro de importação.
-// Substitua este valor pelo endereço do seu backend se for diferente.
-const API_URL = "http://127.0.0.1:8000";
 
 // --- Interfaces de Tipagem para Dados da API ---
 interface HistoricData {

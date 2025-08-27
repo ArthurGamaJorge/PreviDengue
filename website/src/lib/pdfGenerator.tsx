@@ -1,8 +1,7 @@
+"use client";
+
 import React from 'react';
 import { Page, Text, View, Document, StyleSheet, Font, Link, Image } from '@react-pdf/renderer';
-
-// Importa a imagem do ícone do Maps (você precisará de um ícone base64 ou de uma URL)
-const mapsIconBase64 = "data:image/png;base64,..."; // Substitua por seu próprio ícone.
 
 const styles = StyleSheet.create({
     page: {
@@ -78,10 +77,9 @@ const styles = StyleSheet.create({
         color: '#757575',
         marginTop: 4,
     },
-    linkButton: {
-        width: 20,
-        height: 20,
-        marginLeft: 10,
+    linkButtonText: {
+        fontSize: 12,
+        color: '#1A73E8',
     },
     footer: {
         position: 'absolute',
@@ -125,32 +123,44 @@ const getRiskColor = (risk: PrioritizedAddress['risk_level']) => {
     }
 };
 
-// --- Funções de Cálculo e Ordenação ---
-
-// Função para calcular a distância euclidiana entre dois pontos
-const calculateDistance = (coord1: string, coord2: string) => {
-    const [lat1, lng1] = coord1.split(', ').map(s => parseFloat(s.replace(/[^0-9.-]/g, '')));
-    const [lat2, lng2] = coord2.split(', ').map(s => parseFloat(s.replace(/[^0-9.-]/g, '')));
-    return Math.sqrt(Math.pow(lat2 - lat1, 2) + Math.pow(lng2 - lng1, 2));
+const getCoordsFromAddress = (addr: PrioritizedAddress) => {
+    const [lat, lng] = addr.coords.replace('Lat: ', '').replace('Lng: ', '').split(', ').map(parseFloat);
+    return { lat, lng };
 };
 
-// Algoritmo do Vizinho Mais Próximo para otimização total
+// Função para calcular a distância euclidiana entre dois pontos
+const calculateDistance = (coord1: { lat: number, lng: number }, coord2: { lat: number, lng: number }) => {
+    return Math.sqrt(Math.pow(coord2.lat - coord1.lat, 2) + Math.pow(coord2.lng - coord1.lng, 2));
+};
+
+// Algoritmo do Vizinho Mais Próximo com ponto de partida baseado na maior latitude
 const getOptimizedRoute = (addresses: PrioritizedAddress[]) => {
     if (addresses.length <= 1) {
         return addresses;
     }
 
-    const startPoint = addresses.find(addr => addr.risk_level === 'Alto') || addresses[0];
-    const unvisited = [...addresses].filter(addr => addr !== startPoint);
+    // Encontra o ponto com a maior latitude para ser o ponto de partida
+    let startPoint = addresses[0];
+    let maxLat = -Infinity;
+    for (const addr of addresses) {
+        const { lat } = getCoordsFromAddress(addr);
+        if (lat > maxLat) {
+            maxLat = lat;
+            startPoint = addr;
+        }
+    }
+    
+    const unvisited = addresses.filter(addr => addr !== startPoint);
     const route = [startPoint];
     let currentPoint = startPoint;
 
     while (unvisited.length > 0) {
         let nearestIndex = -1;
         let minDistance = Infinity;
+        const currentCoords = getCoordsFromAddress(currentPoint);
 
         for (let i = 0; i < unvisited.length; i++) {
-            const distance = calculateDistance(currentPoint.coords, unvisited[i].coords);
+            const distance = calculateDistance(currentCoords, getCoordsFromAddress(unvisited[i]));
             if (distance < minDistance) {
                 minDistance = distance;
                 nearestIndex = i;
@@ -214,7 +224,7 @@ export const ReportDocument = ({ municipalityName, addresses }: ReportDocumentPr
                                     <Text style={styles.detailsText}>Coordenadas: {addr.coords}</Text>
                                 </View>
                                 <Link src={`https://www.google.com/maps/search/?api=1&query=${addr.coords.replace('Lat: ', '').replace('Lng: ', '')}`}>
-                                    <Image src={mapsIconBase64} style={styles.linkButton} />
+                                    <Text style={styles.linkButtonText}>Maps</Text>
                                 </Link>
                             </View>
                         ))

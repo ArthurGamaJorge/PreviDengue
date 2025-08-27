@@ -1,11 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState, ChangeEvent, useEffect, useMemo, use } from "react";
+import { useState, ChangeEvent, useEffect, useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, TooltipProps, Cell } from 'recharts';
 import municipiosData from '../../public/data/municipios.json';
 import { API_URL } from "@/lib/config";
-import { Search, Upload, ChevronDown, Download, X, FileBarChart2, FileJson, Loader2 } from 'lucide-react';
+import { Search, Upload, ChevronDown, Download, X, FileBarChart2, FileJson, Loader2, Plus, RefreshCcw } from 'lucide-react';
 
 // Interfaces de Dados
 interface DataPoint {
@@ -97,7 +97,7 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
   const [uploading, setUploading] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [jsonFile, setJsonFile] = useState<File | null>(null);
-  const [imageFiles, setImageFiles] = useState<FileList | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [jsonImageFilenames, setJsonImageFilenames] = useState<Set<string>>(new Set());
   const [imageFileNames, setImageFileNames] = useState<Set<string>>(new Set());
   const [importWarnings, setImportWarnings] = useState<string[]>([]);
@@ -261,22 +261,27 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
     reader.readAsText(file);
   };
 
-  const handleImagesChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) {
-      setImageFileNames(new Set());
-      validateImageJsonMatch(jsonImageFilenames, new Set());
-      setImageFiles(null);
-      return;
-    }
-    const names = new Set(Array.from(files).map((f) => f.name));
+  const handleReplaceImagesChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const newFiles = Array.from(e.target.files || []);
+    setImageFiles(newFiles);
+    const names = new Set(newFiles.map((f) => f.name));
     setImageFileNames(names);
     validateImageJsonMatch(jsonImageFilenames, names);
-    setImageFiles(files);
+    e.target.value = '';
+  };
+  
+  const handleAddImagesChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const newFiles = Array.from(e.target.files || []);
+    const allFiles = [...imageFiles, ...newFiles];
+    setImageFiles(allFiles);
+    const names = new Set(allFiles.map((f) => f.name));
+    setImageFileNames(names);
+    validateImageJsonMatch(jsonImageFilenames, names);
+    e.target.value = '';
   };
 
   const handleImport = async () => {
-    if (!jsonFile || !imageFiles) return;
+    if (!jsonFile || imageFiles.length === 0) return;
     setIsImporting(true);
     try {
       const reader = new FileReader();
@@ -326,7 +331,7 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
           onDataChange(updatedData);
           setShowImportModal(false);
           setJsonFile(null);
-          setImageFiles(null);
+          setImageFiles([]);
           setIsImporting(false); 
         } catch (err) {
           console.error(err);
@@ -343,7 +348,7 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
     setShowImportModal(false);
     setImportWarnings([]);
     setJsonFile(null);
-    setImageFiles(null);
+    setImageFiles([]);
     setJsonImageFilenames(new Set());
     setImageFileNames(new Set());
   };
@@ -354,7 +359,7 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
 
   return (
     <>
-      <div className="w-full p-8 animate-fade-in-up">        
+      <div className="w-full p-8 animate-fade-in-up h-full flex flex-col">        
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
           <h2 className="text-4xl font-bold text-white">Análise Inteligente de Focos</h2>
           <form onSubmit={handleSearchSubmit} className="relative w-full md:w-auto">
@@ -391,7 +396,7 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
           </form>
         </div>
       
-        <div className="flex flex-col lg:flex-row gap-8 items-stretch">
+        <div className="flex flex-col lg:flex-row gap-8 items-stretch flex-1">
           {/* Painel Lateral */}
           <div className="flex flex-col gap-6 lg:w-1/4 p-6 bg-zinc-900/80 backdrop-blur-sm rounded-lg shadow-xl border border-zinc-800">
             {/* Botões de Ação */}
@@ -468,7 +473,7 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
           </div>
       
           {/* Seção do Mapa */}
-          <div className="flex-1 rounded-lg overflow-hidden shadow-xl border border-zinc-800 min-h-[600px]">
+          <div className="flex-1 rounded-lg overflow-hidden shadow-xl border border-zinc-800 min-h-[600px] h-full">
             {isClient ? (
               <DynamicMap
                 points={dataPoints}
@@ -516,24 +521,49 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
                 className="w-full rounded-lg border border-zinc-700 bg-zinc-800 text-zinc-300 p-3 cursor-pointer transition duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
               />
             </div>
+
             <div className="mb-6">
-              <label
-                htmlFor="imageFilesInput"
-                className="flex items-center gap-3 mb-3 text-white font-semibold text-lg"
-              >
+              <div className="flex items-center gap-3 mb-3 text-white font-semibold text-lg">
                 <Upload size={24} className="text-green-400" />
-                Imagens (múltiplas)
-              </label>
-              <input
-                id="imageFilesInput"
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImagesChange}
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 text-zinc-300 p-3 cursor-pointer transition duration-200 focus:outline-none focus:ring-2 focus:ring-green-500/50"
-              />
+                Imagens ({imageFiles.length} selecionadas)
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* Botão de Substituir Imagens */}
+                <label
+                  htmlFor="replaceImageInput"
+                  className="flex-1 cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-zinc-700 bg-zinc-800 p-3 text-zinc-300 transition duration-200 hover:bg-zinc-700 hover:text-white"
+                >
+                  <RefreshCcw size={20} className="text-blue-400" />
+                  Escolher Imagens
+                  <input
+                    id="replaceImageInput"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleReplaceImagesChange}
+                    className="hidden"
+                  />
+                </label>
+                {/* Botão de Adicionar Imagens */}
+                <label
+                  htmlFor="addImageInput"
+                  className="flex-1 cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-green-600 bg-green-700 p-3 text-white transition duration-200 hover:bg-green-800"
+                >
+                  <Plus size={20} />
+                  Adicionar Imagens
+                  <input
+                    id="addImageInput"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleAddImagesChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
             </div>
-            {jsonFile && imageFiles && importWarnings.length > 0 && (
+
+            {jsonFile && imageFiles.length > 0 && importWarnings.length > 0 && (
               <div className="mb-6 p-4 rounded-lg bg-red-900/50 text-red-200 text-sm max-h-40 overflow-auto border border-red-800">
                 {importWarnings.map((msg, idx) => (
                   <p key={idx}>{msg}</p>
@@ -545,37 +575,14 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
                 <ChevronDown size={20} className="text-zinc-500"/>
                 Ver modelo de JSON aceito
               </summary>
-              <div className="mt-2 space-y-3 text-zinc-400">
-                <p>O arquivo JSON deve conter uma lista com as chaves:</p>
-                <ul className="list-disc list-inside space-y-2 text-zinc-400">
-                  <li>
-                    <strong>lat</strong> e <strong>lng</strong>: coordenadas do
-                    ponto, no formato decimal.
-                  </li>
-                  <li>
-                    <strong>imageFilename</strong>: nome do arquivo da imagem
-                    correspondente.
-                  </li>
-                  <li>
-                    <strong>intensity</strong> (opcional):
-                    <span className="text-yellow-400">
-                      ⚠️ Se você estiver criando o JSON externamente, **não
-                      manipule esse campo**.
-                    </span>
-                  </li>
-                  <li>
-                    <strong>detectedObjects</strong> (opcional):
-                    <span className="text-yellow-400">
-                      ⚠️ Se você estiver criando o JSON externamente, **não
-                      manipule esse campo**.
-                    </span>
-                  </li>
+              <div className="mt-2 text-zinc-400 space-y-2">
+                <p>O arquivo JSON deve ser uma lista com as seguintes chaves:</p>
+                <ul className="list-disc list-inside ml-4 text-zinc-400 space-y-1">
+                  <li><strong>lat</strong> e <strong>lng</strong>: coordenadas.</li>
+                  <li><strong>imageFilename</strong>: nome do arquivo de imagem.</li>
+                  <li><strong className="text-yellow-400">intensity</strong> e <strong className="text-yellow-400">detectedObjects</strong>: **opcionais**. A IA vai calculá-los se não estiverem presentes.</li>
                 </ul>
-                <p className="text-zinc-500">
-                  Caso algum campo opcional não esteja presente, a IA calculará
-                  os valores.
-                </p>
-                <pre className="whitespace-pre-wrap font-mono bg-zinc-900/50 p-3 rounded-lg border border-zinc-700 overflow-auto text-zinc-300 text-xs">
+                <pre className="whitespace-pre-wrap font-mono bg-zinc-900/50 p-3 rounded-lg border border-zinc-700 overflow-x-auto text-zinc-300 text-xs mt-3">
                   {`[
     {
       "lat": -23.54395455873987,
@@ -585,15 +592,6 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
       "detectedObjects": {
         "caixa_agua": 3
       }
-    },
-    {
-      "lat": -23.555206120737367,
-      "lng": -46.66365382056169,
-      "imageFilename": "img-8.png",
-      "detectedObjects": {
-        "carro": 94,
-        "piscina": 9
-      }
     }
   ]`}
                 </pre>
@@ -601,9 +599,9 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
             </details>
             <button
               onClick={handleImport}
-              disabled={!jsonFile || !imageFiles || imageFiles.length === 0 || isImporting}
+              disabled={!jsonFile || imageFiles.length === 0 || isImporting}
               className={`w-full py-3 rounded-lg text-white font-bold transition-colors duration-200 flex items-center justify-center ${
-                (jsonFile && imageFiles?.length && !isImporting)
+                (jsonFile && imageFiles.length > 0 && !isImporting)
                   ? "bg-green-600 hover:bg-green-700"
                   : "bg-zinc-700 text-zinc-400 cursor-not-allowed"
               }`}
@@ -628,7 +626,7 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
           onCancel={() => {
             setSelectedCoords(null);
             setImageFile(null);
-          }}
+          }} 
           imageFile={imageFile}
           setImageFile={setImageFile}
           uploading={uploading}
