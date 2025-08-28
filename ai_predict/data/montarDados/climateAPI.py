@@ -1,7 +1,7 @@
 import asyncio
 import json
 import pandas as pd
-from datetime import datetime
+from datetime import date, datetime
 from epiweeks import Week
 import logging
 import httpx
@@ -15,7 +15,7 @@ MAX_REQUESTS_PER_MINUTE = 125
 CONCURRENT_TASKS = 30
 MAX_RETRIES = 5
 
-UPDATE_UNTIL_WEEK = Week(2025, 33)
+UPDATE_UNTIL_WEEK = Week.fromdate(date.today()) - 3
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)

@@ -6,14 +6,16 @@ import pandas as pd
 from epiweeks import Week
 import datetime
 
-# --- Constantes ---
-DATA_PREV_PATH = "./data/prev"
-CLIMATE_PATH = "./data/dadosClimaticos.parquet"
-STATES_JSON_PATH = "./data/prev/estados.json"
-MUNICIPIOS_JSON_PATH = "./data/prev/municipios.json"
+# --- Constantes Corrigidas ---
+# Caminhos atualizados para a nova estrutura de pastas.
+DATA_PREV_PATH = "../casos"
+CLIMATE_PATH = "../dadosClimaticos.parquet"
+STATES_JSON_PATH = "../municipios/estados.json"
+MUNICIPIOS_JSON_PATH = "../municipios/municipios.json"
 
-OUTPUT_PATH = "./data/final_training_data.parquet" 
-#OUTPUT_PATH = "./data/inference_data.parquet" 
+# Saída para o ficheiro de treino final.
+OUTPUT_PATH = "../final_training_data.parquet" 
+OUTPUT_PATH = "../inference_data.parquet" 
 
 def max_epi_week(year):
     day = datetime.date(year, 12, 31)
@@ -70,7 +72,7 @@ def load_all_prev_files(path):
     dfs = []
     for fname in os.listdir(path):
         if fname.endswith('.csv') and fname.startswith('mun'):
-            print(f"Processing {fname}")
+            print(f"Processando {fname}")
             dfs.append(read_and_process_prev_file(os.path.join(path, fname)))
     return pd.concat(dfs, ignore_index=True)
 
@@ -90,105 +92,85 @@ def normalize_name(name):
     return re.sub(r'\s+', ' ', norm.encode('ASCII', 'ignore').decode()).lower().strip()
 
 def load_climate_data(path):
-    df = pd.read_parquet(path)
+    df = pd.read_parquet(path, engine='fastparquet')
     df["municipio_norm"] = df["municipio"].apply(normalize_name)
     df[["ano", "semana"]] = df["ano_semana"].str.extract(r"(\d{4})/(\d{2})").astype(int)
     return df
 
-### MODIFICADO: Função 'merge_and_fill' substituída por 'create_inference_df' ###
-def create_inference_df(df_prev, df_climate, municipios_list, limit_year, last_cases_week):
+# ✅ FUNÇÃO ATUALIZADA: Agora cria um dataset de treino completo, sem NaNs.
+def create_final_dataset(df_prev, df_climate, municipios_list, limit_year, last_cases_week):
     """
-    Cria um dataframe para inferência.
-    - Usa dados de casos até a semana `last_cases_week` do ano `limit_year`.
-    - Para semanas posteriores, os casos são NaN, mas os dados climáticos são mantidos.
+    Cria um dataframe de treino completo, juntando casos e clima até uma data limite.
+    Semanas sem casos notificados são preenchidas com 0.
     """
-    print(f"Criando dados de inferência com casos até {limit_year}/SE {last_cases_week}.")
+    print(f"Criando dataset de treino com dados até {limit_year}/SE {last_cases_week}.")
 
-    # --- 1. Padroniza chaves (código IBGE de 7 dígitos) para evitar bugs de merge ---
-    df_prev["codigo_ibge"] = df_prev["codigo_ibge"].astype(str).str.zfill(7)
-    df_climate["codigo_ibge"] = df_climate["codigo_ibge"].astype(str).str.zfill(7)
-    
-    # --- 2. Filtra os casos de dengue para incluir apenas dados até o limite especificado ---
+    # 1. Filtra os dados de casos para incluir apenas até a semana limite.
     df_prev_filtered = df_prev[
         (df_prev['ano'] < limit_year) |
         ((df_prev['ano'] == limit_year) & (df_prev['semana'] <= last_cases_week))
     ].copy()
 
-    # --- 3. Junta os casos filtrados com os dados climáticos ---
+    # 2. Cria uma base completa com todos os municípios e todas as semanas até o limite.
+    all_municipios = pd.DataFrame(municipios_list)[['codigo_ibge', 'nome', 'latitude', 'longitude']]
+    all_municipios['codigo_ibge'] = all_municipios['codigo_ibge'].astype(str)
+
+    all_year_week = df_climate[
+        (df_climate['ano'] < limit_year) |
+        ((df_climate['ano'] == limit_year) & (df_climate['semana'] <= last_cases_week))
+    ][["ano", "semana"]].drop_duplicates()
+
+    base_df = all_municipios.merge(all_year_week, how="cross")
+
+    # 3. Junta a base com os dados de casos. Semanas sem correspondência (sem casos) ficarão com NaN.
     df_merged = pd.merge(
-        df_prev_filtered,
-        df_climate,
-        on=["codigo_ibge", "ano", "semana"],
-        how="left" # Mantém todos os casos históricos, mesmo que falte clima
+        base_df,
+        df_prev_filtered[['codigo_ibge', 'ano', 'semana', 'numero_casos']],
+        on=['codigo_ibge', 'ano', 'semana'],
+        how='left'
     )
+    # Preenche com 0 os casos não notificados, que é o comportamento esperado.
+    df_merged['numero_casos'] = df_merged['numero_casos'].fillna(0).astype(int)
 
-    # --- 4. Cria uma base completa com todos municípios e todas as semanas do período climático ---
-    all_municipios = pd.DataFrame(municipios_list)
-    all_municipios["codigo_ibge"] = all_municipios["codigo_ibge"].astype(str).str.zfill(7)
+    # 4. Junta os dados climáticos.
+    # ✅ CORREÇÃO: Garante que a chave de merge 'codigo_ibge' tenha o mesmo tipo (string) em ambos os DataFrames.
+    df_climate['codigo_ibge'] = df_climate['codigo_ibge'].astype(str)
     
-    # A base de tempo será o range completo dos dados climáticos
-    all_year_week = df_climate[["ano", "semana"]].drop_duplicates()
-
-    base = all_municipios.merge(all_year_week, how="cross")
-
-    # --- 5. Preenche os valores de 'numero_casos' na base ---
-    # Por padrão, semanas passadas sem notificação são 0
-    base["numero_casos"] = 0
-    # Semanas futuras (para predição) são NaN
-    future_mask = (base['ano'] == limit_year) & (base['semana'] > last_cases_week)
-    base.loc[future_mask, "numero_casos"] = float("nan")
-    # Mantém NaN para qualquer ano futuro além do ano limite, se houver
-    future_mask_years = base['ano'] > limit_year
-    base.loc[future_mask_years, "numero_casos"] = float("nan")
-
-    # --- 6. Remove da 'base' as combinações que já existem em 'df_merged' para não duplicar ---
-    existing_keys = df_merged.set_index(["codigo_ibge", "ano", "semana"]).index
-    base_keys = base.set_index(["codigo_ibge", "ano", "semana"]).index
-    base = base[~base_keys.isin(existing_keys)]
+    df_final = pd.merge(
+        df_merged,
+        df_climate.drop(columns=['municipio', 'municipio_norm', 'ano_semana']),
+        on=['codigo_ibge', 'ano', 'semana'],
+        how='left'
+    )
     
-    # --- 7. Adiciona os dados climáticos e geográficos na 'base' ---
-    base = pd.merge(base, df_climate, on=["codigo_ibge", "ano", "semana"], how="left")
-    base["notificacao"] = base["ano"].apply(lambda y: 1 if y in [2021, 2022] else 0)
-    
+    # 5. Adiciona informações geográficas restantes e ordena.
     states_dict = load_states(STATES_JSON_PATH)
-    base["uf_code"] = base["codigo_ibge"].str[:2]
-    base["estado_sigla"] = base["uf_code"].map(lambda x: states_dict.get(x, {}).get("uf"))
-    base["regiao"] = base["uf_code"].map(lambda x: states_dict.get(x, {}).get("regiao"))
-    base = base.drop(columns=["uf_code"])
+    df_final["uf_code"] = df_final["codigo_ibge"].str[:2]
+    df_final["estado_sigla"] = df_final["uf_code"].map(lambda x: states_dict.get(x, {}).get("uf"))
+    df_final["regiao"] = df_final["uf_code"].map(lambda x: states_dict.get(x, {}).get("regiao"))
+    df_final['notificacao'] = df_final["ano"].apply(lambda y: 1 if y in [2021, 2022] else 0)
 
-
-    # --- 8. Concatena os dados e finaliza ---
-    df_final = pd.concat([df_merged, base], ignore_index=True)
-    
-    # Preenche latitude e longitude para as linhas que vieram da 'base'
-    municipio_geo_map = all_municipios.set_index('codigo_ibge')[['latitude', 'longitude']].to_dict('index')
-    
-    lat_map = {k: v['latitude'] for k, v in municipio_geo_map.items()}
-    lon_map = {k: v['longitude'] for k, v in municipio_geo_map.items()}
-
-    df_final['latitude'] = df_final['latitude'].fillna(df_final['codigo_ibge'].map(lat_map))
-    df_final['longitude'] = df_final['longitude'].fillna(df_final['codigo_ibge'].map(lon_map))
-
-
-    # Ordena para garantir a sequência temporal correta
     df_final = df_final.sort_values(by=["codigo_ibge", "ano", "semana"]).reset_index(drop=True)
 
+    # 6. Seleciona e reordena as colunas finais.
     final_columns = [
         "municipio", "numero_casos", "semana", "ano", "notificacao", "codigo_ibge",
         "latitude", "longitude", "estado_sigla", "regiao",
         "T2M", "T2M_MAX", "T2M_MIN", "PRECTOTCORR", "RH2M", "ALLSKY_SFC_SW_DWN"
     ]
+    # Renomeia a coluna 'nome' para 'municipio' para consistência
+    df_final.rename(columns={'nome': 'municipio'}, inplace=True)
     
-    # Garante que as colunas existam antes de tentar selecioná-las
-    cols_to_use = [col for col in final_columns if col in df_final.columns]
-    df_final = df_final[cols_to_use]
-    
-    return df_final
+    return df_final[final_columns]
 
 
 def main():
-    LIMIT_YEAR = 2025
-    LAST_CASES_WEEK = 20
+    # ✅ CÁLCULO DINÂMICO DO LIMITE
+    current_epi_week = Week.fromdate(datetime.date.today())
+    LIMIT_YEAR = current_epi_week.year
+    LAST_CASES_WEEK = current_epi_week.week - 3
+    
+    print(f"Semana epidemiológica atual: {current_epi_week.week}. Limite de dados definido para a semana {LAST_CASES_WEEK}.")
 
     states_dict = load_states(STATES_JSON_PATH)
     municipios_list = load_municipios(MUNICIPIOS_JSON_PATH)
@@ -197,22 +179,21 @@ def main():
     df_prev = add_geo_info(df_prev, states_dict, municipios_list)
     df_climate = load_climate_data(CLIMATE_PATH)
 
-    # Chama a nova função com os parâmetros de limite
-    df_final = create_inference_df(df_prev, df_climate, municipios_list, 
+    # ✅ Chama a nova função com os parâmetros de limite
+    df_final = create_final_dataset(df_prev, df_climate, municipios_list, 
                                    limit_year=LIMIT_YEAR, 
                                    last_cases_week=LAST_CASES_WEEK)
 
     df_final["codigo_ibge"] = df_final["codigo_ibge"].astype(str)
     df_final.to_parquet(OUTPUT_PATH, index=False)
     
-    print(f"\nDados de inferência finalizados e salvos em: {OUTPUT_PATH}")
-    # Verifica a última semana com e sem casos no ano limite
+    print(f"\nDados de treino finalizados e salvos em: {OUTPUT_PATH}")
+    # Verifica a última semana no ficheiro final
     df_year = df_final[df_final['ano'] == LIMIT_YEAR]
-    last_week_with_data = df_year['semana'][df_year['numero_casos'].notna()].max()
-    first_week_without_data = df_year['semana'][df_year['numero_casos'].isna()].min()
-    print(f"No ano de {LIMIT_YEAR}:")
-    print(f"  -> Última semana com dados de casos: {int(last_week_with_data)}")
-    print(f"  -> Primeira semana com casos vazios (NaN): {int(first_week_without_data)}")
+    if not df_year.empty:
+        last_week_with_data = df_year['semana'].max()
+        print(f"No ano de {LIMIT_YEAR}:")
+        print(f"  -> Última semana com dados no ficheiro final: {int(last_week_with_data)}")
 
 
 if __name__ == "__main__":
