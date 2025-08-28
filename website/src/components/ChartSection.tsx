@@ -278,42 +278,55 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
 
   const chartData = useMemo(() => {
     if (!apiData?.historic_data || !apiData?.predicted_data) {
-      return [];
+        return [];
     }
 
-    apiData.historic_data[apiData.historic_data.length-1].cases = apiData.predicted_data[0].predicted_cases
-  
-    // Use the unified ChartPoint type for all arrays
-    const formattedHistoric: ChartPoint[] = apiData.historic_data.map(d => ({
-      date: new Date(d.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
-      'Casos Reais': d.cases,
-      'Previsão da IA': null,
-    }));
-  
-    const formattedPrediction: ChartPoint[] = apiData.predicted_data.map(d => ({
-      date: new Date(d.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
-      'Casos Reais': null,
-      'Previsão da IA': d.predicted_cases
-    }));
-  
-    // Create the final array with the connection point
-    let finalChartData: ChartPoint[] = [...formattedHistoric];
-  
-    if (formattedHistoric.length > 0 && formattedPrediction.length > 0) {
-      // Add a connection point to link the last historic and first predicted points
-      const connectionPoint: ChartPoint = {
-        date: formattedHistoric[formattedHistoric.length - 1].date,
-        'Casos Reais': formattedHistoric[formattedHistoric.length - 1]['Casos Reais'],
-        'Previsão da IA': formattedPrediction[0]['Previsão da IA']
-      };
-      finalChartData.push(connectionPoint);
+    // Filtra os dados de previsão para mostrar apenas o número de semanas selecionado
+    // Isso garante que o gráfico sempre corresponda ao slider
+    const predictedWeeks = apiData.predicted_data.slice(0, currentWeeks);
+    
+    // Encontra o último ponto de dados histórico com um valor de 'cases' válido
+    const lastValidHistoricPoint = apiData.historic_data.slice().reverse().find(d => d.cases !== null && d.cases !== undefined);
+
+    // Se não houver dados históricos válidos ou previsão, retorna um array vazio
+    if (!lastValidHistoricPoint || predictedWeeks.length === 0) {
+        return [];
     }
-  
-    // Concatenate the remaining predicted data
-    finalChartData = finalChartData.concat(formattedPrediction);
-  
-    return finalChartData;
-  }, [apiData]);
+    
+    // A data do último ponto válido e seu valor
+    const lastValidHistoricDate = new Date(lastValidHistoricPoint.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' });
+    const lastValidHistoricValue = lastValidHistoricPoint.cases;
+    
+    // Os dados históricos formatados até o último ponto válido
+    const formattedHistoric = apiData.historic_data
+        .slice(0, apiData.historic_data.indexOf(lastValidHistoricPoint) + 1)
+        .map(d => ({
+            date: new Date(d.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
+            'Casos Reais': d.cases,
+            'Previsão da IA': null,
+        }));
+    
+    // O primeiro ponto de previsão
+    const firstPredictedPoint = predictedWeeks[0];
+    
+    // O ponto de conexão entre os dados históricos e a previsão
+    const connectionPoint = {
+        date: new Date(firstPredictedPoint.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
+        'Casos Reais': lastValidHistoricValue,
+        'Previsão da IA': firstPredictedPoint.predicted_cases,
+    };
+    
+    // O restante dos dados de previsão
+    const remainingPredictedData = predictedWeeks.slice(1).map(d => ({
+        date: new Date(d.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
+        'Casos Reais': null,
+        'Previsão da IA': d.predicted_cases,
+    }));
+    
+    // Combina os dados na ordem correta
+    return [...formattedHistoric, connectionPoint, ...remainingPredictedData];
+    
+}, [apiData, currentWeeks]);
 
   
   const handleWeeksChange = (e: ChangeEvent<HTMLInputElement>) => {
