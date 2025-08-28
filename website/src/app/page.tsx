@@ -26,7 +26,6 @@ import {
   BrainCircuit
 } from 'lucide-react';
 import { motion } from "framer-motion";
-import { Head } from "next/document";
 
 
 // --- Componente de Tooltip Customizado ---
@@ -102,12 +101,6 @@ export default function About() {
 
   return (
     <div className="min-h-screen font-sans text-white">
-      <Head>
-        <meta 
-          name="google-site-verification" 
-          content="8eSmXVGFaW8AfV8ksbr_1HEGDMgWcO1qIDXFMHjXf5I" 
-        />
-      </Head>
       
       {/* --- Fundo com Gradiente e Pontilhados --- */}
       <div className="background-container"></div>
