@@ -3,8 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import React, { useState } from 'react';
-import Header from "@/components/Header"; // Componente de Cabeçalho
-import Footer from "@/components/Footer"; // Componente de Rodapé
+import Header from "@/components/Header"; 
+import Footer from "@/components/Footer";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { 
   ChevronDown, 
@@ -25,7 +25,6 @@ import {
   ArrowRight,
   BrainCircuit
 } from 'lucide-react';
-// Adicione esta importação no topo do seu arquivo para usar as animações
 import { motion } from "framer-motion";
 
 
@@ -62,70 +61,35 @@ interface FAQItem {
   answer: string;
 }
 
-const faqs: FAQItem[] = [
-  {
-    question: "Como o PreviDengue detecta os focos do mosquito?",
-    answer: "Utilizamos algoritmos de visão computacional, treinados com um vasto dataset de imagens, para identificar padrões e objetos em imagens aéreas (drones e satélites) que são indicativos de potenciais criadouros do Aedes aegypti, como piscinas descobertas, caixas d&apos;água sem tampa e acúmulo de resíduos. A tecnologia permite uma varredura eficiente e em larga escala, superando as limitações da inspeção manual."
-  },
-  {
-    question: "Qual a precisão do sistema na detecção e previsão?",
-    answer: "Nossos modelos de detecção atingem uma precisão superior a 90% na identificação de objetos, variando conforme a resolução da imagem e as condições ambientais. Para a previsão de surtos, integramos dados históricos, climáticos e sociodemográficos para gerar projeções robustas que auxiliam na alocação de recursos e em ações preventivas. A validação dos modelos é um processo contínuo."
-  }
+
+
+// --- Dados de Exemplo para Gráficos (agora com flutuações e previsão em queda) ---
+const dengueCasesData = [
+  { month: "Jan", cases: 120, forecast: null },
+  { month: "Jan", cases: 180, forecast: null },
+  { month: "Fev", cases: 250, forecast: null },
+  { month: "Fev", cases: 210, forecast: null },
+  { month: "Mar", cases: 280, forecast: null },
+  { month: "Mar", cases: 230, forecast: null },
+  { month: "Abr", cases: 170, forecast: null },
+  { month: "Abr", cases: 140, forecast: null },
+  { month: "Mai", cases: 100, forecast: null },
+  { month: "Mai", cases: 115, forecast: null },
+  { month: "Jun", cases: 130, forecast: null },
+  { month: "Jun", cases: 180, forecast: null },
+  { month: "Jul", cases: 220, forecast: null },
+  { month: "Jul", cases: 260, forecast: null },
+  { month: "Ago", cases: 240, forecast: null },
+  { month: "Ago", cases: 290, forecast: null },
+  { month: "Set", cases: 250, forecast: null },
+  { month: "Set", cases: 210, forecast: null },
+  { month: "Out", cases: 190, forecast: null },
+  { month: "Out", cases: 160, forecast: null },
+  { month: "Nov", cases: 190, forecast: 190 }, 
+  { month: "Nov", cases: null, forecast: 240 },
+  { month: "Dez", cases: null, forecast: 190 },
+  { month: "Dez", cases: null, forecast: 160 }
 ];
-
-
-// --- Função Geradora de Dados para Gráficos Dinâmicos ---
-const generateGraphData = () => {
-  // Define o tipo do array 'data' explicitamente para evitar o erro de tipagem.
-  // 'cases' e 'forecast' podem ser nulos, o que permite a mesma estrutura para todos os pontos.
-  const data: Array<{ month: string; cases: number | null; forecast: number | null }> = [];
-  const totalPoints = 30;
-  const historicPoints = 20; // 70% dos pontos são dados "reais"
-  const monthNames = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-  ];
-  
-  for (let i = 0; i < totalPoints; i++) {
-    const baseCases = Math.sin(i / 10) * 80 + Math.cos(i / 5) * 50 + 150;
-    const month = monthNames[i % 12];
-    
-    // Dados históricos
-    if (i < historicPoints) {
-      data.push({
-        month: month,
-        cases: Math.round(baseCases + (Math.random() - 0.5) * 30),
-        forecast: null, // Define como nulo para pontos históricos
-      });
-    } 
-    // Dados de previsão
-    else {
-      const forecastCases = baseCases + (i - historicPoints) * 5 + (Math.random() - 0.5) * 10;
-      
-      // Conecta a linha da previsão ao último ponto histórico
-      if (i === historicPoints) {
-        // Ponto de transição: 'cases' tem o valor do último ponto real, e 'forecast' tem seu próprio valor
-        data.push({
-          month: month,
-          cases: data[historicPoints - 1].cases,
-          forecast: Math.round(forecastCases),
-        });
-      } else {
-        // Pontos de previsão: 'cases' é nulo e 'forecast' tem um valor
-        data.push({
-          month: month,
-          cases: null,
-          forecast: Math.round(forecastCases),
-        });
-      }
-    }
-  }
-  return data;
-};
-
-// --- Dados de Exemplo para Gráficos (agora gerados por função) ---
-const dengueCasesData = generateGraphData();
-
 
 
 export default function About() {
@@ -185,7 +149,7 @@ export default function About() {
           <ChartSpline size={32} />
         </div>
         <h4 className="text-2xl font-semibold text-green-300 mb-3">Previsão de Surtos</h4>
-        <p className="text-zinc-300 leading-relaxed">Um modelo preditivo que antecipa áreas de diferentes riscos epidemiológicos.</p>
+        <p className="text-zinc-300 leading-relaxed">Um modelo preditivo que projeta a evolução de surtos de dengue a nível municipal.</p>
       </div>
       <span className="mt-6 text-sm font-semibold text-green-400 group-hover:text-green-300 transition-colors">Acessar ferramenta</span>
     </Link>
@@ -246,7 +210,7 @@ export default function About() {
               </div>
               <h4 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 mb-4 text-center">Missão</h4>
               <p className="text-zinc-300 text-lg leading-relaxed text-center">
-                Desenvolver e fornecer ferramentas de inteligência artificial que permitam a detecção precoce de focos, a previsão de surtos e a otimização de recursos no combate à dengue.
+                Desenvolver e fornecer ferramentas de inteligência artificial que permitam a detecção de focos, a previsão precoce de surtos e, portanto, a otimização de recursos no combate à dengue.
               </p>
             </div>
             {/* Visão Card */}
@@ -350,7 +314,7 @@ export default function About() {
               </div>
               <h4 className="text-2xl font-semibold text-blue-300 mb-3">1. Detecção Inteligente</h4>
               <p className="text-zinc-300 leading-relaxed">
-                Visão computacional analisa imagens de satélite e drones, identificando focos (piscinas, caixas d&apos;água) para mapear áreas de risco.
+                Visão computacional analisa imagens de drones, identificando possíveis focos (piscinas, caixas d&apos;água) para mapear áreas de risco.
               </p>
             </div>
             <div className="bg-zinc-900/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-zinc-800 flex flex-col items-center group animate-fade-in-up delay-300">
@@ -359,7 +323,7 @@ export default function About() {
               </div>
               <h4 className="text-2xl font-semibold text-green-300 mb-3">2. Análise Preditiva</h4>
               <p className="text-zinc-300 leading-relaxed">
-                Modelos de Machine Learning processam dados históricos, climáticos e geográficos para prever a incidência de casos futuros.
+                Modelos de Machine Learning processam dados históricos e climáticos para prever a incidência de casos futuros.
               </p>
             </div>
             <div className="bg-zinc-900/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-zinc-800 flex flex-col items-center group animate-fade-in-up delay-400">
@@ -377,10 +341,10 @@ export default function About() {
         <hr className="border-zinc-800 mb-24" />
 
 {/* --- 6. Seção de Gráficos de Previsão --- */}
-<section className="max-w-6xl mx-auto mb-24 p-8 bg-zinc-900/80 backdrop-blur-sm rounded-2xl shadow-lg border border-zinc-800 animate-fade-in-up">
-  <h3 className="text-4xl font-bold text-white mb-4 text-center">Projeção de Casos (Exemplo)</h3>
+<section className="max-w-6xl mx-auto mb-24 rounded-2xl ">
+  <h3 className="text-4xl font-bold text-white mb-4 text-center">Projeção de Casos</h3>
   <p className="text-zinc-300 text-lg mb-8 text-center max-w-3xl mx-auto">
-    Este gráfico ilustra como nosso modelo compara dados históricos com projeções futuras, uma ferramenta vital para o planejamento antecipado.
+    Este gráfico exemplo ilustra como nosso modelo compara dados históricos com projeções futuras, uma ferramenta vital para o planejamento antecipado.
   </p>
   <div className="mb-4">
     <ResponsiveContainer width="100%" height={400}>
@@ -412,9 +376,9 @@ export default function About() {
         
         {/* --- 7. Seção de Imagem de Destaque --- */}
         <section className="max-w-6xl mx-auto mb-24 text-center animate-fade-in-up">
-          <h3 className="text-4xl font-bold text-white mb-4">Detecção de Focos na Prática</h3>
+          <h3 className="text-4xl font-bold text-white mb-4">Detecção de Focos</h3>
           <p className="text-zinc-300 text-lg mb-10 max-w-3xl mx-auto">
-            A visão computacional permite analisar vastas áreas, identificando com precisão potenciais criadouros. Veja um exemplo de como a IA processa uma imagem aérea.
+            A visão computacional permite analisar vastas áreas, identificando potenciais criadouros. Veja um exemplo de como a IA processa uma imagem aérea.
           </p>
           <div className="relative w-full h-130 rounded-2xl overflow-hidden shadow-2xl border border-zinc-700">
             <Image
@@ -565,33 +529,6 @@ export default function About() {
                 </a>
               </div>
             </div>
-          </div>
-        </section>
-
-
-        <hr className="border-zinc-800 mb-24" />
-
-        {/* --- 9. Seção de Perguntas Frequentes (FAQ) --- */}
-        <section className="max-w-4xl mx-auto mb-24 animate-fade-in-up">
-          <h3 className="text-4xl font-bold text-white mb-12 text-center">Perguntas Frequentes (FAQ)</h3>
-          <div className="space-y-6">
-            {faqs.map((faq, index) => (
-              <div
-                key={index}
-                className="bg-zinc-900/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-zinc-800 cursor-pointer transition-all duration-300 hover:border-blue-600/80"
-                onClick={() => toggleFAQ(index)}
-              >
-                <div className="flex justify-between items-center text-left">
-                  <h4 className="text-xl font-semibold text-white">{faq.question}</h4>
-                  {openFAQIndex === index ? <ChevronUp size={24} className="text-blue-400" /> : <ChevronDown size={24} className="text-zinc-400" />}
-                </div>
-                {openFAQIndex === index && (
-                  <p className="mt-4 text-zinc-300 leading-relaxed animate-fade-in-down text-left">
-                    {faq.answer}
-                  </p>
-                )}
-              </div>
-            ))}
           </div>
         </section>
 
