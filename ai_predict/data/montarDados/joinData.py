@@ -187,6 +187,14 @@ def main():
     df_final["codigo_ibge"] = df_final["codigo_ibge"].astype(str)
     df_final.to_parquet(OUTPUT_PATH, index=False)
     
+    if OUTPUT_PATH.endswith("inference_data.parquet"):
+        api_path = os.path.join(
+            os.path.dirname(__file__),
+            "..", "..", "..", "api", "data", "inference_data.parquet"
+        )
+        df_final.to_parquet(api_path, index=False)
+        print(f"Dados de inferência também salvos em: {api_path}")
+    
     print(f"\nDados de treino finalizados e salvos em: {OUTPUT_PATH}")
     # Verifica a última semana no ficheiro final
     df_year = df_final[df_final['ano'] == LIMIT_YEAR]
