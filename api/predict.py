@@ -46,12 +46,11 @@ class DenguePredictor:
         print("INFO: Carregando todos os ativos da IA (modelo, scalers, dados)...")
         AI_ASSETS_DIR = self.project_root / "models"
         
-        # --- MUDANÇA: Baixa o arquivo do Hugging Face para o caminho local ---
         INFERENCE_PATH = hf_hub_download(
             repo_id='previdengue/predict_inference_data', 
             filename='inference_data.parquet', 
             repo_type='dataset',
-            token=os.environ.get('HF_TOKEN') # Autenticação com o token de acesso
+            token=os.environ.get('HF_TOKEN') 
         )
         
         SCALER_DIR = AI_ASSETS_DIR / "scalers"

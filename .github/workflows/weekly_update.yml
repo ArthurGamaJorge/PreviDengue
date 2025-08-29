@@ -2,14 +2,15 @@ name: Atualização Semanal dos Dados de Dengue
 
 on:
   schedule:
-    - cron: '0 6 * * 1' # Executa toda segunda-feira às 3h BRT
+    - cron: '0 6 * * 1' 
   workflow_dispatch:
 
 jobs:
   update-data-pipeline:
     runs-on: ubuntu-latest
     permissions:
-      contents: write 
+      contents: write
+      id-token: write
 
     steps:
       - name: Checkout do repositório
@@ -21,18 +22,17 @@ jobs:
           python-version: '3.12'
 
       - name: Instalação das dependências
+        working-directory: ./ai_predict/data/pipeline_scripts
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
+          pip install huggingface_hub  # Instala a biblioteca do Hugging Face
       - name: Executa o pipeline de atualização de dados
         working-directory: ./ai_predict/data/montarDados
         run: python master_update.py
 
-      - name: Commit dos novos ficheiros de dados
+      - name: Upload dos dados de inferência para o Hugging Face Hub
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add -A
-          git commit -m "chore(data): Atualização semanal automática dos dados" || echo "Nenhuma alteração nos dados para fazer commit."
-          git push
+          python -c "import os; from huggingface_hub import HfApi; api = HfApi(token=os.environ['HF_TOKEN']); api.upload_file(path_or_fileobj='./ai_predict/data/inference_data.parquet', path_in_repo='inference_data.parquet', repo_id='previdengue/predict_inference_data', repo_type='dataset', commit_message='chore(data): Atualização semanal automática dos dados')"
