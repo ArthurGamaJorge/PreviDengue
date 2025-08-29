@@ -1,0 +1,38 @@
+name: Atualização Semanal dos Dados de Dengue
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # Executa toda segunda-feira às 3h BRT
+  workflow_dispatch:
+
+jobs:
+  update-data-pipeline:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write 
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Setup do Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalação das dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Executa o pipeline de atualização de dados
+        working-directory: ./ai_predict/data/montarDados
+        run: python master_update.py
+
+      - name: Commit dos novos ficheiros de dados
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          git commit -m "chore(data): Atualização semanal automática dos dados" || echo "Nenhuma alteração nos dados para fazer commit."
+          git push
