@@ -36,7 +36,7 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           # Use a biblioteca huggingface_hub para um upload mais seguro e moderno.
-          python -c "from huggingface_hub import HfApi; api = HfApi(token=os.environ['HF_TOKEN']); api.upload_file(path_or_fileobj='./ai_predict/data/inference_data.parquet', path_in_repo='inference_data.parquet', repo_id='previdengue/predict_inference_data', commit_message='chore(data): Atualização semanal automática dos dados')"
+          python -c "import os; from huggingface_hub import HfApi; api = HfApi(token=os.environ['HF_TOKEN']); api.upload_file(path_or_fileobj='./ai_predict/data/inference_data.parquet', path_in_repo='inference_data.parquet', repo_id='previdengue/predict_inference_data', commit_message='chore(data): Atualização semanal automática dos dados')"
 
       - name: Commit dos novos ficheiros de dados
         run: |
