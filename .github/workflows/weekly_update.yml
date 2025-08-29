@@ -1,0 +1,45 @@
+name: Atualização Semanal dos Dados de Dengue
+
+on:
+  # 1. Agendamento: Executa toda segunda-feira às 3:00 da manhã (BRT)
+  schedule:
+    - cron: '0 6 * * 1' 
+  
+  # 2. Manual: Permite que você inicie a automação manualmente na página de "Actions" do GitHub
+  workflow_dispatch:
+
+jobs:
+  update-data-pipeline:
+    # A automação será executada numa máquina virtual Linux (Ubuntu)
+    runs-on: ubuntu-latest
+
+    steps:
+      # Passo 1: Clona o seu repositório para a máquina virtual
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      # Passo 2: Configura o ambiente Python
+      - name: Setup do Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Passo 3: Instala todas as bibliotecas Python listadas no requirements.txt
+      - name: Instalação das dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Passo 4: Executa o seu script mestre que orquestra todo o pipeline
+      - name: Executa o pipeline de atualização de dados
+        run: python ./ai_predict/data/montarDados/master_update.py 
+
+      # Passo 5: Faz o commit e o push dos ficheiros de dados atualizados para o repositório
+      - name: Commit dos novos ficheiros de dados
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A # Adiciona todos os ficheiros novos ou modificados (ex: .csv, .parquet)
+          
+          git commit -m "chore(data): Atualização semanal automática dos dados" || echo "Nenhuma alteração nos dados para fazer commit."
+          git push
