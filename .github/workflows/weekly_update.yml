@@ -31,14 +31,12 @@ jobs:
         working-directory: ./ai_predict/data/montarDados
         run: python master_update.py
 
-      - name: Autenticação no Hugging Face Hub
-        uses: huggingface/actions/login@v1
+      - name: Upload dos dados de inferência para o Hugging Face Hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-
-      - name: Upload dos dados de inferência para o Hugging Face Hub
         run: |
-          # Comando para fazer o upload do arquivo para o dataset
+          # Comando para fazer o upload do arquivo para o dataset. A autenticação é feita
+          # automaticamente usando a variável de ambiente HF_TOKEN.
           huggingface-cli upload \
             previdengue/predict_inference_data \
             ./ai_predict/data/inference_data.parquet \
