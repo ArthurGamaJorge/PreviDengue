@@ -183,12 +183,6 @@ def main():
     df_final["codigo_ibge"] = df_final["codigo_ibge"].astype(str)
     df_final.to_parquet(OUTPUT_PATH, index=False)
     
-    api_dir = Path(__file__).resolve().parent.parent.parent / "api" / "data"
-    api_dir.mkdir(parents=True, exist_ok=True)
-    api_path = api_dir / "inference_data.parquet"
-    df_final.to_parquet(api_path, index=False)
-    print(f"Dados de inferência também salvos em: {api_path}")
-    
     print(f"\nDados de inferência finalizados e salvos em: {OUTPUT_PATH}")
     
     df_year = df_final[df_final['ano'] == LIMIT_YEAR]
