@@ -9,6 +9,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import base64
 from io import BytesIO
+from huggingface_hub import hf_hub_download 
 
 warnings.filterwarnings('ignore')
 plt.style.use('seaborn-v0_8-darkgrid')
@@ -44,7 +45,15 @@ class DenguePredictor:
     def load_assets(self):
         print("INFO: Carregando todos os ativos da IA (modelo, scalers, dados)...")
         AI_ASSETS_DIR = self.project_root / "models"
-        INFERENCE_PATH = self.project_root / "data" / "inference_data.parquet"
+        
+        # --- MUDANÇA: Baixa o arquivo do Hugging Face para o caminho local ---
+        INFERENCE_PATH = hf_hub_download(
+            repo_id='previdengue/predict_inference_data', 
+            filename='inference_data.parquet', 
+            repo_type='dataset',
+            token=os.environ.get('HF_TOKEN') # Autenticação com o token de acesso
+        )
+        
         SCALER_DIR = AI_ASSETS_DIR / "scalers"
         MODEL_PATH = AI_ASSETS_DIR / "checkpoints" / "model_checkpoint_best_city.keras"
 
@@ -52,9 +61,8 @@ class DenguePredictor:
         self.scaler_dyn = joblib.load(SCALER_DIR / "scaler_dyn_global.pkl")
         self.scaler_static = joblib.load(SCALER_DIR / "scaler_static_global.pkl")
         self.scaler_target = joblib.load(SCALER_DIR / "scaler_target_global.pkl")
-        # O scaler de velocidade não é usado na inversão para o usuário final, mas é bom tê-lo
-        # self.scaler_velocity = joblib.load(SCALER_DIR / "scaler_velocidade_global.pkl")
 
+        # Lê os dados de inferência do arquivo baixado
         df_master = pd.read_parquet(INFERENCE_PATH)
         df_master['codigo_ibge'] = df_master['codigo_ibge'].astype(int)
         df_master['date'] = pd.to_datetime(df_master['ano'].astype(str) + df_master['semana'].astype(str) + '0', format='%Y%W%w', errors='coerce')
@@ -106,7 +114,6 @@ class DenguePredictor:
         pred_casos_scaled = predictions_scaled[0] # Primeira saída do modelo
 
         # 5. Inverte a transformação para obter o número de casos reais
-        # ✅ CORREÇÃO: Remodela o array de 1D para 2D, como o scaler espera.
         pred_casos_log = self.scaler_target.inverse_transform(pred_casos_scaled.reshape(1, -1))
         pred_casos_real = np.expm1(pred_casos_log).flatten()
         

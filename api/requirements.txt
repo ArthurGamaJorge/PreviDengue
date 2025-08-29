@@ -13,3 +13,4 @@ tensorflow==2.20.0
 epiweeks==2.3.0
 scikit-learn==1.6.1
 fastparquet
+huggingface_hub
