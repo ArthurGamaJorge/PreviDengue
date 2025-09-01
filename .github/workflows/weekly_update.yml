@@ -1,8 +1,8 @@
 name: Atualização Semanal dos Dados de Dengue
 
 on:
-  schedule:
-    - cron: '0 6 * * 1' 
+  schedule: # Terça feira, às quatro da manhã (BRT)
+    - cron: '0 6 * * 2' 
   workflow_dispatch:
 
 jobs:
