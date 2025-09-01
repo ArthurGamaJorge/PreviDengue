@@ -5,8 +5,10 @@ import unicodedata
 import pandas as pd
 from epiweeks import Week
 import datetime
-from pathlib import Path 
+from pathlib import Path
+import numpy as np
 
+# --- CAMINHOS ROBUSTOS ---
 SCRIPT_DIR = Path(__file__).resolve().parent
 DATA_PREV_PATH = SCRIPT_DIR / "../casos"
 CLIMATE_PATH = SCRIPT_DIR / "../dadosClimaticos.parquet"
@@ -45,15 +47,14 @@ def read_and_process_prev_file(file_path):
     df[['codigo_ibge_6', 'municipio']] = df[first_col].apply(lambda x: pd.Series(parse(x)))
     df = df.dropna(subset=['codigo_ibge_6'])
 
-    year = int(re.search(r'(\d{4})', os.path.basename(file_path)).group(1))
+    year_match = re.search(r'mun(\d{4})\.csv', os.path.basename(file_path))
+    if not year_match: return pd.DataFrame()
+    year = int(year_match.group(1))
+    
     max_week = max_epi_week(year)
 
     week_cols = [col for col in df.columns if col.lower().startswith("semana")]
-    week_cols_filtered = []
-    for col in week_cols:
-        m = re.search(r'(\d+)', col)
-        if m and int(m.group(1)) <= max_week:
-            week_cols_filtered.append(col)
+    week_cols_filtered = [col for col in week_cols if int(re.search(r'(\d+)', col, re.IGNORECASE).group(1)) <= max_week]
 
     df[week_cols_filtered] = df[week_cols_filtered].replace("-", 0).apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
 
@@ -67,10 +68,11 @@ def read_and_process_prev_file(file_path):
 
 def load_all_prev_files(path):
     dfs = []
-    for fname in os.listdir(path):
+    for fname in sorted(os.listdir(path)): # Ordena para processamento consistente
         if fname.endswith('.csv') and fname.startswith('mun'):
-            print(f"Processando {fname}")
+            print(f"Processando ficheiro de casos: {fname}")
             dfs.append(read_and_process_prev_file(os.path.join(path, fname)))
+    if not dfs: return pd.DataFrame()
     return pd.concat(dfs, ignore_index=True)
 
 def add_geo_info(df, states_dict, municipios_list):
@@ -84,71 +86,63 @@ def add_geo_info(df, states_dict, municipios_list):
     df.drop(columns=["codigo_ibge_6", "uf_code"], inplace=True)
     return df
 
-def normalize_name(name):
-    norm = unicodedata.normalize('NFKD', name)
-    return re.sub(r'\s+', ' ', norm.encode('ASCII', 'ignore').decode()).lower().strip()
-
 def load_climate_data(path):
+    if not path.exists():
+        raise FileNotFoundError(f"Ficheiro de clima não encontrado em {path}")
     df = pd.read_parquet(path, engine='fastparquet')
-    df["municipio_norm"] = df["municipio"].apply(normalize_name)
     df[["ano", "semana"]] = df["ano_semana"].str.extract(r"(\d{4})/(\d{2})").astype(int)
     return df
 
+# ✅ --- FUNÇÃO TOTALMENTE REESCRITA PARA MAIOR ROBUSTEZ E CLAREZA ---
 def create_inference_df(df_prev, df_climate, municipios_list, limit_year, last_cases_week):
-    print(f"Criando dados de inferência com casos até {limit_year}/SE {last_cases_week}.")
+    print(f"Criando dados de inferência com casos até {limit_year}/SE{last_cases_week}.")
 
-    df_prev["codigo_ibge"] = df_prev["codigo_ibge"].astype(str)
-    df_climate["codigo_ibge"] = df_climate["codigo_ibge"].astype(str)
+    # 1. Prepara a base de municípios, padronizando os nomes das colunas
+    all_municipios = pd.DataFrame(municipios_list)
+    all_municipios.rename(columns={'nome': 'municipio'}, inplace=True)
+    all_municipios['codigo_ibge'] = all_municipios['codigo_ibge'].astype(str)
     
-    df_prev_filtered = df_prev[
-        (df_prev['ano'] < limit_year) |
-        ((df_prev['ano'] == limit_year) & (df_prev['semana'] <= last_cases_week))
-    ].copy()
+    # 2. Cria a grelha completa de tempo (todas as semanas de todos os anos nos dados climáticos)
+    all_year_week = df_climate[["ano", "semana"]].drop_duplicates()
+    
+    # 3. Cria a base final com todas as combinações de município x semana
+    base_df = all_municipios.merge(all_year_week, how="cross")
 
-    df_merged = pd.merge(
-        df_prev_filtered,
-        df_climate,
-        on=["codigo_ibge", "ano", "semana"],
-        how="left"
+    # 4. Junta os dados de casos (df_prev) à base.
+    # O 'left' merge mantém todas as linhas da base.
+    df_final = pd.merge(
+        base_df,
+        df_prev[['codigo_ibge', 'ano', 'semana', 'numero_casos']],
+        on=['codigo_ibge', 'ano', 'semana'],
+        how='left'
     )
 
-    all_municipios = pd.DataFrame(municipios_list)
-    all_municipios["codigo_ibge"] = all_municipios["codigo_ibge"].astype(str)
+    # 5. Junta os dados climáticos à base.
+    df_climate['codigo_ibge'] = df_climate['codigo_ibge'].astype(str)
+    df_final = pd.merge(
+        df_final,
+        df_climate.drop(columns=['municipio', 'ano_semana']),
+        on=['codigo_ibge', 'ano', 'semana'],
+        how='left'
+    )
     
-    all_year_week = df_climate[["ano", "semana"]].drop_duplicates()
+    # 6. Aplica a lógica de preenchimento de casos: 0 para o passado, NaN para o futuro
+    # Preenche com 0 todos os casos históricos que não foram notificados (ficaram NaN após o merge)
+    past_mask = (df_final['ano'] < limit_year) | ((df_final['ano'] == limit_year) & (df_final['semana'] <= last_cases_week))
+    df_final.loc[past_mask, 'numero_casos'] = df_final.loc[past_mask, 'numero_casos'].fillna(0)
 
-    base = all_municipios.merge(all_year_week, how="cross")
-    base["codigo_ibge"] = base["codigo_ibge"].astype(str)
-
-    base["numero_casos"] = 0
-    future_mask = (base['ano'] == limit_year) & (base['semana'] > last_cases_week)
-    base.loc[future_mask, "numero_casos"] = float("nan")
-    future_mask_years = base['ano'] > limit_year
-    base.loc[future_mask_years, "numero_casos"] = float("nan")
-
-    existing_keys = df_merged.set_index(["codigo_ibge", "ano", "semana"]).index
-    base_keys = base.set_index(["codigo_ibge", "ano", "semana"]).index
-    base = base[~base_keys.isin(existing_keys)]
+    # Define como NaN todos os casos futuros para a IA prever
+    future_mask = ~past_mask
+    df_final.loc[future_mask, 'numero_casos'] = np.nan
     
-    base = pd.merge(base, df_climate, on=["codigo_ibge", "ano", "semana"], how="left")
-    base["notificacao"] = base["ano"].apply(lambda y: 1 if y in [2021, 2022] else 0)
-    
+    # 7. Adiciona informações geográficas e a coluna 'notificacao'
     states_dict = load_states(STATES_JSON_PATH)
-    base["uf_code"] = base["codigo_ibge"].str[:2]
-    base["estado_sigla"] = base["uf_code"].map(lambda x: states_dict.get(x, {}).get("uf"))
-    base["regiao"] = base["uf_code"].map(lambda x: states_dict.get(x, {}).get("regiao"))
-    base = base.drop(columns=["uf_code"])
+    df_final["uf_code"] = df_final["codigo_ibge"].str[:2]
+    df_final["estado_sigla"] = df_final["uf_code"].map(lambda x: states_dict.get(x, {}).get("uf"))
+    df_final["regiao"] = df_final["uf_code"].map(lambda x: states_dict.get(x, {}).get("regiao"))
+    df_final['notificacao'] = df_final["ano"].apply(lambda y: 1 if y in [2021, 2022] else 0)
 
-    df_final = pd.concat([df_merged, base], ignore_index=True)
-    
-    municipio_geo_map = all_municipios.set_index('codigo_ibge')[['latitude', 'longitude']].to_dict('index')
-    
-    lat_map = {k: v['latitude'] for k, v in municipio_geo_map.items()}
-    lon_map = {k: v['longitude'] for k, v in municipio_geo_map.items()}
-
-    df_final['latitude'] = df_final['latitude'].fillna(df_final['codigo_ibge'].map(lat_map))
-    df_final['longitude'] = df_final['longitude'].fillna(df_final['codigo_ibge'].map(lon_map))
-
+    # 8. Ordena e finaliza
     df_final = df_final.sort_values(by=["codigo_ibge", "ano", "semana"]).reset_index(drop=True)
 
     final_columns = [
@@ -157,10 +151,8 @@ def create_inference_df(df_prev, df_climate, municipios_list, limit_year, last_c
         "T2M", "T2M_MAX", "T2M_MIN", "PRECTOTCORR", "RH2M", "ALLSKY_SFC_SW_DWN"
     ]
     
-    cols_to_use = [col for col in final_columns if col in df_final.columns]
-    df_final = df_final[cols_to_use]
-    
-    return df_final
+    # Remove colunas extras e garante a ordem correta
+    return df_final[[col for col in final_columns if col in df_final.columns]]
 
 def main():
     target_week = Week.fromdate(datetime.date.today()) - 3
@@ -173,6 +165,10 @@ def main():
     municipios_list = load_municipios(MUNICIPIOS_JSON_PATH)
 
     df_prev = load_all_prev_files(DATA_PREV_PATH)
+    if df_prev.empty:
+        print("Nenhum ficheiro de casos encontrado. A terminar.")
+        return
+        
     df_prev = add_geo_info(df_prev, states_dict, municipios_list)
     df_climate = load_climate_data(CLIMATE_PATH)
 
@@ -187,9 +183,12 @@ def main():
     
     df_year = df_final[df_final['ano'] == LIMIT_YEAR]
     if not df_year.empty:
-        last_week_with_data = df_year['semana'][df_final['numero_casos'].notna()].max()
-        print(f"No ano de {LIMIT_YEAR}:")
-        print(f"  -> Última semana com dados de casos: {int(last_week_with_data)}")
+        if not df_year['numero_casos'].notna().any():
+            print(f"No ano de {LIMIT_YEAR}: Nenhum dado de casos foi encontrado até à semana limite.")
+        else:
+            last_week_with_data = df_year['semana'][df_final['numero_casos'].notna()].max()
+            print(f"No ano de {LIMIT_YEAR}:")
+            print(f"  -> Última semana com dados de casos: {int(last_week_with_data)}")
 
 if __name__ == "__main__":
     main()
