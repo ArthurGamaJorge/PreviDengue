@@ -15,12 +15,10 @@ class DengueDetector:
         return score
 
     def detect_image(self, image_bytes):
-        # Carregar imagem da memória
         img = Image.open(BytesIO(image_bytes)).convert("RGB")
-        img_np = np.array(img)  # YOLO aceita np.array diretamente
+        img_np = np.array(img)  
         height, width = img_np.shape[:2]
 
-        # Detectar objetos
         results = self.model(img_np)
         result = results[0]
         boxes = result.boxes
@@ -29,7 +27,6 @@ class DengueDetector:
         class_names = [self.names[int(cls)] for cls in class_ids]
         counts = Counter(class_names)
 
-        # Construir lista de detecções
         detections = []
         for i in range(len(boxes)):
             x1, y1, x2, y2 = map(float, boxes.xyxy[i])
