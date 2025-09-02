@@ -1,3 +1,5 @@
+# uvicorn app:app --reload
+
 import uvicorn
 from fastapi import Body, FastAPI, UploadFile, File, Response 
 from fastapi.responses import JSONResponse
