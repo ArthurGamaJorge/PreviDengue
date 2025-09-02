@@ -25,8 +25,7 @@ jobs:
 
       - name: Sync files
         run: |
-          rsync -av --exclude='.git' --delete api/ hf_space/api/
-          rsync -av --exclude='.git' README.md hf_space/
+          rsync -av --exclude='.git' --delete api/ hf_space/
 
       - name: Commit and push
         run: |
@@ -39,4 +38,3 @@ jobs:
             git push
           else
             echo "No changes to deploy"
-          fi
