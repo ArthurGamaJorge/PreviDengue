@@ -15,7 +15,6 @@ class DengueDetector:
         return score
 
     def detect_image(self, image_bytes):
-        # Carregar imagem da memória
         img = Image.open(BytesIO(image_bytes)).convert("RGB")
         img_np = np.array(img)  
         height, width = img_np.shape[:2]
