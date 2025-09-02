@@ -1,0 +1,40 @@
+name: Deploy to Hugging Face Space
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: 
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Git LFS
+        run: |
+          sudo apt-get update
+          sudo apt-get install git-lfs -y
+          git lfs install
+
+      - name: Clone Hugging Face Space
+        run: |
+          git clone https://hf-token:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/username/PreviDengueAPI hf_space
+
+      - name: Sync files
+        run: |
+          rsync -av --exclude='.git' --delete api/ hf_space/api/
+          rsync -av --exclude='.git' README.md hf_space/
+
+      - name: Commit and push
+        run: |
+          cd hf_space
+          if ! git diff --quiet; then
+            git add .
+            git commit -m "Auto-deploy from GitHub"
+            git push
+          else
+            echo "No changes to deploy"
+          fi
