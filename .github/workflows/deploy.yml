@@ -21,7 +21,7 @@ jobs:
 
       - name: Clone Hugging Face Space
         run: |
-          git clone https://hf-token:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/username/PreviDengueAPI hf_space
+          git clone https://hf-token:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Previdengue/PreviDengueAPI hf_space
 
       - name: Sync files
         run: |
