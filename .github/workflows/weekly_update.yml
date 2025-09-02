@@ -2,14 +2,14 @@ name: Atualização Semanal dos Dados de Dengue
 
 on:
   schedule: # Terça feira, às quatro da manhã (BRT)
-    - cron: '0 6 * * 2' 
+    - cron: '0 7 * * 2'
   workflow_dispatch:
 
 jobs:
   update-data-pipeline:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write 
       id-token: write
 
     steps:
@@ -26,13 +26,50 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install huggingface_hub  # Instala a biblioteca do Hugging Face
+          pip install huggingface_hub # Essencial para interagir com o HF
+          
+      - name: Download dos dados climáticos existentes
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          huggingface-cli download \
+            previdengue/predict_climate_data \
+            dadosClimaticos.parquet \
+            --repo-type dataset \
+            --local-dir ./ai_predict/data/
+
       - name: Executa o pipeline de atualização de dados
         working-directory: ./ai_predict/data/pipeline_scripts
         run: python master_update.py
+-
+      - name: Upload dos dados climáticos atualizados para o Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python -c "
+          from huggingface_hub import HfApi
+          import os
+          api = HfApi(token=os.environ['HF_TOKEN'])
+          api.upload_file(
+              path_or_fileobj='./ai_predict/data/dadosClimaticos.parquet',
+              path_in_repo='dadosClimaticos.parquet',
+              repo_id='previdengue/predict_climate_data',
+              repo_type='dataset',
+              commit_message='chore(data): 🤖 Atualização semanal automática dos dados climáticos'
+          )"
 
       - name: Upload dos dados de inferência para o Hugging Face Hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          python -c "import os; from huggingface_hub import HfApi; api = HfApi(token=os.environ['HF_TOKEN']); api.upload_file(path_or_fileobj='./ai_predict/data/inference_data.parquet', path_in_repo='inference_data.parquet', repo_id='previdengue/predict_inference_data', repo_type='dataset', commit_message='chore(data): Atualização semanal automática dos dados')"
+          python -c "
+          from huggingface_hub import HfApi
+          import os
+          api = HfApi(token=os.environ['HF_TOKEN'])
+          api.upload_file(
+              path_or_fileobj='./ai_predict/data/inference_data.parquet',
+              path_in_repo='inference_data.parquet',
+              repo_id='previdengue/predict_inference_data',
+              repo_type='dataset',
+              commit_message='chore(data): ✨ Atualização semanal automática dos dados de inferência'
+          )"
