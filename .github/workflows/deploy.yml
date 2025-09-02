@@ -28,7 +28,7 @@ jobs:
           rsync -av --exclude='.git' --delete api/ hf_space/
 
       - name: Commit and push
-        run: bash -c '
+        run: |
           cd hf_space
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
@@ -38,5 +38,3 @@ jobs:
             git push
           else
             echo "No changes to deploy"
-          fi
-        '
