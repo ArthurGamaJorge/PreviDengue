@@ -23,7 +23,7 @@ predictor: DenguePredictor = None
 
 app = FastAPI()
 
-# --- Crie um evento de startup para carregar os modelos ---
+# --- evento de startup para carregar os modelos ---
 @app.on_event("startup")
 async def startup_event():
     global detector, predictor
