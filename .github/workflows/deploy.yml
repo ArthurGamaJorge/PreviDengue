@@ -27,6 +27,12 @@ jobs:
         run: |
           rsync -av --exclude='.git' api/ hf_space/
 
+      - name: Pull LFS files in Hugging Face repo
+        run: |
+          cd hf_space
+          git lfs install
+          git lfs pull
+
       - name: Set Git identity
         run: |
           cd hf_space
