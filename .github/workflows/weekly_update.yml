@@ -73,3 +73,19 @@ jobs:
               repo_type='dataset',
               commit_message='chore(data): ✨ Atualização semanal automática dos dados de inferência'
           )"
+
+      - name: Upload dos dados estaduais de inferência para o Hugging Face Hub
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python -c "
+          from huggingface_hub import HfApi
+          import os
+          api = HfApi(token=os.environ['HF_TOKEN'])
+          api.upload_file(
+              path_or_fileobj='./ai_predict/data/final_training_data_estadual.parquet',
+              path_in_repo='final_training_data_estadual.parquet',
+              repo_id='previdengue/predict_inference_data_estadual',
+              repo_type='dataset',
+              commit_message='chore(data): 🏛️ Atualização semanal automática dos dados estaduais de inferência'
+          )"
