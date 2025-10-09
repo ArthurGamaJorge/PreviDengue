@@ -37,15 +37,18 @@ const DynamicPDFDownloadLink = dynamic(
     }
 );
 
+// src/components/PdfButton.tsx
 export const PdfButton = ({ municipalityName, addresses }: PdfGeneratorProps) => {
-    // 2. O documento é criado aqui para manter a lógica encapsulada.
-    const pdfDocument = <ReportDocument municipalityName={municipalityName} addresses={addresses} />;
+    // 2. The document is created here to keep the logic encapsulated.
+    // Add a default value to the `municipalityName` prop
+    const name = municipalityName || 'municipio_desconhecido';
+    const pdfDocument = <ReportDocument municipalityName={name} addresses={addresses} />;
 
-    // 3. Usa o componente importado dinamicamente
+    // 3. Uses the dynamically imported component
     return (
         <DynamicPDFDownloadLink
             document={pdfDocument}
-            fileName={`relatorio_fiscalizacao_${municipalityName.replace(/\s/g, '_')}.pdf`}
+            fileName={`relatorio_fiscalizacao_${name.replace(/\s/g, '_')}.pdf`}
         >
             {({ loading }) => (
                 <button

@@ -361,7 +361,7 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
     <>
       <div className="w-full p-8 animate-fade-in-up h-full flex flex-col">        
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
-          <h2 className="text-4xl font-bold text-white">Análise Inteligente de Focos</h2>
+          <h2 className="text-4xl font-bold text-white">Painel de Análise</h2>
           <form onSubmit={handleSearchSubmit} className="relative w-full md:w-auto">
             <div className="relative">
               <input
@@ -486,6 +486,7 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
                 <p>Carregando mapa...</p>
               </div>
             )}
+            
           </div>
         </div>
       </div>

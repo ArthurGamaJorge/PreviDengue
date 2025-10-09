@@ -112,7 +112,7 @@ export default function About() {
       {/* --- 1. Seção de Hero / Introdução --- */}
       <section id="inicio" className="h-[calc(100vh-100px)] flex flex-col items-center justify-center text-center gap-6 mb-32">
         <h1 className="text-5xl sm:text-7xl font-extrabold leading-tight text-transparent bg-clip-text bg-gradient-to-br from-white to-zinc-400 animate-fade-in-up">
-          Tecnologia Apoiando na Linha de Frente Contra a Dengue
+          Tecnologia Apoiando na Linha de Frente no Combate à Dengue
         </h1>
         <p className="max-w-3xl text-zinc-300 text-lg sm:text-xl leading-relaxed animate-fade-in-up delay-200">
           Ações inteligentes e proativas contra a dengue, com IAs que preveem surtos e detectam focos do mosquito com eficiência.
@@ -128,15 +128,15 @@ export default function About() {
       </section>
 
 
-      <hr className="border-zinc-800 mb-24" />
+      <hr id="ferramentas" className="border-zinc-800 mb-24" />
 
         
-      <section id="ferramentas" className="max-w mx-auto mb-24 text-center">
+      <section className="max-w mx-auto mb-24 text-center">
   <div className="mb-12 animate-fade-in-up">
     <h2 className="text-2xl font-bold text-blue-400 mb-2">Para Agentes de Saúde e Gestores</h2>
     <h3 className="text-4xl font-bold text-white">Nossas Ferramentas de Análise</h3>
     <p className="text-zinc-300 text-lg mt-4 max-w-3xl mx-auto">
-      A combinação de nossas ferramentas gera um ecossistema de dados poderoso para o planejamento de ações preventivas.
+      Um ecossistema de dados para um planejamento de ações preventivas - O Painel de Análise
     </p>
   </div>
   
@@ -188,7 +188,7 @@ export default function About() {
           <LayoutDashboard size={32} />
         </div>
         <h4 className="text-2xl font-semibold text-indigo-300 mb-3">Painel de Análise</h4>
-        <p className="text-zinc-300 leading-relaxed">Visualize dados e insights de ambos os modelos para guiar a tomada de decisão e o planejamento.</p>
+        <p className="text-zinc-300 leading-relaxed">Visualize insights dos modelos de previsão e detecção para guiar a tomada de decisão e o planejamento.</p>
       </div>
       <span className="mt-6 text-sm font-semibold text-indigo-400 group-hover:text-indigo-300 transition-colors">Explorar o painel</span>
     </Link>
