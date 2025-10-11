@@ -150,7 +150,7 @@ const StateChartSection = () => {
       return (
         <div style={{ background: 'rgba(17,24,39,0.9)', border: '1px solid #374151', padding: 8, borderRadius: 8 }}>
           <div style={{ fontWeight: 600, marginBottom: 6 }}>{`Semana ${week}: ${rangeStr}`}</div>
-          {real !== null && <div style={{ color: '#22c55e' }}>Casos Reais: {real}</div>}
+          {real !== null && <div style={{ color: '#3b82f6' }}>Casos Reais: {real}</div>}
           {pred !== null && <div style={{ color: '#f59e0b' }}>Previsão da IA: {pred}</div>}
         </div>
       );
@@ -200,8 +200,8 @@ const StateChartSection = () => {
               <AreaChart data={chartData} margin={{ top: 24, right: 20, left: -10, bottom: 5 }}>
                 <defs>
                   <linearGradient id="stateHistoric" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.7} />
-                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.7} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="statePrediction" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.7} />
@@ -237,7 +237,7 @@ const StateChartSection = () => {
                 <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend wrapperStyle={{ fontSize: '14px' }} />
-                <Area type="monotone" dataKey="Casos Reais" stroke="#22c55e" fillOpacity={1} fill="url(#stateHistoric)" strokeWidth={2} connectNulls />
+                <Area type="monotone" dataKey="Casos Reais" stroke="#3b82f6" fillOpacity={1} fill="url(#stateHistoric)" strokeWidth={2} connectNulls />
                 <Area type="monotone" dataKey="Previsão da IA" stroke="#f59e0b" fillOpacity={1} fill="url(#statePrediction)" strokeWidth={2} connectNulls />
               </AreaChart>
             </ResponsiveContainer>
