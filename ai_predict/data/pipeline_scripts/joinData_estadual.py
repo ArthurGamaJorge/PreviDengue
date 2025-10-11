@@ -5,7 +5,7 @@ import numpy as np
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 INFERENCE_PATH = SCRIPT_DIR / "../inference_data.parquet"
-OUTPUT_PATH = SCRIPT_DIR / "../final_training_data_estadual.parquet"
+OUTPUT_PATH = SCRIPT_DIR / "../inference_data_estadual.parquet"
 POP_PATH = SCRIPT_DIR / "../municipios/populacao_2025.json"
 STATES_JSON_PATH = SCRIPT_DIR / "../municipios/estados.json"
 

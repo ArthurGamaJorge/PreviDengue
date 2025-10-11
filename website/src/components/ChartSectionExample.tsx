@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, ChangeEvent } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 import { BarChart3, Bot, AlertTriangle } from 'lucide-react';
 import { API_URL } from "@/lib/config";
 // ✅ CORREÇÃO: A variável API_URL foi movida para cá para resolver o erro de importação.
@@ -73,7 +73,10 @@ const ChartSectionExample = () => {
   const [apiData, setApiData] = useState<ApiData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [weeksToDisplay, setWeeksToDisplay] = useState<number>(8); // Controla a exibição
+  // Previsão sempre fixa em 6 semanas
+  const weeksToDisplay = 6;
+  // Controle do histórico visível (em semanas) - sempre uma quantidade fixa (sem opção "tudo")
+  const [historyWeeks, setHistoryWeeks] = useState<number>(52);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -136,9 +139,11 @@ const ChartSectionExample = () => {
     if (!apiData?.historic_data || !apiData?.predicted_data) return [];
 
     const historicDataCleaned = apiData.historic_data.filter(d => d.cases !== null);
+    // Limita o histórico visível com base em historyWeeks (0 ou valor grande para mostrar tudo)
+    const limitedHistoric = historyWeeks > 0 ? historicDataCleaned.slice(-historyWeeks) : historicDataCleaned;
 
-    const formattedHistoric: ChartPoint[] = historicDataCleaned.map(d => ({
-      date: new Date(d.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
+    const formattedHistoric: ChartPoint[] = limitedHistoric.map(d => ({
+      date: d.date, // manter ISO para formatar no eixo/tooltip
       'Casos Reais': d.cases,
       'Previsão da IA': null,
     }));
@@ -146,7 +151,7 @@ const ChartSectionExample = () => {
     const slicedPrediction = apiData.predicted_data.slice(0, weeksToDisplay);
 
     const formattedPrediction: ChartPoint[] = slicedPrediction.map(d => ({
-      date: new Date(d.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
+      date: d.date,
       'Casos Reais': null,
       'Previsão da IA': d.predicted_cases
     }));
@@ -154,14 +159,32 @@ const ChartSectionExample = () => {
     if (formattedHistoric.length > 0 && formattedPrediction.length > 0) {
       const lastHistoricPoint = formattedHistoric[formattedHistoric.length - 1];
       const connectionPoint: ChartPoint = {
-        ...lastHistoricPoint,
-        'Previsão da IA': lastHistoricPoint['Casos Reais'],
+        date: lastHistoricPoint.date,
+        'Casos Reais': null,
+        'Previsão da IA': lastHistoricPoint['Casos Reais'] ?? 0,
       };
       formattedPrediction.unshift(connectionPoint);
     }
 
     return [...formattedHistoric, ...formattedPrediction];
-  }, [apiData, weeksToDisplay]);
+  }, [apiData, historyWeeks]);
+
+  // Marcadores de início de ano (destacados, sem duplicatas)
+  const yearMarkers = useMemo(() => {
+    const markers: { date: string; year: number }[] = [];
+    const seen = new Set<number>();
+    for (const pt of chartData) {
+      const dt = new Date(pt.date);
+      if (!isNaN(dt.getTime())) {
+        const y = dt.getFullYear();
+        if (!seen.has(y)) {
+          seen.add(y);
+          markers.push({ date: pt.date, year: y });
+        }
+      }
+    }
+    return markers;
+  }, [chartData]);
 
   // Memoização da lista de municípios filtrados
   const filteredMunicipalities = useMemo(() => {
@@ -177,8 +200,46 @@ const ChartSectionExample = () => {
     setShowDropdown(false);
   };
   
-  const handleWeeksChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setWeeksToDisplay(Number(e.target.value));
+  const handleHistoryChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setHistoryWeeks(Number(e.target.value));
+  };
+
+  // Formatação dos ticks do eixo X: mostrar meses; quando for início do ano, mostrar o ano
+  const monthTickFormatter = (value: string) => {
+    const dt = new Date(value);
+    const month = dt.getMonth();
+    return month === 0
+      ? dt.getFullYear().toString()
+      : dt.toLocaleString('pt-BR', { month: 'short' });
+  };
+
+  // Tooltip customizado: "Semana NN: dd mon - dd mon"
+  const isoWeekNumber = (date: Date) => {
+    const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = tmp.getUTCDay() || 7;
+    tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+    return Math.ceil((((tmp as any) - (yearStart as any)) / 86400000 + 1) / 7);
+  };
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const d = new Date(payload[0].payload.date);
+      const end = new Date(d);
+      end.setDate(end.getDate() + 6);
+      const week = isoWeekNumber(d);
+      const rangeStr = `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} - ${end.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}`;
+      const real = payload.find((p: any) => p.dataKey === 'Casos Reais')?.value ?? null;
+      const pred = payload.find((p: any) => p.dataKey === 'Previsão da IA')?.value ?? null;
+      return (
+        <div style={{ background: 'rgba(17,24,39,0.9)', border: '1px solid #374151', padding: 8, borderRadius: 8 }}>
+          <div style={{ fontWeight: 600, marginBottom: 6 }}>{`Semana ${week}: ${rangeStr}`}</div>
+          {real !== null && <div style={{ color: '#3b82f6' }}>Casos Reais: {real}</div>}
+          {pred !== null && <div style={{ color: '#f59e0b' }}>Previsão da IA: {pred}</div>}
+        </div>
+      );
+    }
+    return null;
   };
   
   const getMunicipalityName = (ibgeCode: number) => {
@@ -225,19 +286,21 @@ const ChartSectionExample = () => {
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-          <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+          {yearMarkers.map(m => (
+            <ReferenceLine
+              key={`year-${m.year}`}
+              x={m.date}
+              stroke="#6b7280"
+              strokeDasharray="4 4"
+              label={{ value: String(m.year), position: 'top', fill: '#9ca3af', fontSize: 12, fontWeight: 700 }}
+            />
+          ))}
+          <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} tickFormatter={monthTickFormatter} />
           <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: 'rgba(17, 24, 39, 0.9)',
-              borderColor: '#374151',
-              color: '#d1d5db',
-              borderRadius: '0.75rem'
-            }}
-          />
+          <Tooltip content={<CustomTooltip />} />
           <Legend wrapperStyle={{ fontSize: "14px" }} />
           <Area type="monotone" dataKey="Casos Reais" stroke="#3b82f6" fillOpacity={1} fill="url(#colorHistoric)" strokeWidth={2} connectNulls />
-          <Area type="monotone" dataKey="Previsão da IA" stroke="#f59e0b" fillOpacity={1} fill="url(#colorPrediction)" strokeWidth={2} />
+          <Area type="monotone" dataKey="Previsão da IA" stroke="#f59e0b" fillOpacity={1} fill="url(#colorPrediction)" strokeWidth={2} connectNulls />
         </AreaChart>
       </ResponsiveContainer>
     );
@@ -266,7 +329,6 @@ const ChartSectionExample = () => {
                   {filteredMunicipalities.map((m) => (
                     <li
                       key={m.codigo_ibge}
-                      onClick={() => handleCitySelect(m)}
                       className="p-2 cursor-pointer hover:bg-zinc-700 text-sm"
                     >
                       {m.nome}
@@ -276,18 +338,18 @@ const ChartSectionExample = () => {
               )}
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <label htmlFor="weeks-slider" className="text-zinc-300 text-sm whitespace-nowrap">Semanas:</label>
+              <label htmlFor="history-slider" className="text-zinc-300 text-sm whitespace-nowrap">Histórico (semanas):</label>
               <input
-                id="weeks-slider"
+                id="history-slider"
                 type="range"
-                min="1"
-                max="8"
-                value={weeksToDisplay}
-                onChange={handleWeeksChange}
-                className="w-full sm:w-24 h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                min="12"
+                max="600" 
+                value={historyWeeks}
+                onChange={handleHistoryChange}
+                className="w-full sm:w-40 h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
               />
-              <span className="w-12 h-8 flex items-center justify-center rounded-md border border-zinc-700 bg-zinc-800 text-white text-sm">
-                {weeksToDisplay}
+              <span className="w-20 h-8 flex items-center justify-center rounded-md border border-zinc-700 bg-zinc-800 text-white text-sm">
+                {historyWeeks}
               </span>
             </div>
           </div>
