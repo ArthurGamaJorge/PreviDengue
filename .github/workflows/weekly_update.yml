@@ -83,8 +83,8 @@ jobs:
           import os
           api = HfApi(token=os.environ['HF_TOKEN'])
           api.upload_file(
-              path_or_fileobj='./ai_predict/data/final_training_data_estadual.parquet',
-              path_in_repo='final_training_data_estadual.parquet',
+              path_or_fileobj='./ai_predict/data/inference_data_estadual.csv.parquet',
+              path_in_repo='inference_data_estadual.csv.parquet',
               repo_id='previdengue/predict_inference_data_estadual',
               repo_type='dataset',
               commit_message='chore(data): 🏛️ Atualização semanal automática dos dados estaduais de inferência'

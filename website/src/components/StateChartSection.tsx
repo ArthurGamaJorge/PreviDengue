@@ -67,6 +67,37 @@ const StateChartSection = () => {
     return [...histPoints, ...preds];
   }, [apiData, historyWeeks]);
 
+  // Ticks de mês únicos e ano em negrito (janeiro)
+  const monthTicks = useMemo(() => {
+    const seen = new Set<string>();
+    const ticks: string[] = [];
+    for (const pt of chartData) {
+      const d = new Date(pt.date);
+      if (isNaN(d.getTime())) continue;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        ticks.push(pt.date);
+      }
+    }
+    return ticks;
+  }, [chartData]);
+
+  const CustomMonthYearTick = (props: any) => {
+    const { x, y, payload } = props;
+    const d = new Date(payload.value);
+    if (isNaN(d.getTime())) return null;
+    const isJanuary = d.getMonth() === 0;
+    const text = isJanuary ? String(d.getFullYear()) : d.toLocaleString('pt-BR', { month: 'short' });
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text dy={16} textAnchor="middle" fill="#9ca3af" fontSize={12} fontWeight={isJanuary ? 700 : 400}>
+          {text}
+        </text>
+      </g>
+    );
+  };
+
   // Formatação de ticks: mês curto e ano no início do ano
   const monthTickFormatter = (value: string) => {
     const dt = new Date(value);
@@ -157,7 +188,15 @@ const StateChartSection = () => {
                 {yearMarkers.map(m => (
                   <ReferenceLine key={`year-${m.year}`} x={m.date} stroke="#6b7280" strokeDasharray="4 4" label={{ value: String(m.year), position: 'top', fill: '#9ca3af', fontSize: 12, fontWeight: 700 }} />
                 ))}
-                <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} tickFormatter={monthTickFormatter} />
+                <XAxis
+                  dataKey="date"
+                  stroke="#9ca3af"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  ticks={monthTicks}
+                  tick={<CustomMonthYearTick />}
+                />
                 <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend wrapperStyle={{ fontSize: '14px' }} />

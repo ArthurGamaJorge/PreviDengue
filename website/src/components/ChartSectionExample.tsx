@@ -169,6 +169,39 @@ const ChartSectionExample = () => {
     return [...formattedHistoric, ...formattedPrediction];
   }, [apiData, historyWeeks]);
 
+  // Ticks de eixo X: somente 1 por mês (evita repetição); ano em negrito nas viradas (janeiro)
+  const monthTicks = useMemo(() => {
+    const seen = new Set<string>(); // key: YYYY-MM
+    const ticks: string[] = [];
+    for (const pt of chartData) {
+      const d = new Date(pt.date);
+      if (isNaN(d.getTime())) continue;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        ticks.push(pt.date);
+      }
+    }
+    return ticks;
+  }, [chartData]);
+
+  const CustomMonthYearTick = (props: any) => {
+    const { x, y, payload } = props;
+    const d = new Date(payload.value);
+    if (isNaN(d.getTime())) return null;
+    const isJanuary = d.getMonth() === 0;
+    const text = isJanuary
+      ? String(d.getFullYear())
+      : d.toLocaleString('pt-BR', { month: 'short' });
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text dy={16} textAnchor="middle" fill="#9ca3af" fontSize={12} fontWeight={isJanuary ? 700 : 400}>
+          {text}
+        </text>
+      </g>
+    );
+  };
+
   // Marcadores de início de ano (destacados, sem duplicatas)
   const yearMarkers = useMemo(() => {
     const markers: { date: string; year: number }[] = [];
@@ -295,7 +328,15 @@ const ChartSectionExample = () => {
               label={{ value: String(m.year), position: 'top', fill: '#9ca3af', fontSize: 12, fontWeight: 700 }}
             />
           ))}
-          <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} tickFormatter={monthTickFormatter} />
+          <XAxis
+            dataKey="date"
+            stroke="#9ca3af"
+            fontSize={12}
+            tickLine={false}
+            axisLine={false}
+            ticks={monthTicks}
+            tick={<CustomMonthYearTick />}
+          />
           <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
           <Tooltip content={<CustomTooltip />} />
           <Legend wrapperStyle={{ fontSize: "14px" }} />

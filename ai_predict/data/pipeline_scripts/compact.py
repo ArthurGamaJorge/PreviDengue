@@ -10,8 +10,8 @@ import pandas as pd
 #csv_path = '../inference_data.csv'
 #parquet_path = '../inference_data.parquet'
 
-csv_path = '../final_training_data_estadual.csv'
-parquet_path = '../final_training_data_estadual.parquet'
+csv_path = '../inference_data_estadual.csv.csv'
+parquet_path = '../inference_data_estadual.csv.parquet'
 
 # Compactar
 #df = pd.read_csv(csv_path)
