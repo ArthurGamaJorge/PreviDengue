@@ -24,6 +24,7 @@ interface ApiData {
 interface Municipality {
   codigo_ibge: number;
   nome: string;
+  codigo_uf: number;
 }
 
 // --- Componentes de UI (Estilo Shadcn/ui) com Tipagem ---
@@ -77,6 +78,7 @@ const ChartSectionExample = () => {
   const weeksToDisplay = 6;
   // Controle do histórico visível (em semanas) - sempre uma quantidade fixa (sem opção "tudo")
   const [historyWeeks, setHistoryWeeks] = useState<number>(52);
+  const [maxHistoryWeeks, setMaxHistoryWeeks] = useState<number>(600);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -112,27 +114,34 @@ const ChartSectionExample = () => {
         const response = await fetch(`${API_URL}/predict/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ibge_code: selectedIbgeCode,
-          }),
+          body: JSON.stringify({ ibge_code: selectedIbgeCode })
         });
 
         if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error || `HTTP error! status: ${response.status}`);
+          let errMsg = `HTTP error! status: ${response.status}`;
+          try {
+            const errData = await response.json();
+            if (errData?.error) errMsg = errData.error;
+          } catch {}
+          throw new Error(errMsg);
         }
-        const data: ApiData = await response.json();
-        setApiData(data);
-      } catch (e: any)
-      {
-        console.error("Falha ao buscar dados da API:", e);
+  const data: ApiData = await response.json();
+  setApiData(data);
+  // Atualiza o máximo de semanas baseado no histórico disponível
+  const count = (data.historic_data || []).filter(d => d.cases !== null).length;
+  if (count > 0) setMaxHistoryWeeks(count);
+      } catch (e: any) {
+        console.error('Falha ao buscar dados da API:', e);
         setError(e.message);
       } finally {
         setLoading(false);
       }
     };
+
     fetchData();
   }, [selectedIbgeCode]);
+
+  // (o efeito de busca por município está mais abaixo, limpo e funcional)
 
   // Memoização dos dados do gráfico
   const chartData = useMemo(() => {
@@ -298,8 +307,20 @@ const ChartSectionExample = () => {
   };
   
   const getMunicipalityName = (ibgeCode: number) => {
-    return allMunicipalities.find(m => m.codigo_ibge === ibgeCode)?.nome || "Carregando...";
+    const m = allMunicipalities.find(m => m.codigo_ibge === ibgeCode);
+    if (!m) return "Carregando...";
+    const uf = UF_BY_CODE[m.codigo_uf] || "";
+    return uf ? `${uf} - ${m.nome}` : m.nome;
   };
+
+  // Mapa de código UF -> sigla
+  const UF_BY_CODE: Record<number, string> = useMemo(() => ({
+    11: 'RO', 12: 'AC', 13: 'AM', 14: 'RR', 15: 'PA', 16: 'AP', 17: 'TO',
+    21: 'MA', 22: 'PI', 23: 'CE', 24: 'RN', 25: 'PB', 26: 'PE', 27: 'AL', 28: 'SE', 29: 'BA',
+    31: 'MG', 32: 'ES', 33: 'RJ', 35: 'SP',
+    41: 'PR', 42: 'SC', 43: 'RS',
+    50: 'MS', 51: 'MT', 52: 'GO', 53: 'DF'
+  }), []);
 
   const renderContent = () => {
     if (loading) {
@@ -397,6 +418,12 @@ const ChartSectionExample = () => {
                 onChange={(e) => { setSearchQuery(e.target.value); setShowDropdown(true); }}
                 onFocus={() => setShowDropdown(true)}
                 onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && filteredMunicipalities.length > 0) {
+                    e.preventDefault();
+                    handleCitySelect(filteredMunicipalities[0]);
+                  }
+                }}
                 placeholder="Pesquisar cidade..."
                 className="bg-zinc-800 border border-zinc-700 text-white rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
               />
@@ -405,9 +432,10 @@ const ChartSectionExample = () => {
                   {filteredMunicipalities.map((m) => (
                     <li
                       key={m.codigo_ibge}
+                      onMouseDown={() => handleCitySelect(m)}
                       className="p-2 cursor-pointer hover:bg-zinc-700 text-sm"
                     >
-                      {m.nome}
+                      {(UF_BY_CODE[m.codigo_uf] ? `${UF_BY_CODE[m.codigo_uf]} - ` : '') + m.nome}
                     </li>
                   ))}
                 </ul>
@@ -419,7 +447,7 @@ const ChartSectionExample = () => {
                 id="history-slider"
                 type="range"
                 min="12"
-                max="600" 
+                max={maxHistoryWeeks}
                 value={historyWeeks}
                 onChange={handleHistoryChange}
                 className="w-full sm:w-40 h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
