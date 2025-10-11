@@ -156,14 +156,12 @@ const ChartSectionExample = () => {
       'Previsão da IA': d.predicted_cases
     }));
 
-    if (formattedHistoric.length > 0 && formattedPrediction.length > 0) {
+    if (formattedHistoric.length > 0) {
       const lastHistoricPoint = formattedHistoric[formattedHistoric.length - 1];
-      const connectionPoint: ChartPoint = {
-        date: lastHistoricPoint.date,
-        'Casos Reais': null,
-        'Previsão da IA': lastHistoricPoint['Casos Reais'] ?? 0,
-      };
-      formattedPrediction.unshift(connectionPoint);
+      // Preenche o último ponto do histórico também com o valor inicial da previsão
+      if (lastHistoricPoint['Previsão da IA'] == null) {
+        lastHistoricPoint['Previsão da IA'] = lastHistoricPoint['Casos Reais'] ?? 0;
+      }
     }
 
     return [...formattedHistoric, ...formattedPrediction];
@@ -197,6 +195,30 @@ const ChartSectionExample = () => {
       <g transform={`translate(${x},${y})`}>
         <text dy={16} textAnchor="middle" fill="#9ca3af" fontSize={12} fontWeight={isJanuary ? 700 : 400}>
           {text}
+        </text>
+      </g>
+    );
+  };
+
+  // Ticks anuais (primeiro ponto de cada ano) para um eixo superior dedicado
+  const yearTicks = useMemo(() => {
+    const firstByYear = new Map<number, string>();
+    for (const pt of chartData) {
+      const d = new Date(pt.date);
+      if (isNaN(d.getTime())) continue;
+      const y = d.getFullYear();
+      if (!firstByYear.has(y)) firstByYear.set(y, pt.date);
+    }
+    return Array.from(firstByYear.values());
+  }, [chartData]);
+
+  const YearTick = ({ x, y, payload }: any) => {
+    const d = new Date(payload.value);
+    if (isNaN(d.getTime())) return null;
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text dy={-4} textAnchor="middle" fill="#9ca3af" fontSize={12} fontWeight={700}>
+          {String(d.getFullYear())}
         </text>
       </g>
     );
@@ -307,7 +329,7 @@ const ChartSectionExample = () => {
 
     return (
       <ResponsiveContainer width="100%" height={450}>
-        <AreaChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+  <AreaChart data={chartData} margin={{ top: 24, right: 20, left: -10, bottom: 5 }}>
           <defs>
             <linearGradient id="colorHistoric" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.7} />
@@ -336,6 +358,19 @@ const ChartSectionExample = () => {
             axisLine={false}
             ticks={monthTicks}
             tick={<CustomMonthYearTick />}
+            allowDuplicatedCategory={false}
+          />
+          <XAxis
+            dataKey="date"
+            xAxisId="year"
+            orientation="top"
+            stroke="#9ca3af"
+            tickLine={false}
+            axisLine={false}
+            ticks={yearTicks}
+            tick={<YearTick />}
+            height={0}
+            allowDuplicatedCategory={false}
           />
           <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
           <Tooltip content={<CustomTooltip />} />

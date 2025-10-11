@@ -59,10 +59,11 @@ const StateChartSection = () => {
       'Casos Reais': null,
       'Previsão da IA': d.predicted_cases
     }));
-    if (histPoints.length && preds.length) {
+    if (histPoints.length) {
       const last = histPoints[histPoints.length - 1];
-      const connectVal = (last['Casos Reais'] ?? 0) as number;
-      preds.unshift({ date: last.date, 'Casos Reais': null, 'Previsão da IA': connectVal });
+      if (last['Previsão da IA'] == null) {
+        last['Previsão da IA'] = (last['Casos Reais'] ?? 0) as number;
+      }
     }
     return [...histPoints, ...preds];
   }, [apiData, historyWeeks]);
@@ -93,6 +94,29 @@ const StateChartSection = () => {
       <g transform={`translate(${x},${y})`}>
         <text dy={16} textAnchor="middle" fill="#9ca3af" fontSize={12} fontWeight={isJanuary ? 700 : 400}>
           {text}
+        </text>
+      </g>
+    );
+  };
+
+  const yearTicks = useMemo(() => {
+    const firstByYear = new Map<number, string>();
+    for (const pt of chartData) {
+      const d = new Date(pt.date);
+      if (isNaN(d.getTime())) continue;
+      const y = d.getFullYear();
+      if (!firstByYear.has(y)) firstByYear.set(y, pt.date);
+    }
+    return Array.from(firstByYear.values());
+  }, [chartData]);
+
+  const YearTick = ({ x, y, payload }: any) => {
+    const d = new Date(payload.value);
+    if (isNaN(d.getTime())) return null;
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text dy={-4} textAnchor="middle" fill="#9ca3af" fontSize={12} fontWeight={700}>
+          {String(d.getFullYear())}
         </text>
       </g>
     );
@@ -173,7 +197,7 @@ const StateChartSection = () => {
             <div className="flex items-center justify-center h-[300px] text-red-400">{error}</div>
           ) : (
             <ResponsiveContainer width="100%" height={400}>
-              <AreaChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+              <AreaChart data={chartData} margin={{ top: 24, right: 20, left: -10, bottom: 5 }}>
                 <defs>
                   <linearGradient id="stateHistoric" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#22c55e" stopOpacity={0.7} />
@@ -196,6 +220,19 @@ const StateChartSection = () => {
                   axisLine={false}
                   ticks={monthTicks}
                   tick={<CustomMonthYearTick />}
+                  allowDuplicatedCategory={false}
+                />
+                <XAxis
+                  dataKey="date"
+                  xAxisId="year"
+                  orientation="top"
+                  stroke="#9ca3af"
+                  tickLine={false}
+                  axisLine={false}
+                  ticks={yearTicks}
+                  tick={<YearTick />}
+                  height={0}
+                  allowDuplicatedCategory={false}
                 />
                 <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip content={<CustomTooltip />} />
