@@ -24,8 +24,14 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-zinc-900/80 backdrop-blur-sm text-zinc-300 py-10 border-t border-zinc-800 w-full mt-12">
-      <div className="container mx-auto px-4">
+    <footer className="relative w-full mt-12 text-zinc-300">
+      {/* Full-bleed background spanning the viewport width */}
+      <div
+        aria-hidden
+        className="absolute inset-y-0 left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] bg-zinc-900/80 backdrop-blur-sm border-t border-zinc-800"
+      />
+      {/* Content */}
+      <div className="relative container mx-auto px-4 py-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-sm">
 
           {/* Coluna 1: Informações do Projeto */}

@@ -5,8 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import * as Slider from "@radix-ui/react-slider";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import YoloDetectionSection from "@/components/YOLOSummarySection";
-import { FileImage, Info, X, MapPin, Box } from "lucide-react";
+import { FileImage, X, MapPin, Box, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { API_URL } from "@/lib/config";
 
 export default function Detectar() {
@@ -16,18 +15,35 @@ export default function Detectar() {
   const [sliderValue, setSliderValue] = useState([0.5]);
   const [showDetection, setShowDetection] = useState(true);
   const [selectedClasses, setSelectedClasses] = useState<string[]>([
-    "carro",
-    "piscina",
-    "caixa_agua",
+    "piscina_limpa",
+    "piscina_suja",
+    "lona",
+    "monte_de_lixo",
+    "reservatorio_de_agua",
+    "pneu", 
+    "saco_de_lixo"
   ]);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const topRef = useRef<HTMLDivElement>(null);
+  const imageRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [rightOpen, setRightOpen] = useState(true);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setRightOpen(false);
+    }
+  }, []);
 
   // Variável movida para um escopo global no componente
-  const cores_por_classe: { [key: string]: string } = {
-    carro: "rgb(155, 0, 0)",
-    piscina: "rgb(0, 0, 155)",
-    caixa_agua: "rgb(0, 155, 0)",
-  };
+const cores_por_classe: { [key: string]: string } = {
+  piscina_limpa: "rgb(0, 150, 255)",      
+  piscina_suja: "rgb(107, 142, 35)",     
+  lona: "rgb(255, 140, 0)",             
+  monte_de_lixo: "rgb(139, 69, 19)",    
+  reservatorio_de_agua: "rgb(47, 79, 79)",
+  pneu: "rgb(220, 20, 60)",              
+  saco_de_lixo: "rgb(128, 0, 128)"       
+};
 
   const handleDrop = async (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
@@ -128,13 +144,21 @@ export default function Detectar() {
     }
   };
 
+  const scrollToTop = () => {
+    if (topRef.current) {
+      topRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   return (
-    <div className="min-h-screen font-sans bg-zinc-950 text-white px-8 py-12">
+    <div ref={topRef} className="min-h-screen font-sans bg-gradient-to-br from-zinc-950 to-zinc-900 text-white px-4 sm:px-8 pb-0 pt-0">
       <Header />
 
-      <main className="pt-28 flex mx-auto gap-8">
+      <main className="pt-24 flex mx-auto gap-8">
         {/* Sidebar de Controles */}
-        <aside className="w-[350px] flex-shrink-0 sticky top-28 self-start space-y-4">
+        <aside className="w-[350px] flex-shrink-0 sticky top-24 self-start space-y-4">
 
 
           {/* Upload Box */}
@@ -208,7 +232,7 @@ export default function Detectar() {
               Filtrar por Classe
             </h3>
             <div className="space-y-4">
-              {["carro", "piscina", "caixa_agua"].map((className) => (
+              {["piscina_limpa","piscina_suja","lona","monte_de_lixo","reservatorio_de_agua", "pneu", "saco_de_lixo"].map((className) => (
                 <label
                   key={className}
                   className="flex items-center gap-3 text-zinc-300 text-sm cursor-pointer hover:text-blue-500"
@@ -224,6 +248,7 @@ export default function Detectar() {
               ))}
             </div>
           </div>
+
         </aside>
 
         {/* Imagens e resultados */}
@@ -236,11 +261,14 @@ export default function Detectar() {
                     <p className="text-zinc-500 text-xl font-medium">Faça o upload de uma imagem para começar a detecção.</p>
                 </div>
             ) : (
-                images.map((img, index) => (
-                    <div
-                        key={index}
-                        className="flex flex-col gap-6 relative bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700 rounded-2xl p-6 shadow-xl"
-                    >
+        images.map((img, index) => (
+          <div
+            key={index}
+                        ref={(el) => {
+                          imageRefs.current[index] = el;
+                        }}
+            className="flex flex-col gap-6 relative bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700 rounded-2xl p-6 shadow-xl"
+          >
                         {/* Imagem e as caixas de detecção */}
                         <div className="relative w-full group">
                             <Image
@@ -357,10 +385,77 @@ export default function Detectar() {
             )}
           </div>
         </section>
+
+        {/* Painel da Direita: Navegação com Miniaturas */}
+        {rightOpen && (
+          <aside className="w-[320px] hidden lg:block flex-shrink-0 sticky top-24 self-start">
+            <div className="bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700 rounded-xl p-6 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-zinc-300 font-semibold text-lg">Navegação</h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={scrollToTop}
+                    className="text-xs px-2 py-1 rounded border border-zinc-600 hover:border-white text-zinc-300 hover:text-white"
+                    title="Voltar ao topo"
+                  >
+                    Topo
+                  </button>
+                  <button
+                    onClick={() => setRightOpen(false)}
+                    className="p-2 rounded border border-zinc-600 hover:border-white text-zinc-300 hover:text-white"
+                    title="Fechar painel"
+                  >
+                    <ChevronsRight size={18} />
+                  </button>
+                </div>
+              </div>
+              {images.length === 0 ? (
+                <p className="text-zinc-500 text-sm">Nenhuma imagem enviada.</p>
+              ) : (
+                <ul className="space-y-3 max-h-[60vh] overflow-auto pr-1">
+                  {images.map((img, idx) => (
+                    <li key={idx}>
+                      <button
+                        onClick={() => imageRefs.current[idx]?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                        className="w-full flex items-center gap-3 p-2 rounded-lg border border-zinc-700 hover:border-blue-500 text-left bg-zinc-800 group"
+                        title={img.name}
+                      >
+                        <img
+                          src={img.url}
+                          alt={img.name}
+                          className="w-12 h-12 object-cover rounded-md border border-zinc-700"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-zinc-200 truncate">
+                            <span className="font-mono text-xs text-zinc-400 mr-2">#{idx + 1}</span>
+                            {img.name}
+                          </div>
+                          {img.loading ? (
+                            <div className="text-xs text-zinc-500">processando…</div>
+                          ) : (
+                            <div className="text-xs text-zinc-500">
+                              {img.result?.objetos?.length ?? 0} objetos
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </aside>
+        )}
       </main>
 
-      <YoloDetectionSection></YoloDetectionSection>
-
+      {/* Aba flutuante para abrir/fechar o painel da direita */}
+      <button
+        onClick={() => setRightOpen((v) => !v)}
+        className="fixed right-2 top-1/2 -translate-y-1/2 z-50 bg-zinc-800 border border-zinc-700 hover:border-white text-zinc-300 hover:text-white rounded-l px-2 py-2 shadow hidden lg:flex"
+        title={rightOpen ? "Esconder navegação" : "Mostrar navegação"}
+      >
+        {rightOpen ? <ChevronsRight size={18} /> : <ChevronsLeft size={18} />}
+      </button>
       <Footer />
 
     </div>
