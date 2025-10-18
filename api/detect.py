@@ -131,7 +131,6 @@ class DengueDetector:
                         all_scores.append(float(confidences[j]))
                         all_classes.append(int(class_ids[j]))
 
-        final_indices = []
         final_boxes = []
         final_scores = []
         final_classes = []

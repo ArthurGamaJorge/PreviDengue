@@ -27,8 +27,10 @@ def asymmetric_mse(y_true, y_pred):
     return tf.reduce_mean(loss)
 
 class DenguePredictor:
-    def __init__(self, project_root=None):
+    def __init__(self, project_root=None, offline: bool = False, local_inference_path: str | None = None):
         self.project_root = Path(project_root) if project_root else Path(__file__).resolve().parent
+        self.offline = bool(offline)
+        self.local_inference_path = Path(local_inference_path) if local_inference_path else None
         self.sequence_length = 12
         self.horizon = 6
         self.year_min_train = 2014
@@ -66,15 +68,38 @@ class DenguePredictor:
         else:
             self.city_to_idx = {}
 
-        hf_token = os.environ.get("HF_TOKEN")
-        inference_path = hf_hub_download(
-            repo_id="previdengue/predict_inference_data",
-            filename="inference_data.parquet",
-            repo_type="dataset",
-            token=hf_token
-        )
+        # Load inference dataset (HF online or local offline)
+        df = None
+        if self.offline:
+            # Somente .parquet é aceito no modo offline
+            candidate_paths = []
+            if self.local_inference_path:
+                candidate_paths.append(self.local_inference_path)
+            candidate_paths.append(models_dir / "inference_data.parquet")
 
-        df = pd.read_parquet(inference_path)
+            found = None
+            for p in candidate_paths:
+                try:
+                    if p and Path(p).exists() and str(p).lower().endswith(".parquet"):
+                        found = Path(p)
+                        break
+                except Exception:
+                    continue
+            if not found:
+                raise FileNotFoundError(
+                    "Offline mode enabled but no local Parquet dataset found. "
+                    "Place 'inference_data.parquet' under models/ or pass a valid 'local_inference_path' (.parquet)."
+                )
+            df = pd.read_parquet(found)
+        else:
+            hf_token = os.environ.get("HF_TOKEN")
+            inference_path = hf_hub_download(
+                repo_id="previdengue/predict_inference_data",
+                filename="inference_data.parquet",
+                repo_type="dataset",
+                token=hf_token
+            )
+            df = pd.read_parquet(inference_path)
         df["codigo_ibge"] = df["codigo_ibge"].astype(int)
         df["ano"] = df["ano"].astype(int)
         df["semana"] = df["semana"].astype(int)

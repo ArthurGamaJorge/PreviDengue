@@ -20,8 +20,10 @@ def asymmetric_mse(y_true, y_pred):
     return tf.reduce_mean(loss)
 
 class StatePredictor:
-    def __init__(self, project_root=None):
+    def __init__(self, project_root=None, offline: bool = False, local_inference_path: str | None = None):
         self.project_root = Path(project_root) if project_root else Path(__file__).resolve().parent
+        self.offline = bool(offline)
+        self.local_inference_path = Path(local_inference_path) if local_inference_path else None
         self.sequence_length = 12
         self.horizon = 6
         self.dynamic_features = [
@@ -64,26 +66,53 @@ class StatePredictor:
         else:
             self.state_peak_map = {}
 
-        # inference dataset (HF only)
-        hf_token = os.environ.get("HF_TOKEN")
-        hf_repo = "previdengue/predict_inference_data_estadual"
-        hf_filename = "inference_data_estadual.parquet"
-        try:
-            hf_path = hf_hub_download(
-                repo_id=hf_repo,
-                filename=hf_filename,
-                repo_type="dataset",
-                token=hf_token,
-            )
-            df_loaded = pd.read_parquet(hf_path)
-        except Exception as e:
-            raise FileNotFoundError(
-                "Could not download 'inference_data_estadual.parquet' from HF repo 'previdengue/predict_inference_data_estadual'. "
-                "Ensure the dataset exists and set HF_TOKEN if the repo requires authentication."
-            ) from e
+        # inference dataset: HF online or local offline (.parquet only)
+        if self.offline:
+            # Somente .parquet é aceito no modo offline
+            candidate_paths = []
+            if self.local_inference_path:
+                candidate_paths.append(self.local_inference_path)
+            # Candidatos comuns no diretório de modelos
+            candidate_paths.append(models_dir / "inference_data_state.parquet")
+            candidate_paths.append(models_dir / "inference_data_estadual.parquet")
 
-        # normalize
-        df = df_loaded.copy()
+            found = None
+            for p in candidate_paths:
+                try:
+                    if p and Path(p).exists() and str(p).lower().endswith(".parquet"):
+                        found = Path(p)
+                        break
+                except Exception:
+                    continue
+            if not found:
+                raise FileNotFoundError(
+                    "Offline mode enabled but no local Parquet state dataset found. "
+                    "Place 'inference_data_state.parquet' or 'inference_data_estadual.parquet' under models/ or pass a valid 'local_inference_path' (.parquet)."
+                )
+            df = pd.read_parquet(found)
+        else:
+            # Tenta baixar do HF; se falhar, tenta arquivo local como fallback
+            df = None
+            try:
+                hf_token = os.environ.get("HF_TOKEN")
+                inference_path = hf_hub_download(
+                    repo_id="previdengue/predict_inference_data",
+                    filename="inference_data_estadual.parquet",
+                    repo_type="dataset",
+                    token=hf_token,
+                )
+                df = pd.read_parquet(inference_path)
+            except Exception:
+                # Fallback local
+                for p in [models_dir / "inference_data_state.parquet", models_dir / "inference_data_estadual.parquet"]:
+                    if p.exists():
+                        df = pd.read_parquet(p)
+                        break
+                if df is None:
+                    raise FileNotFoundError(
+                        "Online state dataset not available from HF and no local fallback found. "
+                        "Place 'inference_data_estadual.parquet' under models/ or switch APP_MODE to 'offline'."
+                    )
         required = ["estado_sigla", "year", "week", "casos_soma"]
         if any(col not in df.columns for col in required):
             raise ValueError("State dataset missing required columns: ['estado_sigla','year','week','casos_soma']")
