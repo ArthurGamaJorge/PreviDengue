@@ -94,12 +94,10 @@ class StatePredictor:
             # Tenta baixar do HF; se falhar, tenta arquivo local como fallback
             df = None
             try:
-                hf_token = os.environ.get("HF_TOKEN")
                 inference_path = hf_hub_download(
-                    repo_id="previdengue/predict_inference_data",
+                    repo_id="previdengue/predict_inference_data_estadual",
                     filename="inference_data_estadual.parquet",
-                    repo_type="dataset",
-                    token=hf_token,
+                    repo_type="dataset"
                 )
                 df = pd.read_parquet(inference_path)
             except Exception:

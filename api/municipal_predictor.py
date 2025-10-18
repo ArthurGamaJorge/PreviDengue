@@ -92,12 +92,10 @@ class DenguePredictor:
                 )
             df = pd.read_parquet(found)
         else:
-            hf_token = os.environ.get("HF_TOKEN")
             inference_path = hf_hub_download(
                 repo_id="previdengue/predict_inference_data",
                 filename="inference_data.parquet",
-                repo_type="dataset",
-                token=hf_token
+                repo_type="dataset"
             )
             df = pd.read_parquet(inference_path)
         df["codigo_ibge"] = df["codigo_ibge"].astype(int)
