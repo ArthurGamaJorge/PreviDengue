@@ -52,9 +52,47 @@ class DengueDetector:
         print("Modelo carregado com as seguintes classes:", self.names)
 
     def calculate_intensity(self, objects):
-        weights = {"piscina": 9, "caixa_agua": 4}
-        score = sum(weights.get(obj["class"], 0) for obj in objects)
-        return score
+        if not objects:
+            return 0.0
+        
+        weights = {
+            "piscina_suja": 10.0,
+            "reservatorio_de_agua": 8.0,
+            "pneu": 6.0,
+            "lona": 4.0,
+            "monte_de_lixo": 3.0,
+            "saco_de_lixo": 2.0,
+            "piscina_limpa": 1.0
+        }
+        
+        total_score = 0.0
+        first_obj = objects[0]
+        img_w = first_obj["box"]["original_width"]
+        img_h = first_obj["box"]["original_height"]
+        total_img_area = float(img_w * img_h)
+
+        if total_img_area == 0:
+            for obj in objects:
+                weight = weights.get(obj["class"], 1.0) 
+                confidence = obj["confidence"]
+                total_score += weight * confidence
+            return total_score
+
+        for obj in objects:
+            weight = weights.get(obj["class"], 1.0) 
+            confidence = obj["confidence"]
+            
+            box = obj["box"]
+            w = box["x2"] - box["x1"]
+            h = box["y2"] - box["y1"]
+            obj_area = w * h
+            relative_area = obj_area / total_img_area
+            
+            # risco = Peso * Confiança * Área Relativa
+            risk_contribution = weight * confidence * relative_area
+            total_score += risk_contribution
+        
+        return total_score * 100.0
 
     def detect_image(self, image_bytes, fast: bool = True):
         img = Image.open(BytesIO(image_bytes)).convert("RGB")
@@ -159,6 +197,10 @@ class DengueDetector:
                 x2 *= inv
                 y2 *= inv
             cname = self.names[int(c)]
+
+            if cname == "lona" and s < 0.6:
+                continue
+
             class_names.append(cname)
             detections.append({
                 "class": cname,
