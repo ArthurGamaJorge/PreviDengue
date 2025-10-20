@@ -105,7 +105,9 @@ function MapClickHandler({
     if (hasOpenPopup) {
       // Fecha popup aberto e não abre formulário
       map.closePopup();
-      onMapBackgroundClick && onMapBackgroundClick();
+      if (onMapBackgroundClick) {
+        onMapBackgroundClick();
+      }
       return;
     }
     onMapClick([e.latlng.lat, e.latlng.lng]);
