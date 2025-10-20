@@ -25,6 +25,7 @@ interface HeatMapProps {
     detectedObjects: Record<string, number>;
   }[];
   onMapClick: (latLng: [number, number]) => void;
+  onMapBackgroundClick?: () => void;
   onRemovePoint: (index: number) => void;
   centerCoords: [number, number];
 }
@@ -35,47 +36,95 @@ function HeatLayer({
   points: { lat: number; lng: number; intensity: number }[];
 }) {
   const map = useMap();
+  const [zoom, setZoom] = useState<number>(() => (map ? map.getZoom() : 12));
+
+  useMapEvent('zoomend', () => {
+    if (map) setZoom(map.getZoom());
+  });
 
   useEffect(() => {
     if (!map) return;
 
-    const heatPoints = points.map(
-      (p) => [p.lat, p.lng, p.intensity] as [number, number, number]
-    );
+    // Converte intensidade (0..10) para peso (0..1) e aplica um gamma adicional dependente do zoom
+    const zoomGamma = (() => {
+      const z = map.getZoom();
+      if (z <= 8) return 3.2;
+      if (z <= 10) return 2.4;
+      if (z <= 12) return 1.8;
+      return 1.3;
+    })();
+
+    const heatPoints = points.map((p) => {
+      const base = Math.max(0, Math.min(10, p.intensity)) / 10; // 0..1
+      const weight = Math.pow(base, zoomGamma);
+      return [p.lat, p.lng, weight] as [number, number, number];
+    });
+
+    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+    const z = map.getZoom();
+    // Opções dependentes do zoom: menor raio/blur no zoom baixo para evitar "mancha uniforme"
+  const radius = clamp(Math.round(5 + (z - 5) * 2.8), 4, 32); // z5~5, z14~30
+  const blur = clamp(Math.round(5 + (z - 5) * 1.0), 4, 16);  // z5~5, z14~14
+  const minOpacity = clamp(0.08 + (z - 5) * 0.028, 0.08, 0.35); // mais translúcido no zoom baixo
 
     const heat = L.heatLayer(heatPoints, {
-      radius: 25,
-      blur: 15,
+      radius,
+      blur,
       maxZoom: 17,
-      max: 10,
-      minOpacity: 0.4,
+      max: 1,
+      minOpacity,
       gradient: {
-        0.0: "blue",
-        0.4: "cyan",
-        0.6: "lime",
-        0.8: "orange",
-        1.0: "red",
+        0.0: "#1d4ed8",
+        0.3: "#22d3ee",
+        0.6: "#22c55e",
+        0.8: "#f59e0b",
+        1.0: "#ef4444",
       },
     });
 
     heat.addTo(map);
-
     return () => {
       map.removeLayer(heat);
     };
-  }, [map, points]);
+  }, [map, points, zoom]);
 
   return null;
 }
 
 function MapClickHandler({
   onMapClick,
+  onMapBackgroundClick,
+  hasOpenPopup,
 }: {
   onMapClick: (latLng: [number, number]) => void;
+  onMapBackgroundClick?: () => void;
+  hasOpenPopup: boolean;
 }) {
+  const map = useMap();
   useMapEvent("click", (e) => {
+    if (hasOpenPopup) {
+      // Fecha popup aberto e não abre formulário
+      map.closePopup();
+      onMapBackgroundClick && onMapBackgroundClick();
+      return;
+    }
     onMapClick([e.latlng.lat, e.latlng.lng]);
   });
+  return null;
+}
+
+function PopupStateTracker({ onChange }: { onChange: (open: boolean) => void }) {
+  const map = useMap();
+  useEffect(() => {
+    const onOpen = () => onChange(true);
+    const onClose = () => onChange(false);
+    map.on("popupopen", onOpen);
+    map.on("popupclose", onClose);
+    return () => {
+      map.off("popupopen", onOpen);
+      map.off("popupclose", onClose);
+    };
+  }, [map, onChange]);
   return null;
 }
 
@@ -192,10 +241,12 @@ function MapFlyToHandler({ centerCoords }: { centerCoords: [number, number] }) {
 export default function HeatMap({
   points,
   onMapClick,
+  onMapBackgroundClick,
   onRemovePoint,
   centerCoords,
 }: HeatMapProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [hasOpenPopup, setHasOpenPopup] = useState(false);
 
   const svgString = renderToStaticMarkup(
     <svg
@@ -248,8 +299,9 @@ export default function HeatMap({
         noWrap={true}
       />
 
-      <HeatLayer points={points} />
-      <MapClickHandler onMapClick={onMapClick} />
+  <HeatLayer points={points} />
+  <PopupStateTracker onChange={setHasOpenPopup} />
+  <MapClickHandler hasOpenPopup={hasOpenPopup} onMapClick={onMapClick} onMapBackgroundClick={onMapBackgroundClick} />
 
       {/* Adicione o componente que anima o mapa aqui */}
       <MapFlyToHandler centerCoords={centerCoords} />

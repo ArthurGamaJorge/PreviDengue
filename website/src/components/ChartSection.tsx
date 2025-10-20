@@ -255,12 +255,17 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints, selectedCity }: Cha
       }
       setLoadingAddresses(true);
 
+      // Escala visual: mapeia maior intensidade do conjunto para 10
+      const maxRaw = Math.max(0, ...mapDataPoints.map((p) => Number(p.intensity ?? 0)));
+      const scale = (raw: number) => (maxRaw > 0 ? Math.min(10, (raw / maxRaw) * 10) : 0);
+
       const addresses = await Promise.all(
         mapDataPoints.map(async (point) => {
+          const scaled = scale(Number(point.intensity ?? 0));
           let risk_level: RiskLevel = "Baixo";
-          if (point.intensity >= 7) {
+          if (scaled >= 7) {
             risk_level = "Alto";
-          } else if (point.intensity >= 4) {
+          } else if (scaled >= 4) {
             risk_level = "Médio";
           }
 
@@ -283,7 +288,7 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints, selectedCity }: Cha
             console.error("Failed to fetch address:", e);
           }
 
-          return {
+            return {
             name: locationName,
             coords: `Lat: ${point.lat.toFixed(4)}, Lng: ${point.lng.toFixed(4)}`,
             risk_level,
@@ -302,7 +307,7 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints, selectedCity }: Cha
     const source = viewMode === 'state'
       ? (stateApiData ? { historic_data: stateApiData.historic_data } : null)
       : (apiData ? { historic_data: apiData.historic_data } : null);
-    if (!source?.historic_data) return 12;
+    if (!source?.historic_data) return 52;
     const count = source.historic_data.filter((h) => h.cases !== null && h.cases !== undefined).length;
     return Math.max(1, count);
   }, [viewMode, apiData, stateApiData]);

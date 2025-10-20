@@ -364,9 +364,19 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
     setImageFileNames(new Set());
   };
 
-  const totalIntensity = useMemo(() => dataPoints.reduce((sum, p) => sum + p.intensity, 0), [dataPoints]);
-  const averageIntensity = useMemo(() => dataPoints.length > 0 ? (totalIntensity / dataPoints.length).toFixed(2) : "0.00", [totalIntensity, dataPoints.length]);
-  const intensityData = useMemo(() => getIntensityData(dataPoints), [dataPoints]);
+  const maxIntensityRaw = useMemo(() => Math.max(0, ...dataPoints.map(p => Number(p.intensity ?? 0))), [dataPoints]);
+  const HEAT_GAMMA = 3.5;
+  const getScaledIntensity = (raw: number) => {
+    if (!maxIntensityRaw || maxIntensityRaw <= 0) return 0;
+    const norm = Math.max(0, raw) / maxIntensityRaw;
+    const boosted = Math.pow(norm, HEAT_GAMMA);
+    return Math.min(10, boosted * 10);
+  };
+  const scaledPoints = useMemo<DataPoint[]>(() => dataPoints.map(p => ({ ...p, intensity: getScaledIntensity(Number(p.intensity ?? 0)) })), [dataPoints, maxIntensityRaw]);
+
+  const totalIntensity = useMemo(() => scaledPoints.reduce((sum, p) => sum + p.intensity, 0), [scaledPoints]);
+  const averageIntensity = useMemo(() => scaledPoints.length > 0 ? (totalIntensity / scaledPoints.length).toFixed(2) : "0.00", [totalIntensity, scaledPoints.length]);
+  const intensityData = useMemo(() => getIntensityData(scaledPoints), [scaledPoints]);
 
   return (
     <>
@@ -487,8 +497,12 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
           <div className="flex-1 rounded-lg overflow-hidden shadow-xl border border-zinc-800 min-h-[600px] h-full">
             {isClient ? (
               <DynamicMap
-                points={dataPoints}
+                points={scaledPoints}
                 onMapClick={handleMapClick}
+                onMapBackgroundClick={() => {
+                  // Apenas fecha seleção atual, não abre novo formulário
+                  if (selectedCoords) setSelectedCoords(null);
+                }}
                 onRemovePoint={handleRemovePoint}
                 centerCoords={mapCenter}
               />
