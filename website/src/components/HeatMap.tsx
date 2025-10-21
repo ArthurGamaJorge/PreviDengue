@@ -11,7 +11,7 @@ import {
 import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.heat";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRef } from "react";
 
 import { renderToStaticMarkup } from "react-dom/server";
@@ -20,7 +20,8 @@ interface HeatMapProps {
   points: {
     lat: number;
     lng: number;
-    intensity: number;
+    intensity: number; // usado pelo heat (peso bruto, não normalizado globalmente)
+    rawIntensity?: number; // opcional: para exibir no popup o valor "cru" vindo da API/import
     imageBase64: string | null;
     detectedObjects: Record<string, number>;
   }[];
@@ -45,18 +46,19 @@ function HeatLayer({
   useEffect(() => {
     if (!map) return;
 
-    // Converte intensidade (0..10) para peso (0..1) e aplica um gamma adicional dependente do zoom
-    const zoomGamma = (() => {
-      const z = map.getZoom();
-      if (z <= 8) return 3.2;
-      if (z <= 10) return 2.4;
-      if (z <= 12) return 1.8;
-      return 1.3;
-    })();
+    const maxIntensity = points.length
+      ? Math.max(...points.map((p) => p.intensity))
+      : 0;
+
+    const minVisibleWeight = 0.0; 
 
     const heatPoints = points.map((p) => {
-      const base = Math.max(0, Math.min(10, p.intensity)) / 10; // 0..1
-      const weight = Math.pow(base, zoomGamma);
+      const raw = maxIntensity > 0 ? Math.max(0, p.intensity) / maxIntensity : 0;
+      const base = Math.max(0, Math.min(1, raw));
+      let weight = base;
+      if (base > 0) {
+        weight = Math.max(weight, minVisibleWeight);
+      }
       return [p.lat, p.lng, weight] as [number, number, number];
     });
 
@@ -132,11 +134,15 @@ function PopupStateTracker({ onChange }: { onChange: (open: boolean) => void }) 
 
 function PopupContent({
   intensity,
+  rawIntensity,
+  normalizedIntensity,
   imageBase64,
   detectedObjects,
   onRemove,
 }: {
   intensity: number;
+  rawIntensity?: number;
+  normalizedIntensity?: number; // 0..10
   imageBase64: string | null;
   detectedObjects: Record<string, number>;
   onRemove: () => void;
@@ -187,7 +193,10 @@ function PopupContent({
             onLoad={onImageLoad}
           />
         )}
-        <span>Intensidade: {intensity.toFixed(1)}</span>
+        <span>Intensidade: {(rawIntensity ?? intensity).toFixed(1)}</span>
+        {typeof normalizedIntensity === 'number' && (
+          <span>Normalizada: {normalizedIntensity.toFixed(1)} / 10</span>
+        )}
         {Object.entries(detectedObjects).length > 0 && (
           <div style={{ marginTop: 8, fontSize: 14 }}>
             <strong>Detectados:</strong>
@@ -250,6 +259,12 @@ export default function HeatMap({
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [hasOpenPopup, setHasOpenPopup] = useState(false);
 
+  // Máximo atual para normalização de exibição (0..10) no popup
+  const maxRawIntensity = useMemo(
+    () => Math.max(0, ...points.map(p => Number(p.intensity ?? 0))),
+    [points]
+  );
+
   const svgString = renderToStaticMarkup(
     <svg
       width="32"
@@ -309,7 +324,10 @@ export default function HeatMap({
       <MapFlyToHandler centerCoords={centerCoords} />
 
       {points.map(
-        ({ lat, lng, intensity, imageBase64, detectedObjects }, i) => (
+        ({ lat, lng, intensity, rawIntensity, imageBase64, detectedObjects }, i) => {
+          const base = maxRawIntensity > 0 ? Math.max(0, Number(intensity)) / maxRawIntensity : 0;
+          const normalized10 = Math.min(10, Math.max(0, base * 10));
+          return (
           <Marker
             key={i}
             position={[lat, lng]}
@@ -321,12 +339,15 @@ export default function HeatMap({
           >
             <PopupContent
               intensity={intensity}
+              rawIntensity={rawIntensity}
+              normalizedIntensity={normalized10}
               imageBase64={imageBase64}
               detectedObjects={detectedObjects}
               onRemove={() => onRemovePoint(i)}
             />
           </Marker>
-        )
+          );
+        }
       )}
     </MapContainer>
   );

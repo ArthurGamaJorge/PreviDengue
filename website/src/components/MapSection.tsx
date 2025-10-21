@@ -15,6 +15,8 @@ interface DataPoint {
   imageFilename: string | null;
   imageBase64: string;
   detectedObjects: Record<string, number>;
+  // opcional: manter o valor cru vindo da API/import para exibição no popup do mapa
+  rawIntensity?: number;
 }
 
 interface Municipio {
@@ -364,19 +366,27 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
     setImageFileNames(new Set());
   };
 
+  // Mantém o valor CRU (da API/import) para o mapa e popup
+  const mapPoints = useMemo<DataPoint[]>(
+    () => dataPoints.map(p => ({ ...p, rawIntensity: Number(p.intensity ?? 0) })),
+    [dataPoints]
+  );
+
+  // Para dashboards/gráficos: normaliza 0..10 baseado no maior do conjunto atual
   const maxIntensityRaw = useMemo(() => Math.max(0, ...dataPoints.map(p => Number(p.intensity ?? 0))), [dataPoints]);
-  const HEAT_GAMMA = 3.5;
   const getScaledIntensity = (raw: number) => {
     if (!maxIntensityRaw || maxIntensityRaw <= 0) return 0;
     const norm = Math.max(0, raw) / maxIntensityRaw;
-    const boosted = Math.pow(norm, HEAT_GAMMA);
-    return Math.min(10, boosted * 10);
+    return Math.min(10, norm * 10);
   };
-  const scaledPoints = useMemo<DataPoint[]>(() => dataPoints.map(p => ({ ...p, intensity: getScaledIntensity(Number(p.intensity ?? 0)) })), [dataPoints, maxIntensityRaw]);
+  const uiPoints = useMemo<DataPoint[]>(
+    () => dataPoints.map(p => ({ ...p, intensity: getScaledIntensity(Number(p.intensity ?? 0)) })),
+    [dataPoints, maxIntensityRaw]
+  );
 
-  const totalIntensity = useMemo(() => scaledPoints.reduce((sum, p) => sum + p.intensity, 0), [scaledPoints]);
-  const averageIntensity = useMemo(() => scaledPoints.length > 0 ? (totalIntensity / scaledPoints.length).toFixed(2) : "0.00", [totalIntensity, scaledPoints.length]);
-  const intensityData = useMemo(() => getIntensityData(scaledPoints), [scaledPoints]);
+  const totalIntensity = useMemo(() => uiPoints.reduce((sum, p) => sum + p.intensity, 0), [uiPoints]);
+  const averageIntensity = useMemo(() => uiPoints.length > 0 ? (totalIntensity / uiPoints.length).toFixed(2) : "0.00", [totalIntensity, uiPoints.length]);
+  const intensityData = useMemo(() => getIntensityData(uiPoints), [uiPoints]);
 
   return (
     <>
@@ -497,7 +507,7 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
           <div className="flex-1 rounded-lg overflow-hidden shadow-xl border border-zinc-800 min-h-[600px] h-full">
             {isClient ? (
               <DynamicMap
-                points={scaledPoints}
+                points={mapPoints}
                 onMapClick={handleMapClick}
                 onMapBackgroundClick={() => {
                   // Apenas fecha seleção atual, não abre novo formulário
