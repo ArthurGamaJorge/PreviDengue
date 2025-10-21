@@ -1,0 +1,19 @@
+<h1>Etapa de Previsão de Casos</h1>
+
+<p>
+O objetivo desta etapa foi desenvolver um modelo preditivo capaz de estimar o número de casos de dengue com um horizonte de seis semanas com base em dados históricos da doença e informações climáticas. A proposta fundamenta-se em estudos que apontam a forte influência de fatores ambientais sobre a dinâmica de transmissão da dengue e pesquisas prévias sobre a aplicação de modelos de aprendizado profundo para séries temporais (Hochreiter; Schmidhuber, 1997; Guo et al., 2019).
+</p>
+
+<h2>Uso de Dados Históricos e Climáticos</h2>
+
+<p>
+A base de dados epidemiológicos utilizada foi o DATASUS, por meio da plataforma TABNET, que reúne registros semanais de casos confirmados de dengue em todo o Brasil desde 2014, discriminados por município de infecção. Esses dados, além de cobrirem um período longo - permitindo a análise de padrões recorrentes e garantindo uma grande quantidade de dados -, possuem granularidade espacial e temporal adequada para subsidiar modelos de previsão a um nível municipal.
+</p>
+
+<p>
+Como complemento, foram incorporadas variáveis ambientais provenientes da NASA POWER API, que disponibiliza informações meteorológicas derivadas de satélites. Para cada município, com base em suas coordenadas geográficas, foram coletados indicadores de temperatura média, mínima e máxima; precipitação total; umidade relativa; e radiação solar incidente. Como os fatores ambientais estão diretamente relacionados à taxa de reprodução do mosquito, a presença dessas informações no dataset é essencial para garantir uma maior precisão e confiabilidade na previsão dos casos.
+</p>
+
+<p>
+Para viabilizar as previsões em nível estadual, foi necessário um processo de agregação dos dados municipais. Para isso, os casos de dengue de cada cidade foram somados para obter o total de seus estados, enquanto as variáveis ambientais foram tratadas por meio de uma média ponderada pela população de cada município. Essa abordagem metodológica garante que as condições ambientais de municípios mais populosos, que concentram a maior parte da população e, consequentemente, influenciam mais fortemente os registros epidemiológicos estaduais, tenham um peso proporcionalmente adequado no conjunto de dados agregado.
+</p>

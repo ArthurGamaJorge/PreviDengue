@@ -76,6 +76,13 @@ interface PredictedData {
   predicted_cases: number;
 }
 
+// Estrutura da API estadual
+interface ApiStateData {
+  state: string;
+  historic_data: HistoricData[];
+  predicted_data: PredictedData[];
+}
+
 interface Alert {
   title: string;
   description: string;
@@ -159,15 +166,23 @@ interface ChartPoint {
 interface ChartSectionProps {
   municipalityIbgeCode?: number;
   mapDataPoints: DataPoint[];
+  selectedCity?: {
+    codigo_ibge: number;
+    nome: string;
+    codigo_uf: number;
+  };
 }
 
-const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps) => {
+const ChartSection = ({ municipalityIbgeCode, mapDataPoints, selectedCity }: ChartSectionProps) => {
   const defaultIbge = MUNICIPALITIES.find((m) => m.name === "Campinas")?.ibge_code || MUNICIPALITIES[0].ibge_code;
   const selectedIbgeCode = municipalityIbgeCode || defaultIbge;
 
   const [apiData, setApiData] = useState<ApiData | null>(null);
+  const [stateApiData, setStateApiData] = useState<ApiStateData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [historyWeeks, setHistoryWeeks] = useState<number>(52);
+  const [viewMode, setViewMode] = useState<'city' | 'state'>("city");
   const [filterRisk, setFilterRisk] = useState<"Todos" | "Alto" | "Médio" | "Baixo">("Todos");
   const [loadingAddresses, setLoadingAddresses] = useState<boolean>(false);
   const [prioritizedAddresses, setPrioritizedAddresses] = useState<PrioritizedAddress[]>([]);
@@ -181,9 +196,7 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
         const response = await fetch(API_URL + "/predict/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ibge_code: selectedIbgeCode,
-          }),
+          body: JSON.stringify({ ibge_code: selectedIbgeCode }),
         });
 
         if (!response.ok) {
@@ -202,6 +215,38 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
     fetchData();
   }, [selectedIbgeCode]);
 
+  const UF_BY_CODE: Record<number, string> = useMemo(() => ({
+    11: 'RO', 12: 'AC', 13: 'AM', 14: 'RR', 15: 'PA', 16: 'AP', 17: 'TO',
+    21: 'MA', 22: 'PI', 23: 'CE', 24: 'RN', 25: 'PB', 26: 'PE', 27: 'AL', 28: 'SE', 29: 'BA',
+    31: 'MG', 32: 'ES', 33: 'RJ', 35: 'SP',
+    41: 'PR', 42: 'SC', 43: 'RS', 50: 'MS', 51: 'MT', 52: 'GO', 53: 'DF'
+  }), []);
+
+  const selectedUF = useMemo(() => selectedCity ? (UF_BY_CODE[selectedCity.codigo_uf] || '') : '', [selectedCity, UF_BY_CODE]);
+
+  // Busca dados estaduais sempre que a UF mudar (lazy quando há UF)
+  useEffect(() => {
+    const fetchStateData = async () => {
+      if (!selectedUF) { setStateApiData(null); return; }
+      try {
+        const response = await fetch(API_URL + "/predict/state/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ state: selectedUF })
+        });
+        if (!response.ok) {
+          // Não quebra a tela se o endpoint estadual não estiver disponível
+          return;
+        }
+        const data: ApiStateData = await response.json();
+        setStateApiData(data);
+      } catch (e) {
+        // Silencia falhas não críticas
+      }
+    };
+    fetchStateData();
+  }, [selectedUF]);
+
   useEffect(() => {
     const fetchAddresses = async () => {
       if (mapDataPoints.length === 0) {
@@ -210,12 +255,17 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
       }
       setLoadingAddresses(true);
 
+      // Escala visual: mapeia maior intensidade do conjunto para 10
+      const maxRaw = Math.max(0, ...mapDataPoints.map((p) => Number(p.intensity ?? 0)));
+      const scale = (raw: number) => (maxRaw > 0 ? Math.min(10, (raw / maxRaw) * 10) : 0);
+
       const addresses = await Promise.all(
         mapDataPoints.map(async (point) => {
+          const scaled = scale(Number(point.intensity ?? 0));
           let risk_level: RiskLevel = "Baixo";
-          if (point.intensity >= 7) {
+          if (scaled >= 7) {
             risk_level = "Alto";
-          } else if (point.intensity >= 4) {
+          } else if (scaled >= 4) {
             risk_level = "Médio";
           }
 
@@ -238,7 +288,7 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
             console.error("Failed to fetch address:", e);
           }
 
-          return {
+            return {
             name: locationName,
             coords: `Lat: ${point.lat.toFixed(4)}, Lng: ${point.lng.toFixed(4)}`,
             risk_level,
@@ -252,54 +302,79 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
     fetchAddresses();
   }, [mapDataPoints]);
 
+  // Cálculo dinâmico do total de semanas históricas disponíveis (cidade/estado)
+  const maxHistoryWeeks = useMemo(() => {
+    const source = viewMode === 'state'
+      ? (stateApiData ? { historic_data: stateApiData.historic_data } : null)
+      : (apiData ? { historic_data: apiData.historic_data } : null);
+    if (!source?.historic_data) return 52;
+    const count = source.historic_data.filter((h) => h.cases !== null && h.cases !== undefined).length;
+    return Math.max(1, count);
+  }, [viewMode, apiData, stateApiData]);
+
+  const sliderMin = useMemo(() => Math.min(12, maxHistoryWeeks), [maxHistoryWeeks]);
+
+  // Garante que o valor atual esteja dentro do intervalo permitido ao trocar dados/mode
+  useEffect(() => {
+    if (historyWeeks > maxHistoryWeeks) setHistoryWeeks(maxHistoryWeeks);
+    if (historyWeeks < sliderMin) setHistoryWeeks(sliderMin);
+  }, [maxHistoryWeeks, sliderMin]);
+
   const chartData = useMemo<ChartPoint[]>(() => {
-    if (!apiData?.historic_data || !apiData?.predicted_data) return [];
+    const source: { historic_data: HistoricData[]; predicted_data: PredictedData[] } | null =
+      viewMode === 'state' ? (stateApiData ? { historic_data: stateApiData.historic_data, predicted_data: stateApiData.predicted_data } : null)
+      : (apiData ? { historic_data: apiData.historic_data, predicted_data: apiData.predicted_data } : null);
+
+    if (!source?.historic_data || !source?.predicted_data) return [];
 
     const parseDate = (d: string) => {
       const parts = d.split("-");
       return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
     };
 
-    const fmt = (dateObj: Date) =>
-      dateObj.toLocaleDateString("pt-BR", { month: "short", day: "numeric" });
+    const iso = (dateObj: Date) =>
+      `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
 
-    const historic = apiData.historic_data.map((h) => ({
+    const historicAll = source.historic_data.map((h) => ({
       dateObj: parseDate(h.date),
-      dateLabel: fmt(parseDate(h.date)),
       cases: h.cases,
     }));
 
-    const lastValidHistoricPoint = [...historic].reverse().find((d) => d.cases !== null && d.cases !== undefined);
+    // Aplica filtro de semanas do slider (mantém apenas as últimas N semanas reais com valor válido)
+    const historic = historicAll.filter((d) => d.cases !== null && d.cases !== undefined);
+  const limitedHistoric = historyWeeks > 0 ? historic.slice(-historyWeeks) : historic;
+
+    const lastValidHistoricPoint = [...limitedHistoric].reverse().find((d) => d.cases !== null && d.cases !== undefined);
     if (!lastValidHistoricPoint) return [];
 
     const lastValidDateObj = lastValidHistoricPoint.dateObj;
     const lastValidValue = lastValidHistoricPoint.cases;
 
-    const indexLastHistoric = historic.findIndex((h) => h.dateObj.getTime() === lastValidDateObj.getTime());
-    const formattedHistoric: ChartPoint[] = historic
+    const indexLastHistoric = limitedHistoric.findIndex((h) => h.dateObj.getTime() === lastValidDateObj.getTime());
+    const formattedHistoric: ChartPoint[] = limitedHistoric
       .slice(0, indexLastHistoric + 1)
       .map((d) => ({
-        date: fmt(d.dateObj),
+        date: iso(d.dateObj),
         dateObj: d.dateObj,
         "Casos Reais": d.cases,
         "Previsão da IA": null,
       }));
 
-    const predictedRaw = apiData.predicted_data.map((p) => ({ ...p }));
+    const predictedRaw = source.predicted_data.map((p) => ({ ...p }));
 
+    // Une a primeira previsão ao último ponto real para não duplicar a última semana
     const predictedMapped: ChartPoint[] = [];
-    const syntheticStartDate = new Date(lastValidDateObj.getTime() + 24 * 3600 * 1000);
-    predictedMapped.push({
-      date: fmt(syntheticStartDate),
-      dateObj: syntheticStartDate,
-      "Casos Reais": null,
-      "Previsão da IA": lastValidValue,
-    });
+    if (formattedHistoric.length > 0) {
+      const lastHistoricPoint = formattedHistoric[formattedHistoric.length - 1];
+      if (lastHistoricPoint["Previsão da IA"] == null) {
+        (lastHistoricPoint as any)["Previsão da IA"] = lastValidValue ?? 0;
+      }
+    }
 
     for (let i = 0; i < predictedRaw.length; i++) {
       const dateObj = new Date(lastValidDateObj.getTime() + 7 * 24 * 3600 * 1000 * (i + 1));
       predictedMapped.push({
-        date: fmt(dateObj),
+        date: iso(dateObj),
         dateObj: dateObj,
         "Casos Reais": null,
         "Previsão da IA": predictedRaw[i].predicted_cases,
@@ -308,33 +383,93 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
 
     const combined = [...formattedHistoric, ...predictedMapped];
 
-    const todayObj = new Date();
-    const todayLabel = fmt(todayObj);
-    const existsToday = combined.some((c) => c.date === todayLabel);
-    if (!existsToday) {
-      const insertIndex = combined.findIndex((c) => c.dateObj && c.dateObj.getTime() > todayObj.getTime());
-      const todayPoint: ChartPoint = {
-        date: todayLabel,
-        dateObj: todayObj,
-        "Casos Reais": null,
-        "Previsão da IA": null,
-      };
-      if (insertIndex === -1) combined.push(todayPoint);
-      else combined.splice(insertIndex, 0, todayPoint);
-    }
-
     combined.sort((a, b) => {
       const ta = a.dateObj ? a.dateObj.getTime() : 0;
       const tb = b.dateObj ? b.dateObj.getTime() : 0;
       return ta - tb;
     });
 
-    return combined.map(({ date, "Casos Reais": cr, "Previsão da IA": pr }) => ({
-      date,
-      "Casos Reais": cr ?? null,
-      "Previsão da IA": pr ?? null,
+    // Preserva dateObj para uso no tooltip customizado
+    return combined.map((pt) => ({
+      ...pt,
+      "Casos Reais": (pt as any)["Casos Reais"] ?? null,
+      "Previsão da IA": (pt as any)["Previsão da IA"] ?? null,
     }));
-  }, [apiData]);
+  }, [apiData, stateApiData, viewMode, historyWeeks]);
+
+  // Ticks e marcadores por ano no estilo do Example
+  const monthTicks = useMemo(() => {
+    const seen = new Set<string>();
+    const ticks: string[] = [];
+    for (const pt of chartData) {
+      if (!pt.dateObj) continue;
+      const d = pt.dateObj;
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        ticks.push(pt.date);
+      }
+    }
+    return ticks;
+  }, [chartData]);
+
+  const CustomMonthYearTick = (props: any) => {
+    const { x, y, payload } = props;
+    const d = new Date(payload.value);
+    // Mostrar apenas o mês; os anos serão rotulados nas ReferenceLines
+    const text = d.toLocaleString('pt-BR', { month: 'short' });
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text dy={12} textAnchor="middle" fill="#9ca3af" fontSize={10} fontWeight={400}>
+          {text}
+        </text>
+      </g>
+    );
+  };
+
+  const yearMarkers = useMemo(() => {
+    const markers: { date: string; year: number }[] = [];
+    const seen = new Set<number>();
+    for (const pt of chartData) {
+      if (!pt.dateObj) continue;
+      const y = pt.dateObj.getFullYear();
+      if (!seen.has(y)) {
+        seen.add(y);
+        markers.push({ date: pt.date, year: y });
+      }
+    }
+    return markers;
+  }, [chartData]);
+
+  // Tooltip customizado no formato do exemplo: "Semana NN: dd mon - dd mon"
+  const isoWeekNumber = (date: Date) => {
+    const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = tmp.getUTCDay() || 7;
+    tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+    return Math.ceil((((tmp as any) - (yearStart as any)) / 86400000 + 1) / 7);
+  };
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const base = payload[0]?.payload?.dateObj ? new Date(payload[0].payload.dateObj) : null;
+      if (!base || isNaN(base.getTime())) return null;
+      const end = new Date(base);
+      end.setDate(end.getDate() + 6);
+      const week = isoWeekNumber(base);
+      const rangeStr = `${base.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} - ${end.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}`;
+      const real = payload.find((p: any) => p.dataKey === 'Casos Reais')?.value ?? null;
+      const pred = payload.find((p: any) => p.dataKey === 'Previsão da IA')?.value ?? null;
+      return (
+        <div style={{ background: 'rgba(17,24,39,0.9)', border: '1px solid #374151', padding: 8, borderRadius: 8 }}>
+          <div style={{ fontWeight: 600, marginBottom: 6 }}>{`Semana ${week}: ${rangeStr}`}</div>
+          {real !== null && <div style={{ color: '#3b82f6' }}>Casos Reais: {real}</div>}
+          {pred !== null && <div style={{ color: '#f59e0b' }}>Previsão da IA: {pred}</div>}
+        </div>
+      );
+    }
+    return null;
+  };
 
   const getRiskColor = (risk: RiskLevel) => {
     switch (risk) {
@@ -403,17 +538,17 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
     const todayLabel = new Date().toLocaleDateString("pt-BR", { month: "short", day: "numeric" });
 
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-stretch">
         <div className="col-span-1 flex flex-col">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-lg transition-all duration-300 h-full flex flex-col justify-between p-6 border-red-600/50 bg-red-900/10">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-lg transition-all duration-300 h-full flex flex-col justify-between p-4 border-red-600/50 bg-red-900/10">
             <div>
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-7 w-7 text-blue-400" />
-                <h3 className="text-xl font-bold text-white tracking-tight">Painel de Alertas</h3>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-6 w-6 text-blue-400" />
+                <h3 className="text-lg font-bold text-white tracking-tight">Painel de Alertas</h3>
               </div>
-              <p className="text-sm text-zinc-400 mt-1.5">Sinais importantes para guiar suas ações.</p>
-              <div className="mt-6 space-y-4">
-                <div className="bg-orange-800/10 border border-orange-600/50 p-4 rounded-lg flex flex-col gap-3">
+              <p className="text-xs text-zinc-400 mt-1">Sinais importantes para guiar suas ações.</p>
+              <div className="mt-4 space-y-3">
+                <div className="bg-orange-800/10 border border-orange-600/50 p-3 rounded-lg flex flex-col gap-2.5">
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0 bg-orange-800/80 p-2 rounded-full">
                       {trend === "crescente" && <TrendingUp className="h-6 w-6 text-orange-400" />}
@@ -421,22 +556,22 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
                       {trend === "estável" && <Minus className="h-6 w-6 text-blue-400" />}
                       {trend === "indefinida" && <BrainCircuit className="h-6 w-6 text-zinc-400" />}
                     </div>
-                    <p className="font-semibold text-white">Tendência de Casos: {trend.toUpperCase()}</p>
+                    <p className="font-semibold text-white text-sm">Tendência de Casos: {trend.toUpperCase()}</p>
                   </div>
-                  <p className="text-sm text-zinc-300">
+                  <p className="text-xs text-zinc-300">
                     A análise de previsão indica que o número de casos na região está em uma tendência <strong>{trend}</strong>.
                   </p>
                 </div>
 
                 {isMutiraoNeeded && (
-                  <div className="bg-green-800/10 border border-green-600/50 p-4 rounded-lg flex flex-col gap-3">
+                  <div className="bg-green-800/10 border border-green-600/50 p-3 rounded-lg flex flex-col gap-2.5">
                     <div className="flex items-center gap-3">
                       <div className="flex-shrink-0 bg-green-800/80 p-2 rounded-full">
                         <Users className="h-6 w-6 text-green-400" />
                       </div>
-                      <p className="font-semibold text-white">Mobilização e Mutirões</p>
+                      <p className="font-semibold text-white text-sm">Mobilização e Mutirões</p>
                     </div>
-                    <p className="text-sm text-zinc-300">
+                    <p className="text-xs text-zinc-300">
                       O número de focos de alto risco na cidade é alarmante. A mobilização de mutirões de limpeza é essencial.
                     </p>
                   </div>
@@ -446,19 +581,32 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
           </div>
         </div>
 
-        <div className="lg:col-span-2 flex flex-col gap-6">
+        <div className="lg:col-span-2 flex flex-col gap-4">
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-lg transition-all duration-300 h-full">
-            <div className="p-6 flex flex-row items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="px-4 py-3 flex flex-row items-start justify-between">
+              <div className="flex items-center gap-2.5">
                 <BarChart3 className="h-7 w-7 text-blue-400" />
                 <h3 className="text-xl font-bold text-white tracking-tight">
-                  Previsão de Casos de Dengue de {apiData.municipality_name}
+                  {viewMode === 'city' ? (
+                    <>Previsão Municipal de {selectedUF ? `${selectedUF} - ` : ''}{apiData.municipality_name}</>
+                  ) : (
+                    <>Previsão Estadual de {selectedUF || ''}</>
+                  )}
                 </h3>
               </div>
+              <div className="flex flex-col items-end gap-1.5">
+                {selectedUF && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span>Ver:</span>
+                    <button onClick={() => setViewMode('city')} className={`px-2.5 py-1 rounded-md border ${viewMode==='city'? 'border-blue-500 text-blue-400':'border-zinc-700 text-zinc-300'} bg-zinc-800`}>Cidade</button>
+                    <button onClick={() => setViewMode('state')} className={`px-2.5 py-1 rounded-md border ${viewMode==='state'? 'border-blue-500 text-blue-400':'border-zinc-700 text-zinc-300'} bg-zinc-800`}>Estado ({selectedUF})</button>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="p-6 pt-0">
-              <ResponsiveContainer width="100%" height={500}>
-                <AreaChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+            <div className="px-4 pb-2">
+              <ResponsiveContainer width="100%" height={360}>
+                <AreaChart data={chartData} margin={{ top: 40, right: 12, left: -10, bottom: 5 }}>
                   <defs>
                     <linearGradient id="colorHistoric" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.7} />
@@ -470,26 +618,28 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#9ca3af"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    ticks={monthTicks}
+                    tick={<CustomMonthYearTick />}
+                    allowDuplicatedCategory={false}
+                  />
                   <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "rgba(17, 24, 39, 0.9)",
-                      borderColor: "#374151",
-                      color: "#d1d5db",
-                      borderRadius: "0.75rem",
-                    }}
-                    formatter={(value: any, name: any) => {
-                      return [value, name];
-                    }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: "14px" }} />
-                  <ReferenceLine
-                    x={todayLabel}
-                    stroke="#f43f5e"
-                    strokeDasharray="3 3"
-                    label={{ value: "HOJE", position: "top", fill: "#f43f5e", fontWeight: 700 }}
-                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: "13px" }} />
+                  {yearMarkers.map(m => (
+                    <ReferenceLine
+                      key={`year-${m.year}`}
+                      x={m.date}
+                      stroke="#6b7280"
+                      strokeDasharray="4 4"
+                      label={{ value: String(m.year), position: 'top', dy: -6, fill: '#9ca3af', fontSize: 12, fontWeight: 700 }}
+                    />
+                  ))}
                   <Area
                     type="monotone"
                     dataKey="Casos Reais"
@@ -498,8 +648,9 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
                     fillOpacity={1}
                     fill="url(#colorHistoric)"
                     strokeWidth={2}
-                    connectNulls={false}
-                    isAnimationActive={false}
+                    connectNulls={true}
+                    animationDuration={350}
+                    animationEasing="ease-in-out"
                   />
                   <Area
                     type="monotone"
@@ -509,34 +660,49 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
                     fillOpacity={1}
                     fill="url(#colorPrediction)"
                     strokeWidth={2}
-                    dot={{ r: 3 }}
-                    activeDot={{ r: 5 }}
-                    isAnimationActive={false}
+                    connectNulls={true}
+                    animationDuration={350}
+                    animationEasing="ease-in-out"
                   />
                 </AreaChart>
               </ResponsiveContainer>
+            </div>
+            <div className="px-4 pb-3">
+              <div className="flex items-center gap-2">
+                <label htmlFor="dash-history" className="text-zinc-300 text-sm whitespace-nowrap">Histórico:</label>
+                <input
+                  id="dash-history"
+                  type="range"
+                  min={sliderMin}
+                  max={maxHistoryWeeks}
+                  value={historyWeeks}
+                  onChange={(e) => setHistoryWeeks(Number(e.target.value))}
+                  className="flex-1 h-1.5 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                />
+                <span className="w-12 h-7 flex items-center justify-center rounded-md border border-zinc-700 bg-zinc-800 text-white text-sm">{historyWeeks}</span>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="col-span-1 flex flex-col">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-lg transition-all duration-300 h-full flex flex-col justify-between p-6">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-lg transition-all duration-300 h-full flex flex-col justify-between p-4">
             <div>
-              <div className="flex items-center gap-3">
-                <Lightbulb className="h-7 w-7 text-blue-400" />
-                <h3 className="text-xl font-bold text-white tracking-tight">Painel de Informações</h3>
+              <div className="flex items-center gap-2">
+                <Lightbulb className="h-6 w-6 text-blue-400" />
+                <h3 className="text-lg font-bold text-white tracking-tight">Painel de Informações</h3>
               </div>
-              <p className="text-sm text-zinc-400 mt-1.5">Análise detalhada da previsão da IA.</p>
-              <div className="mt-6 space-y-4">
-                <div className="bg-zinc-800/50 p-4 rounded-lg flex flex-col gap-3">
+              <p className="text-xs text-zinc-400 mt-1">Análise detalhada da previsão da IA.</p>
+              <div className="mt-4 space-y-3">
+                <div className="bg-zinc-800/50 p-3 rounded-lg flex flex-col gap-2.5">
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0 bg-zinc-700 p-2 rounded-full">
                       <BrainCircuit className="h-6 w-6 text-indigo-400" />
                     </div>
-                    <p className="font-semibold text-white">Análise de Fatores</p>
+                    <p className="font-semibold text-white text-sm">Análise de Fatores</p>
                   </div>
-                  <p className="text-sm text-zinc-300">A IA identificou que os principais fatores de risco para picos de dengue na sua região são:</p>
-                  <ul className="space-y-2 text-sm text-zinc-400 pl-4 list-disc">
+                  <p className="text-xs text-zinc-300">A IA identificou que os principais fatores de risco para picos de dengue na sua região são:</p>
+                  <ul className="space-y-2 text-xs text-zinc-400 pl-4 list-disc">
                     {apiData.insights.tipping_points.map((point, index) => (
                       <li key={index} className="text-left">
                         <p>
@@ -547,18 +713,18 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
                   </ul>
                 </div>
 
-                <div className="bg-zinc-800/50 p-4 rounded-lg flex flex-col gap-3">
+                <div className="bg-zinc-800/50 p-3 rounded-lg flex flex-col gap-2.5">
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0 bg-zinc-700 p-2 rounded-full">
                       <Car className="h-6 w-6 text-green-400" />
                     </div>
-                    <p className="font-semibold text-white">Áreas Prioritárias</p>
+                    <p className="font-semibold text-white text-sm">Áreas Prioritárias</p>
                   </div>
-                  <p className="text-sm text-zinc-300">Clique para filtrar por nível de risco e gerar o relatório.</p>
+                  <p className="text-xs text-zinc-300">Clique para filtrar por nível de risco e gerar o relatório.</p>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setFilterRisk("Todos")}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                      className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${
                         filterRisk === "Todos" ? "bg-blue-600 text-white" : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
                       }`}
                     >
@@ -566,7 +732,7 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
                     </button>
                     <button
                       onClick={() => setFilterRisk("Alto")}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                      className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${
                         filterRisk === "Alto" ? "bg-rose-600 text-white" : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
                       }`}
                     >
@@ -574,7 +740,7 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
                     </button>
                     <button
                       onClick={() => setFilterRisk("Médio")}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                      className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${
                         filterRisk === "Médio" ? "bg-amber-600 text-white" : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
                       }`}
                     >
@@ -582,7 +748,7 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
                     </button>
                     <button
                       onClick={() => setFilterRisk("Baixo")}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                      className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${
                         filterRisk === "Baixo" ? "bg-emerald-600 text-white" : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
                       }`}
                     >
@@ -595,7 +761,7 @@ const ChartSection = ({ municipalityIbgeCode, mapDataPoints }: ChartSectionProps
                       <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
                     </div>
                   ) : (
-                    <ul className="space-y-2 text-sm pr-2 overflow-y-auto h-40">
+                    <ul className="space-y-2 text-xs pr-2 overflow-y-auto h-36">
                       {filteredAddresses.map((address, index) => (
                         <li key={index} className="flex justify-between items-center border-b border-zinc-700 pb-2 last:border-b-0">
                           <p className="font-semibold text-zinc-200">{address.name}</p>

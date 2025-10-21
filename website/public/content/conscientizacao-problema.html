@@ -1,0 +1,121 @@
+<h1>Desempenho da Ferramenta de Detecção</h1>
+
+<p>
+A ferramenta de detecção de criadouros, baseada no modelo YOLO, demonstrou desempenho satisfatório ao identificar elementos como piscinas, caixas-d'água e acúmulo de entulhos em imagens aéreas. Esse resultado demonstra que sua utilização na identificação de focos de dengue para auxílio das das equipes de eliminação de criadouros pode ter impacto real. Ainda que o conjunto inicial de imagens tenha sido limitado, o uso de técnicas de data augmentation e early stopping contribuíram para aumentar a diversidade e reduzir o risco de overfitting.
+</p>
+
+<p>
+Os testes evidenciaram que o modelo foi capaz de generalizar para novas imagens, apresentando valores adequados de precisão, revocação e mAP. Conforme apresentado na tabela 1, esses resultados corroboram a literatura sobre a aplicabilidade de redes convolucionais em cenários de vigilância ambiental, confirmando o potencial do uso dessa tecnologia para fins de fiscalização não só contidos à identificação de criadouros de dengue. Considerando que houve uma limitação no tamanho do conjunto de dados para o treinamento e teste do modelo, existe ainda uma possibilidade de desenvolvimento de um modelo de maior precisão e acurácia.
+</p>
+
+<h2>Tabela 1: Métricas de Desempenho do Modelo de Detecção de Criadouros</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Classe</th>
+      <th>Mean Precision</th>
+      <th>Mean Recall</th>
+      <th>MAP50</th>
+      <th>MAP50-95</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Geral</td>
+      <td>0,792</td>
+      <td>0,683</td>
+      <td>0,773</td>
+      <td>0,562</td>
+    </tr>
+    <tr>
+      <td>Piscina limpa</td>
+      <td>0,555</td>
+      <td>0,786</td>
+      <td>0,795</td>
+      <td>0,65</td>
+    </tr>
+    <tr>
+      <td>Piscina suja</td>
+      <td>0,84</td>
+      <td>0,75</td>
+      <td>0,857</td>
+      <td>0,753</td>
+    </tr>
+    <tr>
+      <td>Lona</td>
+      <td>0,893</td>
+      <td>0,745</td>
+      <td>0,865</td>
+      <td>0,682</td>
+    </tr>
+    <tr>
+      <td>Monte de lixo</td>
+      <td>0,771</td>
+      <td>0,673</td>
+      <td>0,741</td>
+      <td>0,551</td>
+    </tr>
+    <tr>
+      <td>Reservatório de água</td>
+      <td>0,87</td>
+      <td>0,571</td>
+      <td>0,671</td>
+      <td>0,425</td>
+    </tr>
+    <tr>
+      <td>Pneu</td>
+      <td>0,826</td>
+      <td>0,828</td>
+      <td>0,872</td>
+      <td>0,493</td>
+    </tr>
+    <tr>
+      <td>Saco de lixo</td>
+      <td>0,789</td>
+      <td>0,427</td>
+      <td>0,608</td>
+      <td>0,376</td>
+    </tr>
+  </tbody>
+</table>
+
+<h1>Desempenho da Ferramenta de Previsão</h1>
+
+<p>
+A ferramenta de previsão apresentou maior complexidade de desenvolvimento, sobretudo em função da necessidade de formatar séries históricas extensas e de integrar variáveis climáticas aos registros epidemiológicos. Porém, o modelo baseado na arquitetura LSTM conseguiu antecipar tendências de crescimento e queda nos casos de dengue.
+</p>
+
+<p>
+A adoção da função de perda assimétrica se mostrou adequada, pois reduziu a incidência de subestimações, o que é crítico em cenários de saúde pública. Embora a previsão de surtos de dengue seja um desafio reconhecido, os experimentos mostraram que o modelo foi capaz de oferecer estimativas consistentes, com média de erros dentro de limites aceitáveis para uso em estratégias preventivas, conforme visto na tabela 2. A integração dessa ferramenta ao website, com atualização automática a partir de novas notificações e dados climáticos, permite que ela já seja utilizada, garantindo seu impacto concreto.
+</p>
+
+<h2>Tabela 2: Métricas de Desempenho do Modelo de Previsão de Casos</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Modelo</th>
+      <th>RMSE</th>
+      <th>MAE</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Municipal</td>
+      <td>10,358</td>
+      <td>81,429</td>
+    </tr>
+    <tr>
+      <td>Estadual</td>
+      <td>696.993</td>
+      <td>3136.778</td>
+    </tr>
+  </tbody>
+</table>
+
+<img src="/images/relatorio/fig11.png" alt="Gráfico de previsão municipal de casos de Campinas">
+<p><small><strong>Figura 11:</strong> Gráfico de previsão municipal de casos de Campinas</small></p>
+
+<img src="/images/relatorio/fig12.png" alt="Gráfico de previsão estadual de casos de São Paulo">
+<p><small><strong>Figura 12:</strong> Gráfico de previsão estadual de casos de São Paulo</small></p>

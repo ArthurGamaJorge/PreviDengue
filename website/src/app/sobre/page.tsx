@@ -26,23 +26,17 @@ const contentMap = {
 };
 
 const sections = [
-  { id: "intro:quem-somos", title: "Quem somos?" },
-  { id: "o-que-e", title: "O que é?" },
-  { id: "divider:identificacao", title: "Frente de Identificação*" },
-  { id: "identificacao:problema", title: "O problema" },
-  { id: "identificacao:solucao", title: "A solução e impacto" },
-  { id: "identificacao:ia", title: "Desenvolvimento da IA" },
-  { id: "identificacao:resultados", title: "Resultados" },
-  { id: "divider:previsao", title: "Frente de Previsão*" },
-  { id: "previsao:problema", title: "O problema" },
-  { id: "previsao:solucao", "title": "A solução e impacto" },
-  { id: "previsao:ia", title: "Desenvolvimento da IA" },
-  { id: "previsao:resultados", title: "Resultados" },
-  { id: "divider:conscientizacao", title: "Frente de Conscientização*" },
-  { id: "conscientizacao:problema", title: "O problema" },
-  { id: "conscientizacao:solucao", title: "A solução e impacto" },
-  { id: "divider:conclusao", title: "Conclusão*" },
-  { id: "conclusao:consideracoes", title: "Considerações finais" },
+  { id: "intro:quem-somos", title: "Introdução" },
+  { id: "o-que-e", title: "O que é o PreviDengue?" },
+  { id: "identificacao:problema", title: "A dengue" },
+  { id: "identificacao:solucao", title: "IA no combate à dengue" },
+  { id: "identificacao:ia", title: "Planejamento inicial" },
+  { id: "identificacao:resultados", title: "Detecção de criadouros" },
+  { id: "previsao:problema", title: "Previsão de casos" },
+  { id: "previsao:solucao", title: "Construção do website" },
+  { id: "previsao:ia", title: "Desempenho das ferramentas" },
+  { id: "previsao:resultados", title: "Limitações e desafios" },
+  { id: "conscientizacao:problema", title: "Conclusão e perspectivas" },
   { id: "conclusao:referencias", title: "Referências bibliográficas" },
 ];
 
@@ -83,30 +77,22 @@ export default function Home() {
         <div className="w-64 flex-shrink-0 space-y-4 text-left pl-6 pr-2 sticky top-20 h-[calc(100vh-80px)] overflow-y-auto">
           <h2 className="text-4xl font-bold text-left">Sobre o projeto</h2>
           <ul className="space-y-2">
-            {sections.map((item) => {
-              const isDivider = item.title.endsWith("*");
-              return (
-                <li
-                  key={item.id}
-                  className={`
-                    px-3 py-2 rounded cursor-pointer
-                    ${isDivider ? "text-zinc-400 font-semibold uppercase text-sm" : ""}
-                    ${
-                      selectedId === item.id && !isDivider
-                        ? "bg-zinc-700 text-white"
-                        : !isDivider
-                        ? "hover:bg-zinc-800"
-                        : ""
-                    }
-                  `}
-                  onClick={() => {
-                    if (!isDivider) setSelectedId(item.id);
-                  }}
-                >
-                  {item.title.replace("*", "")}
-                </li>
-              );
-            })}
+            {sections.map((item) => (
+              <li
+                key={item.id}
+                className={`
+                  px-3 py-2 rounded cursor-pointer
+                  ${
+                    selectedId === item.id
+                      ? "bg-zinc-700 text-white"
+                      : "hover:bg-zinc-800"
+                  }
+                `}
+                onClick={() => setSelectedId(item.id)}
+              >
+                {item.title}
+              </li>
+            ))}
           </ul>
         </div>
         

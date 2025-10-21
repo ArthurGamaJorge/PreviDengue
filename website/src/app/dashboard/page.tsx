@@ -54,7 +54,8 @@ export default function Home() {
       />
       <ChartSection 
         mapDataPoints={mapDataPoints} 
-        municipalityIbgeCode={selectedCity.codigo_ibge} 
+        municipalityIbgeCode={selectedCity.codigo_ibge}
+        selectedCity={selectedCity}
       />
       <Footer />
     </main>

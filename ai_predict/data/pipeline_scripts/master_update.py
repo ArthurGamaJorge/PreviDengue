@@ -143,6 +143,7 @@ def main():
         
         run_script("climateAPI.py")
         run_script("joinData.py")
+        run_script("joinData_estadual.py")
         print("\n====== PIPELINE CONCLUÍDO COM SUCESSO! ======")
     except Exception as e:
         print(f"\n###### ERRO FATAL NO PIPELINE: {e}. O processo foi interrompido. ######")

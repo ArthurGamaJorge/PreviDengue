@@ -19,6 +19,9 @@ jobs:
           sudo apt-get install git-lfs -y
           git lfs install
 
+      - name: Pull LFS files in source repo
+        run: git lfs pull
+
       - name: Clone Hugging Face Space
         run: |
           git clone https://hf-token:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Previdengue/PreviDengueAPI hf_space
@@ -26,6 +29,12 @@ jobs:
       - name: Sync files
         run: |
           rsync -av --exclude='.git' api/ hf_space/
+
+      - name: Pull LFS files in Hugging Face repo
+        run: |
+          cd hf_space
+          git lfs install
+          git lfs pull
 
       - name: Set Git identity
         run: |

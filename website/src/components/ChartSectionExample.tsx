@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, ChangeEvent } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 import { BarChart3, Bot, AlertTriangle } from 'lucide-react';
 import { API_URL } from "@/lib/config";
 // ✅ CORREÇÃO: A variável API_URL foi movida para cá para resolver o erro de importação.
@@ -24,6 +24,7 @@ interface ApiData {
 interface Municipality {
   codigo_ibge: number;
   nome: string;
+  codigo_uf: number;
 }
 
 // --- Componentes de UI (Estilo Shadcn/ui) com Tipagem ---
@@ -73,7 +74,11 @@ const ChartSectionExample = () => {
   const [apiData, setApiData] = useState<ApiData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [weeksToDisplay, setWeeksToDisplay] = useState<number>(8); // Controla a exibição
+  // Previsão sempre fixa em 6 semanas
+  const weeksToDisplay = 6;
+  // Controle do histórico visível (em semanas) - sempre uma quantidade fixa (sem opção "tudo")
+  const [historyWeeks, setHistoryWeeks] = useState<number>(52);
+  const [maxHistoryWeeks, setMaxHistoryWeeks] = useState<number>(600);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -109,36 +114,45 @@ const ChartSectionExample = () => {
         const response = await fetch(`${API_URL}/predict/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ibge_code: selectedIbgeCode,
-          }),
+          body: JSON.stringify({ ibge_code: selectedIbgeCode })
         });
 
         if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error || `HTTP error! status: ${response.status}`);
+          let errMsg = `HTTP error! status: ${response.status}`;
+          try {
+            const errData = await response.json();
+            if (errData?.error) errMsg = errData.error;
+          } catch {}
+          throw new Error(errMsg);
         }
-        const data: ApiData = await response.json();
-        setApiData(data);
-      } catch (e: any)
-      {
-        console.error("Falha ao buscar dados da API:", e);
+  const data: ApiData = await response.json();
+  setApiData(data);
+  // Atualiza o máximo de semanas baseado no histórico disponível
+  const count = (data.historic_data || []).filter(d => d.cases !== null).length;
+  if (count > 0) setMaxHistoryWeeks(count);
+      } catch (e: any) {
+        console.error('Falha ao buscar dados da API:', e);
         setError(e.message);
       } finally {
         setLoading(false);
       }
     };
+
     fetchData();
   }, [selectedIbgeCode]);
+
+  // (o efeito de busca por município está mais abaixo, limpo e funcional)
 
   // Memoização dos dados do gráfico
   const chartData = useMemo(() => {
     if (!apiData?.historic_data || !apiData?.predicted_data) return [];
 
     const historicDataCleaned = apiData.historic_data.filter(d => d.cases !== null);
+    // Limita o histórico visível com base em historyWeeks (0 ou valor grande para mostrar tudo)
+    const limitedHistoric = historyWeeks > 0 ? historicDataCleaned.slice(-historyWeeks) : historicDataCleaned;
 
-    const formattedHistoric: ChartPoint[] = historicDataCleaned.map(d => ({
-      date: new Date(d.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
+    const formattedHistoric: ChartPoint[] = limitedHistoric.map(d => ({
+      date: d.date, // manter ISO para formatar no eixo/tooltip
       'Casos Reais': d.cases,
       'Previsão da IA': null,
     }));
@@ -146,22 +160,95 @@ const ChartSectionExample = () => {
     const slicedPrediction = apiData.predicted_data.slice(0, weeksToDisplay);
 
     const formattedPrediction: ChartPoint[] = slicedPrediction.map(d => ({
-      date: new Date(d.date).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' }),
+      date: d.date,
       'Casos Reais': null,
       'Previsão da IA': d.predicted_cases
     }));
 
-    if (formattedHistoric.length > 0 && formattedPrediction.length > 0) {
+    if (formattedHistoric.length > 0) {
       const lastHistoricPoint = formattedHistoric[formattedHistoric.length - 1];
-      const connectionPoint: ChartPoint = {
-        ...lastHistoricPoint,
-        'Previsão da IA': lastHistoricPoint['Casos Reais'],
-      };
-      formattedPrediction.unshift(connectionPoint);
+      // Preenche o último ponto do histórico também com o valor inicial da previsão
+      if (lastHistoricPoint['Previsão da IA'] == null) {
+        lastHistoricPoint['Previsão da IA'] = lastHistoricPoint['Casos Reais'] ?? 0;
+      }
     }
 
     return [...formattedHistoric, ...formattedPrediction];
-  }, [apiData, weeksToDisplay]);
+  }, [apiData, historyWeeks]);
+
+  // Ticks de eixo X: somente 1 por mês (evita repetição); ano em negrito nas viradas (janeiro)
+  const monthTicks = useMemo(() => {
+    const seen = new Set<string>(); // key: YYYY-MM
+    const ticks: string[] = [];
+    for (const pt of chartData) {
+      const d = new Date(pt.date);
+      if (isNaN(d.getTime())) continue;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        ticks.push(pt.date);
+      }
+    }
+    return ticks;
+  }, [chartData]);
+
+  const CustomMonthYearTick = (props: any) => {
+    const { x, y, payload } = props;
+    const d = new Date(payload.value);
+    if (isNaN(d.getTime())) return null;
+    const isJanuary = d.getMonth() === 0;
+    const text = isJanuary
+      ? String(d.getFullYear())
+      : d.toLocaleString('pt-BR', { month: 'short' });
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text dy={16} textAnchor="middle" fill="#9ca3af" fontSize={12} fontWeight={isJanuary ? 700 : 400}>
+          {text}
+        </text>
+      </g>
+    );
+  };
+
+  // Ticks anuais (primeiro ponto de cada ano) para um eixo superior dedicado
+  const yearTicks = useMemo(() => {
+    const firstByYear = new Map<number, string>();
+    for (const pt of chartData) {
+      const d = new Date(pt.date);
+      if (isNaN(d.getTime())) continue;
+      const y = d.getFullYear();
+      if (!firstByYear.has(y)) firstByYear.set(y, pt.date);
+    }
+    return Array.from(firstByYear.values());
+  }, [chartData]);
+
+  const YearTick = ({ x, y, payload }: any) => {
+    const d = new Date(payload.value);
+    if (isNaN(d.getTime())) return null;
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text dy={-4} textAnchor="middle" fill="#9ca3af" fontSize={12} fontWeight={700}>
+          {String(d.getFullYear())}
+        </text>
+      </g>
+    );
+  };
+
+  // Marcadores de início de ano (destacados, sem duplicatas)
+  const yearMarkers = useMemo(() => {
+    const markers: { date: string; year: number }[] = [];
+    const seen = new Set<number>();
+    for (const pt of chartData) {
+      const dt = new Date(pt.date);
+      if (!isNaN(dt.getTime())) {
+        const y = dt.getFullYear();
+        if (!seen.has(y)) {
+          seen.add(y);
+          markers.push({ date: pt.date, year: y });
+        }
+      }
+    }
+    return markers;
+  }, [chartData]);
 
   // Memoização da lista de municípios filtrados
   const filteredMunicipalities = useMemo(() => {
@@ -177,13 +264,63 @@ const ChartSectionExample = () => {
     setShowDropdown(false);
   };
   
-  const handleWeeksChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setWeeksToDisplay(Number(e.target.value));
+  const handleHistoryChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setHistoryWeeks(Number(e.target.value));
+  };
+
+  // Formatação dos ticks do eixo X: mostrar meses; quando for início do ano, mostrar o ano
+  const monthTickFormatter = (value: string) => {
+    const dt = new Date(value);
+    const month = dt.getMonth();
+    return month === 0
+      ? dt.getFullYear().toString()
+      : dt.toLocaleString('pt-BR', { month: 'short' });
+  };
+
+  // Tooltip customizado: "Semana NN: dd mon - dd mon"
+  const isoWeekNumber = (date: Date) => {
+    const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = tmp.getUTCDay() || 7;
+    tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+    return Math.ceil((((tmp as any) - (yearStart as any)) / 86400000 + 1) / 7);
+  };
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const d = new Date(payload[0].payload.date);
+      const end = new Date(d);
+      end.setDate(end.getDate() + 6);
+      const week = isoWeekNumber(d);
+      const rangeStr = `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} - ${end.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}`;
+      const real = payload.find((p: any) => p.dataKey === 'Casos Reais')?.value ?? null;
+      const pred = payload.find((p: any) => p.dataKey === 'Previsão da IA')?.value ?? null;
+      return (
+        <div style={{ background: 'rgba(17,24,39,0.9)', border: '1px solid #374151', padding: 8, borderRadius: 8 }}>
+          <div style={{ fontWeight: 600, marginBottom: 6 }}>{`Semana ${week}: ${rangeStr}`}</div>
+          {real !== null && <div style={{ color: '#3b82f6' }}>Casos Reais: {real}</div>}
+          {pred !== null && <div style={{ color: '#f59e0b' }}>Previsão da IA: {pred}</div>}
+        </div>
+      );
+    }
+    return null;
   };
   
   const getMunicipalityName = (ibgeCode: number) => {
-    return allMunicipalities.find(m => m.codigo_ibge === ibgeCode)?.nome || "Carregando...";
+    const m = allMunicipalities.find(m => m.codigo_ibge === ibgeCode);
+    if (!m) return "Carregando...";
+    const uf = UF_BY_CODE[m.codigo_uf] || "";
+    return uf ? `${uf} - ${m.nome}` : m.nome;
   };
+
+  // Mapa de código UF -> sigla
+  const UF_BY_CODE: Record<number, string> = useMemo(() => ({
+    11: 'RO', 12: 'AC', 13: 'AM', 14: 'RR', 15: 'PA', 16: 'AP', 17: 'TO',
+    21: 'MA', 22: 'PI', 23: 'CE', 24: 'RN', 25: 'PB', 26: 'PE', 27: 'AL', 28: 'SE', 29: 'BA',
+    31: 'MG', 32: 'ES', 33: 'RJ', 35: 'SP',
+    41: 'PR', 42: 'SC', 43: 'RS',
+    50: 'MS', 51: 'MT', 52: 'GO', 53: 'DF'
+  }), []);
 
   const renderContent = () => {
     if (loading) {
@@ -213,7 +350,7 @@ const ChartSectionExample = () => {
 
     return (
       <ResponsiveContainer width="100%" height={450}>
-        <AreaChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+  <AreaChart data={chartData} margin={{ top: 24, right: 20, left: -10, bottom: 5 }}>
           <defs>
             <linearGradient id="colorHistoric" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.7} />
@@ -225,19 +362,42 @@ const ChartSectionExample = () => {
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-          <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
-          <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: 'rgba(17, 24, 39, 0.9)',
-              borderColor: '#374151',
-              color: '#d1d5db',
-              borderRadius: '0.75rem'
-            }}
+          {yearMarkers.map(m => (
+            <ReferenceLine
+              key={`year-${m.year}`}
+              x={m.date}
+              stroke="#6b7280"
+              strokeDasharray="4 4"
+              label={{ value: String(m.year), position: 'top', fill: '#9ca3af', fontSize: 12, fontWeight: 700 }}
+            />
+          ))}
+          <XAxis
+            dataKey="date"
+            stroke="#9ca3af"
+            fontSize={12}
+            tickLine={false}
+            axisLine={false}
+            ticks={monthTicks}
+            tick={<CustomMonthYearTick />}
+            allowDuplicatedCategory={false}
           />
+          <XAxis
+            dataKey="date"
+            xAxisId="year"
+            orientation="top"
+            stroke="#9ca3af"
+            tickLine={false}
+            axisLine={false}
+            ticks={yearTicks}
+            tick={<YearTick />}
+            height={0}
+            allowDuplicatedCategory={false}
+          />
+          <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+          <Tooltip content={<CustomTooltip />} />
           <Legend wrapperStyle={{ fontSize: "14px" }} />
           <Area type="monotone" dataKey="Casos Reais" stroke="#3b82f6" fillOpacity={1} fill="url(#colorHistoric)" strokeWidth={2} connectNulls />
-          <Area type="monotone" dataKey="Previsão da IA" stroke="#f59e0b" fillOpacity={1} fill="url(#colorPrediction)" strokeWidth={2} />
+          <Area type="monotone" dataKey="Previsão da IA" stroke="#f59e0b" fillOpacity={1} fill="url(#colorPrediction)" strokeWidth={2} connectNulls />
         </AreaChart>
       </ResponsiveContainer>
     );
@@ -258,6 +418,12 @@ const ChartSectionExample = () => {
                 onChange={(e) => { setSearchQuery(e.target.value); setShowDropdown(true); }}
                 onFocus={() => setShowDropdown(true)}
                 onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && filteredMunicipalities.length > 0) {
+                    e.preventDefault();
+                    handleCitySelect(filteredMunicipalities[0]);
+                  }
+                }}
                 placeholder="Pesquisar cidade..."
                 className="bg-zinc-800 border border-zinc-700 text-white rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
               />
@@ -266,28 +432,28 @@ const ChartSectionExample = () => {
                   {filteredMunicipalities.map((m) => (
                     <li
                       key={m.codigo_ibge}
-                      onClick={() => handleCitySelect(m)}
+                      onMouseDown={() => handleCitySelect(m)}
                       className="p-2 cursor-pointer hover:bg-zinc-700 text-sm"
                     >
-                      {m.nome}
+                      {(UF_BY_CODE[m.codigo_uf] ? `${UF_BY_CODE[m.codigo_uf]} - ` : '') + m.nome}
                     </li>
                   ))}
                 </ul>
               )}
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <label htmlFor="weeks-slider" className="text-zinc-300 text-sm whitespace-nowrap">Semanas:</label>
+              <label htmlFor="history-slider" className="text-zinc-300 text-sm whitespace-nowrap">Histórico (semanas):</label>
               <input
-                id="weeks-slider"
+                id="history-slider"
                 type="range"
-                min="1"
-                max="8"
-                value={weeksToDisplay}
-                onChange={handleWeeksChange}
-                className="w-full sm:w-24 h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                min="12"
+                max={maxHistoryWeeks}
+                value={historyWeeks}
+                onChange={handleHistoryChange}
+                className="w-full sm:w-40 h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
               />
-              <span className="w-12 h-8 flex items-center justify-center rounded-md border border-zinc-700 bg-zinc-800 text-white text-sm">
-                {weeksToDisplay}
+              <span className="w-20 h-8 flex items-center justify-center rounded-md border border-zinc-700 bg-zinc-800 text-white text-sm">
+                {historyWeeks}
               </span>
             </div>
           </div>

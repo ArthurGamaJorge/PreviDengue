@@ -1,8 +1,13 @@
 .venv/
 dadosClimaticos.csv
 final_training_data.csv
+final_training_data_estadual.csv
+inference_data_estadual.csv
 dadosClimaticos.parquet
 final_training_data.parquet
+final_training_data_estadual.parquet
+inference_data_estadual.parquet
+inference_data.parquet
 inference_data.csv
 .env.local
 __pycache__

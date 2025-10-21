@@ -1,88 +1,28 @@
-<h1>Título Principal do Projeto</h1>
+<h1>Introdução</h1>
+
 <p>
-  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+A dengue é uma das doenças com maior impacto na sociedade brasileira, acometendo milhões de pessoas todos os anos e gerando efeitos significativos na saúde pública e na qualidade de vida da população. Somente em 2024, foram registrados mais de 6,4 milhões de casos em todo o país, evidenciando a amplitude da doença. Além de afetar um grande número de pessoas, a dengue provoca sintomas debilitantes, como febre alta, dores musculares e articulares, dor de cabeça intensa, mal-estar e vômitos, que comprometem a capacidade dos indivíduos de realizar atividades cotidianas, incluindo trabalho e estudo. A confluência dessas duas características da doença leva a dengue a ter um impacto além do individual, uma vez que seus picos podem sobrecarregar o sistema de saúde e afetar o funcionamento de empresas de médio e pequeno porte.
 </p>
 
-<h2>Subtítulo de Seção</h2>
 <p>
-  Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Este parágrafo contém texto em <b>negrito</b> e <i>itálico</i>.
+Apesar da relevância da dengue, o combate à sua propagação enfrenta desafios significativos na remoção de criadouros e no preparo frente a picos da doença. Atualmente, a eliminação de focos de proliferação do mosquito <i>Aedes aegypti</i> depende principalmente da colaboração social, entretanto essa cooperação resulta na remoção incompleta de criadouros devido à aderência parcial da população e a limitações do alcance das campanhas informacionais. A fim de cobrir as lacunas na eliminação dos principais focos de reprodução do mosquito, o governo possuí equipes de fiscalização e remoção de criadouros, entretanto a atuação delas é limitada devido à ineficiência do método de visitar casas de porta em porta, o qual depende da disponibilidade dos moradores de receber os agentes e em muitas instâncias não resulta na identificação de nenhum criadouro. Paralelamente, a correta alocação de recursos em antecipação a crises da dengue é dificultada devido à imprevisibilidade dos casos da dengue decorrente do seu crescimento brusco e do início e fim súbito dos picos, como exibido na figura 1. As ferramentas atuais que propõe a produção de estimativas de casos de dengue para reduzir a imprevisibilidade dos picos apresentam limitações na sua acessibilidade e restrições no escopo da sua cobertura. A ausência de métodos eficazes na eliminação de criadouros e na previsão dos picos de casos tem um efeito sindêmico que compromete a capacidade da sociedade de enfrentar o problema da dengue.
 </p>
 
-<h3>Outro Subtítulo</h3>
+<img src="/images/relatorio/fig1.png" alt="Evolução dos casos semanais de dengue no Brasil">
+<p><small><strong>Figura 1:</strong> Evolução dos casos semanais de dengue no Brasil (2014–2025). Elaboração própria com base em dados do DATASUS/TABNET (2025)</small></p>
+
+<h2>Proposta do Trabalho</h2>
+
 <p>
-  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+A fim de colaborar com a questão da dengue, o presente trabalho propõe a criação de uma plataforma com duas ferramentas que utilizam Inteligência Artificial para combater a dengue: uma de identificação de criadouros e outra de previsão de casos. A ferramenta de identificação de criadouros propõe auxiliar na remoção de criadouros através da identificação de potenciais locais de concentração do mosquito <i>Aedes aegypti</i> em imagens fornecidas pelos usuários. Por sua vez, a ferramenta de previsão de casos tem como objetivo reduzir a imprevisibilidade dos casos de dengue através da produção de estimativas de novos casos de forma acessível e com ampla cobertura geográfica.
 </p>
 
-<h4>Lista Não Ordenada</h4>
-<ul>
-  <li>Item da lista um</li>
-  <li>Item da lista dois, com um <a href="#">link</a>.</li>
-  <li>Item da lista três, que é um pouco mais longo para testar o alinhamento.</li>
-</ul>
-
-<h4>Lista Ordenada</h4>
-<ol>
-  <li>Primeiro item</li>
-  <li>Segundo item</li>
-  <li>Terceiro item, que inclui texto em <strong>destaque</strong>.</li>
-</ol>
-
-<blockquote>
-  "Com a tecnologia, podemos construir um futuro mais seguro e saudável para todos. Essa é a nossa visão."
-</blockquote>
-
-<hr>
-
-<h3>Exemplo de Código</h3>
 <p>
-  Você pode incluir código como este: <code>const example = "Olá mundo!";</code> diretamente em seus parágrafos.
+Para construir as duas ferramentas propostas, foram implementadas duas redes neurais. A primeira visa a identificar criadouros em imagens recebendo como entrada uma imagem e retornando como saída a imagem com a marcação de possíveis criadouros e o nível de risco encontrado. A segunda utiliza dados de casos prévios para estimar o número de novos casos a serem reportados no mês, desse modo, recebe como entrada informações sobre uma localização e retorna uma estimativa da quantidade de casos esperados no mês. Não obstante, para que os modelos de IA sejam acessíveis à população, foi desenvolvido um website para a disponibilização dos dois modelos de forma simplificada. Nesse sentido, o website se apresenta como um meio de distribuir a ferramenta de identificação de criadouros para pessoas de todas as faixas de idade, bem como de ampliar as formas de acesso às informações de previsão de casos.
 </p>
-<pre><code>function minhaFuncao() {
-  console.log("Olá, mundo!");
-}</code></pre>
 
-<h3>Exemplo de Imagem</h3>
-<img src="https://picsum.photos/seed/exemplo/800/400" alt="Uma imagem de exemplo para testar a renderização">
+<h2>Organização do Trabalho</h2>
 
-<h3>Tabela de Dados</h3>
-<table>
-  <thead>
-    <tr>
-      <th>Recurso</th>
-      <th>Status</th>
-      <th>Impacto</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>IA de Identificação</td>
-      <td>Implementado</td>
-      <td>Alto</td>
-    </tr>
-    <tr>
-      <td>IA de Previsão</td>
-      <td>Em desenvolvimento</td>
-      <td>Alto</td>
-    </tr>
-    <tr>
-      <td>Análise de Dados</td>
-      <td>Finalizado</td>
-      <td>Médio</td>
-    </tr>
-  </tbody>
-</table>
-
-<h3>Exemplo de Card</h3>
-<div class="card">
-  <h4>Título do Card de Informação</h4>
-  <p>
-    Questo eiusmod veniam quis, non nostrud sunt ut, magna veniam minim. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-  </p>
-</div>
-
-<h3>Alinhamentos</h3>
-<p class="text-center">Este parágrafo está alinhado ao centro.</p>
-<p class="text-right">Este parágrafo está alinhado à direita.</p>
 <p>
-  Este é o alinhamento padrão, que geralmente é à esquerda, seguindo as boas práticas de leitura.
+Inicialmente, serão apresentadas a Fundamentação Teórica, que engloba a seção A Dengue, IA no Combate à Dengue e Planejamento Inicial. A seguir, serão descritos os processos de construção das três frentes do projeto na parte de Desenvolvimento e Metodologia, em que há as seções Detecção de Criadouros, Previsão de Casos e Construção do Website. Finalmente, as seções de Desempenho, Dificuldades e Limitações, Considerações Finais e Referências Bibliográficas compõe as Considerações Finais.
 </p>

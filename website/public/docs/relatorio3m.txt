@@ -1,0 +1,868 @@
+COLÉGIO TÉCNICO DA UNICAMP 
+ 
+ 
+ 
+ 
+ 
+Arthur Gama Jorge 
+Daniel Dorigan de Carvalho Campos 
+Ion Mateus Nunes Oprea  
+ 
+ 
+ 
+ 
+ 
+ 
+PREVIDENGUE: 
+Plataforma que utiliza Inteligência Artificial para monitorar e prever surtos de dengue, 
+combinando detecção de focos e previsão epidemiológica 
+ 
+ 
+ 
+ 
+ 
+CAMPINAS/SP 
+2025 
+ 
+ 
+ Arthur Gama Jorge 
+Daniel Dorigan de Carvalho Campos 
+Ion Mateus Nunes Oprea  
+ 
+ 
+PREVIDENGUE: 
+Plataforma que utiliza Inteligência Artificial para monitorar e prever surtos de dengue, 
+combinando detecção de focos e previsão epidemiológica 
+ 
+ 
+Este trabalho, desenvolvido no Colégio Técnico 
+de  Campinas  (COTUCA),  é  um  projeto  de 
+pesquisa  e  desenvolvimento  com o objetivo de 
+criar  uma  ferramenta  tecnológica,  o 
+PreviDengue, para auxiliar no combate à dengue. 
+A  ferramenta  integra  duas  inteligências 
+artificiais: uma para identificação de criadouros e 
+outra  para  previsão  de  casos, com o intuito de 
+apoiar a tomada de decisão de órgãos de saúde 
+pública. 
+ 
+ 
+Orientadora: Andreia Cristina de Souza 
+Coorientadora: Marcia Maria Tognetti Correa 
+ 
+ 
+ 
+CAMPINAS/SP 
+2025 
+ 
+AGRADECIMENTOS 
+ 
+Gostaríamos de expressar nossa sincera gratidão à nossa orientadora Prof.ª Andreia Cristina 
+de  Souza  e coorientadora Prof.ª Marcia Maria Tognetti Correa pela inestimável orientação, 
+paciência  e  incentivo  ao  longo  de  todo  o  desenvolvimento  deste  trabalho.  A dedicação, a 
+disponibilidade  e  as  valiosas  contribuições  de  ambas  foram  fundamentais  para  o 
+amadurecimento da pesquisa e para a consolidação do projeto. 
+Manifestamos também um agradecimento especial ao Prof. Guilherme de Oliveira Macedo, 
+cuja participação foi decisiva para a viabilização da ideia inicial deste trabalho ao prover o 
+dataset  de  imagens  por  meio  de  uma  parceria  com  a  UNICAMP.  Sua  contribuição  foi 
+essencial para que a proposta pudesse se transformar em uma solução prática e relevante. 
+Reconhecemos o papel crucial que a UNICAMP e uma outra instituição, que por motivos de 
+confidencialidade não pode ser revelada, desempenharam ao nos oferecer acesso a um banco 
+de dados de fotos aéreas de quintais para o treinamento da inteligência artificial de detecção. 
+Sem esses dados de alta qualidade, seria impossível desenvolver um modelo preciso. 
+Por  fim,  agradecemos  ao  Colégio  Técnico  de  Campinas (COTUCA) pela oportunidade de 
+realizar  este  projeto  e  pelo  suporte  acadêmico  e  institucional  oferecido  durante  todo  o 
+processo. 
+ 
+ 
+“Não se gerencia o que não se mede, não se mede o que não se define, não se define o que 
+não se entende, e não há sucesso no que não se gerencia.” 
+— William Edwards Deming 
+
+
+RESUMO 
+O  combate  à  dengue  enfrenta  desafios associados à dificuldade da eliminação eficiente de 
+criadouros  e  de  preparação  para  picos  da  doença,  que  ocorrem  de  maneira  imprevisível. 
+Atualmente, a remoção de focos de proliferação do mosquito depende da colaboração social e 
+de um processo lento de checagem de porta em porta pelas equipes de combate às endemias. 
+A previsão de casos também carece de ferramentas eficientes, possuindo limitações acerca da 
+acessibilidade  das  previsões  e  do  escopo  da  cobertura.  A  fim  de  auxiliar  na elaboração e 
+execução  de  medidas  eficazes  de  combate  à  dengue,  este  trabalho  desenvolveu  uma  rede 
+neural  LSTM  capaz  de  estimar  futuros  casos  de  dengue  com  semanas  de  antecedência  e 
+elaborou um modelo de algoritmo YOLO que permite a identificação dos principais focos de 
+propagação  do mosquito da dengue ao reconhecer criadouros e associá-los a domicílios. O 
+modelo de previsão de casos se baseou em dados de ocorrência de dengue disponibilizados 
+pelo DATASUS e dados climáticos da NASA enquanto o modelo de identificação contou com 
+a disponibilização de fotos aéreas de domicílios em uma parceria com a UNICAMP. Esses 
+modelos foram integrados em um painel de análise e disponibilizados em um site intitulado 
+Previdengue, possibilitando o acesso das estimativas de casos de todas as cidades do Brasil e 
+da  ferramenta  de  identificação  de  criadouros.  Dessa  forma,  este  trabalho  contribui  para  o 
+desenvolvimento de ferramentas inteligentes voltadas à saúde pública ao mesmo tempo em 
+que já oferece ferramentas com impacto social concreto, permitindo uma preparação pessoal e 
+institucional  frente  a  picos  de  dengue  e  oferecendo  a  prefeituras  um  modelo  que  torna  a 
+eliminação de criadouros mais eficiente, levando a uma diminuição no número de casos da 
+doença a nível municipal. 
+Palavras-Chave: Dengue. Inteligência Artificial. Saúde Pública. 
+ 
+ 
+ 
+ 
+ 
+ABSTRACT 
+The fight against dengue faces challenges related to the difficulty of efficiently eliminating 
+breeding sites and preparing for disease outbreaks, which occur unpredictably. Currently, the 
+removal  of  mosquito  proliferation  sites  depends  on  social  collaboration  and  a  slow 
+door-to-door inspection process carried out by endemic disease control teams. Case prediction 
+also lacks efficient tools, presenting limitations regarding accessibility and coverage scope. To 
+assist  in  the  planning  and implementation of effective dengue control measures, this study 
+developed an LSTM neural network capable of estimating future dengue cases several weeks 
+in advance and created a YOLO algorithm model that allows the identification of the main 
+mosquito breeding sites by recognizing and geographically indexing objects that offer an ideal 
+place  for  mosquitoes  to  lay  their  eggs.  The  case  prediction  model  was  based  on  dengue 
+occurrence data provided by DATASUS and climate data from NASA, while the identification 
+model relied on aerial photographs of households made available through a partnership with 
+UNICAMP. These models were integrated into an analysis dashboard and made accessible via 
+a website called Previdengue, enabling access to case estimates for all cities in Brazil as well 
+as the breeding site identification tool. Therefore, this work contributes to the development of 
+intelligent  tools  for  public  health  while  already  providing  solutions  with  tangible  social 
+impact, allowing personal and institutional preparation for dengue outbreaks and equipping 
+city  halls  with  a  model  that  makes  breeding  site  elimination  more  efficient,  ultimately 
+reducing the number of disease cases in cities. 
+Key-Words: Dengue. Artificial Intelligence. Public Health. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+LISTA DE ILUSTRAÇÕES 
+ 
+ 
+Figura 1 – Evolução dos casos semanais de dengue no Brasil (2014–2025)............................12 
+Figura 2 – Ciclo de vida do mosquito Aedes aegypti............................................................... 17 
+Figura 3 - Interface de labelling dos criadouros....................................................................... 21 
+Figura 4 - Exemplos de data augmentation...............................................................................22 
+Figura 5 - Página inicial do PreviDengue.................................................................................25 
+Figura 6 - Página de detecção do PreviDengue........................................................................ 25 
+Figura 7 - Página de previsão do PreviDengue.........................................................................26 
+Figura 8 - Mapa de calor do dashboard.....................................................................................27 
+Figura 9 - Painel de alertas e previsão de casos no dashboard................................................. 27 
+Figura 10 - Relatório gerado pelo sistema................................................................................ 28 
+Figura 11 - Gráfico de previsão municipal de casos de Campinas........................................... 31 
+Figura 12 - Gráfico de previsão estadual de casos de São Paulo..............................................31 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ LISTA DE TABELAS 
+ 
+ 
+Tabela 1: Métricas de desempenho do modelo de detecção de criadouros...............................30 
+Tabela 2: Métricas de desempenho do modelo de previsão de casos....................................... 30 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+LISTA DE ABREVIATURAS E SIGLAS 
+  
+API - Application Programming Interface 
+COTUCA - Colégio Técnico de Campinas 
+DATASUS - Departamento de Informática do Sistema Único de Saúde 
+GPU - Graphics Processing Unit 
+IA - Inteligência Artificial 
+IoU - Intersection over Union 
+LSTM - Long Short-Term Memory 
+MAE - Mean Absolute Error 
+mAP - mean Average Precision 
+NASA - National Aeronautics and Space Administration 
+ODS - Objetivos de Desenvolvimento Sustentável 
+OPAS - Organização Pan-Americana da Saúde 
+RMSE - Root Mean Squared Error 
+SUS - Sistema Único de Saúde 
+UNICAMP - Universidade Estadual de Campinas 
+YOLO - You Only Look Once 
+ 
+ 
+ 
+ 
+ 
+ SUMÁRIO 
+ 
+1 INTRODUÇÃO....................................................................................................................12 
+2 FUNDAMENTAÇÃO TEÓRICA.......................................................................................15 
+2.1 A dengue....................................................................................................................... 15 
+2.1.1 Impacto na saúde pública.....................................................................................15 
+2.1.2 Criadouros e proliferação da doença....................................................................16 
+2.1.3 Ciclo de reprodução do mosquito........................................................................ 16 
+2.2 Inteligência artificial no combate à dengue................................................................. 17 
+2.2.1 Visão Computacional para a detecção de criadouros...........................................18 
+2.2.2 Modelo de IA para a previsão de casos................................................................19 
+3 DESENVOLVIMENTO E METODOLOGIA.................................................................. 20 
+3.1 Definição do tema e planejamento inicial.....................................................................20 
+3.2 Etapa de detecção de criadouros...................................................................................21 
+3.2.1 Coleta e preparação das imagens......................................................................................21 
+3.2.2 Treinamento e testes do sistema....................................................................................... 22 
+3.3 Etapa de previsão de casos.........................................................................................................23 
+3.3.1 Uso de dados históricos e climáticos................................................................................23 
+3.3.2 Construção do modelo preditivo.......................................................................................23 
+3.4 Construção do website................................................................................................................24 
+3.4.1 Página de detecção............................................................................................................25 
+3.4.2 Página de previsão............................................................................................................ 26 
+3.4.3 Dashboard interativo.........................................................................................................26 
+4 CONSIDERAÇÕES FINAIS..............................................................................................29 
+4.1 Desempenho da ferramenta de detecção.................................................................................... 29 
+4.2 Desempenho da ferramenta de previsão.....................................................................................30 
+4.3 Limitações e desafios enfrentados..............................................................................................31 
+4.4 Conclusão e perspectivas de continuidade................................................................ 32 
+REFERÊNCIA........................................................................................................................33 
+GLOSSÁRIO...........................................................................................................................34 
+ 
+ 
+ 
+ 
+ 
+
+ 1 INTRODUÇÃO 
+A dengue é uma das doenças com maior impacto na sociedade brasileira, acometendo milhões 
+de pessoas todos os anos e gerando efeitos significativos na saúde pública e na qualidade de 
+vida  da  população.  Somente em 2024, foram registrados mais de 6,4 milhões de casos em 
+todo  o  país,  evidenciando  a  amplitude  da  doença.  Além  de  afetar  um  grande  número  de 
+pessoas,  a  dengue  provoca  sintomas  debilitantes,  como  febre  alta,  dores  musculares  e 
+articulares, dor de cabeça intensa, mal-estar e vômitos, que comprometem a capacidade dos 
+indivíduos de realizar atividades cotidianas, incluindo trabalho e estudo. A confluência dessas 
+duas características da doença leva a dengue a ter um impacto além do individual, uma vez 
+que seus picos podem sobrecarregar o sistema de saúde e afetar o funcionamento de empresas 
+de médio e pequeno porte. 
+Apesar da relevância da dengue, o combate à sua propagação enfrenta desafios significativos 
+na remoção de criadouros e no preparo frente a picos da doença. Atualmente, a eliminação de 
+focos  de  proliferação  do  mosquito  Aedes aegypti  depende  principalmente  da  colaboração 
+social,  entretanto  essa  cooperação  resulta  na  remoção  incompleta  de  criadouros  devido  à 
+aderência parcial da população e a limitações do alcance das campanhas informacionais. A 
+fim  de  cobrir  as lacunas na eliminação dos principais focos de reprodução do mosquito, o 
+governo possuí equipes de fiscalização e remoção de criadouros, entretanto a atuação delas é 
+limitada devido à ineficiência do método de visitar casas de porta em porta, o qual depende da 
+disponibilidade dos moradores de receber os agentes e em muitas instâncias não resulta na 
+identificação  de  nenhum  criadouro.  Paralelamente,  a  correta  alocação  de  recursos  em 
+antecipação a crises da dengue é dificultada devido à imprevisibilidade dos casos da dengue 
+decorrente  do  seu  crescimento brusco e do início e fim súbito dos picos, como exibido na 
+figura 1. As ferramentas atuais que propõe a produção de estimativas de casos de dengue para 
+reduzir a imprevisibilidade dos picos apresentam limitações na sua acessibilidade e restrições 
+no escopo da sua cobertura. A ausência de métodos eficazes na eliminação de criadouros e na 
+previsão  dos  picos  de  casos  tem  um  efeito  sindêmico  que  compromete  a  capacidade  da 
+sociedade de enfrentar o problema da dengue. 
+ 
+Figura 1 – Evolução dos casos semanais de dengue no Brasil (2014–2025) 
+Elaboração própria com base em dados do DATASUS/TABNET (2025) 
+ 
+13 
+Diante da ineficácia dos métodos atualmente disponíveis para a identificação de criadouros e 
+para  a  previsão  de  picos  de  dengue,  este  trabalho  propõe  o  desenvolvimento  de  duas 
+inteligências artificiais que superem as limitações dos sistemas existentes a fim de viabilizar 
+medidas de impacto real no combate à doença. O primeiro modelo desenvolvido é capaz de 
+identificar e contabilizar criadouros em fotos de drones de domicílios, além de destacar sua 
+distribuição  geográfica  nas  imagens.  Essa  funcionalidade permite que uma lista de regiões 
+com  maior  quantidade  de  criadouros  seja  gerada  para  indicar  as  áreas  que  devem  ser 
+priorizadas  pelas  equipes  de  combate  às  endemias,  levando  em  conta  o  número  e tipo de 
+criadouros presentes. Dessa forma, essa ferramenta permite o desenvolvimento de um sistema 
+de fiscalização e eliminação de focos de dengue muito mais eficiente do que o atual, evitando 
+visitas em casas que não possuem criadouros, permitindo a priorização dos maiores focos e 
+oferecendo  um  relatório preliminar ao agente de saúde. O segundo modelo desenvolvido é 
+capaz de estimar o número de casos de dengue das 4 próximas semanas de qualquer cidade do 
+Brasil com base na ocorrência recente da doença, dados climáticos e na época do ano atual. 
+Essa funcionalidade permite que o usuário possa analisar dados concretos sobre a tendência 
+da doença, recebendo um aviso prévio de picos de dengue e podendo visualizar a escala do 
+surto atual. Dessa forma, essa ferramenta possibilita uma organização a nível institucional e 
+pessoal  frente  a  futuros  picos  de  dengue,  levando  a  uma  diminuição  do  impacto  direto  e 
+indireto da doença e permitindo que o indivíduo atente-se a medidas preventivas, como o uso 
+do  repelente,  durante  picos.  O  desenvolvimento  simultâneo  dessas  duas  inteligências 
+artificiais não só permitiu a sua integração em uma plataforma única, oferecendo uma análise 
+cruzada de seus resultados, como também permitiu que este trabalho apresentasse uma visão 
+mais  completa  sobre  os  desafios  associados  à  elaboração  de  aplicações  de  IA  na  saúde 
+pública, assim contribuindo para o avanço teórico e metodológico desse campo de pesquisa.  
+O  treinamento  desses  dois  modelos  ocorreu  no  Google  Colab  e  seu  desenvolvimento  se 
+baseou  em  uma  abordagem  iterativa  na  qual  ajustamos  os  hiperparâmetros dos modelos e 
+analisamos seus resultados (avaliando a possibilidade de overfitting, a precisão e a matriz de 
+correlação) para produzir uma próxima versão refinada. A IA de detecção foi desenvolvida 
+utilizando o algoritmo YOLO de visão computacional treinado com imagens aéreas de drones 
+disponibilizadas por meio de uma parceria com a UNICAMP e o modelo de previsão de casos 
+de dengue utilizou a arquitetura de rede neural LSTM com dados climáticos da NASA e de 
+incidência de dengue por semana epidemiológica do DATASUS de todas as cidades do Brasil 
+no período de 2014 a 2025. A fim de disponibilizar esses modelos para uso do público geral, 
+também  foi  desenvolvido um site chamado Previdengue hospedado na plataforma Vercel e 
+uma API das IAs foi publicada no Hugging Face. 
+Nas  seções  a  frente,  este  trabalho  expõe  a  fundamentação  teórica,  o  processo  de 
+desenvolvimento  e  metodologia  e  as  considerações  finais.  A  primeira  seção  expõe  o 
+embasamento teórico que permitiu a escolha dos modelos e as informações sobre a doença 
+que  guiaram  o  processo  de  análise  e  desenvolvimento  das  IAs.  A  seção  que  aborda  o 
+desenvolvimento  do  trabalho  destaca  o  caminho  metodológico  percorrido  durante  a 
+elaboração dos modelos e do site e detalha a implementação das tecnologias utilizadas. Por 
+último,  as  considerações  finais  destacam  a  relevância  desse  trabalho  no  atual  contexto de 
+ 
+14 
+desenvolvimento  de  ferramentas  baseadas  em  inteligência  artificial  para  a  saúde  pública, 
+exibem os resultados do trabalho e revelam o seu impacto.   
+
+
+2 FUNDAMENTAÇÃO TEÓRICA 
+2.1 A dengue 
+A  dengue  é  uma  arbovirose  transmitida  pelo  mosquito  Aedes  aegypti,  vetor  altamente 
+adaptado ao ambiente urbano. Trata-se de uma doença de grande relevância epidemiológica, 
+tanto pela sua ampla disseminação em países tropicais quanto pelas consequências clínicas, 
+sociais e econômicas que acarreta. No Brasil, a dengue se consolidou como um dos maiores 
+problemas de saúde pública, com ciclos epidêmicos recorrentes e a circulação simultânea de 
+diferentes sorotipos virais, o que amplia a probabilidade de infecções graves e de reinfecções 
+(Revista FT, 2023). 
+A  transmissão  da  dengue  não  depende  apenas  de  fatores  biológicos,  mas  também  é 
+influenciada  por  fatores  estruturais  e  governamentais,  como  o  manejo  adequado  do  lixo   
+(Bezerra;  Matos,  2023).  Assim,  compreender  a  doença  e  suas  dinâmicas de transmissão é 
+essencial para desenvolver estratégias eficazes de monitoramento e prevenção. 
+2.1.1 Impacto na saúde pública 
+Devido ao grande número de casos e à gravidade dos sintomas da dengue, essa doença cria 
+uma demanda constante sobre os recursos do sistema de saúde público. Esse impacto toma 
+novas proporções durante períodos de surto, nos quais o aumento expressivo de atendimentos 
+de urgência e internações pode sobrecarregar hospitais (Revista FT, 2023). Esse estresse sobre 
+o  sistema  de  saúde  compromete  não  apenas  a  resposta  à  dengue  mas  também  a  outras 
+doenças, configurando um risco generalizado para a população. 
+Além do impacto sobre o sistema de saúde, os casos mais graves de dengue apresentam risco 
+de morte aos pacientes. Quando não diagnosticada e tratada de forma adequada e antecipada, 
+a doença pode evoluir para quadros hemorrágicos com alta letalidade (Ministério da Saúde, 
+2025). Esse aspecto da doença evidencia de maneira direta a gravidade do impacto da dengue 
+na população, evidenciando a urgência de medidas públicas que combatam a doença. 
+A dengue também impõe danos significativos no campo econômico, levando a despesas para 
+o  governo  e  para empresas privadas. Os custos das medidas governamentais de combate a 
+essa  doença  -  como  a  eliminação  de  criadouros,  mobilização  de campanhas emergenciais, 
+internações  hospitalares  e  aquisição  de  insumos  -  consomem  uma  parcela  razoável  do 
+orçamento  da  saúde  pública.  Além  disso,  as  empresas  enfrentam  perdas  relacionadas  ao 
+ 
+16 
+afastamento de trabalhadores doentes e à diminuição da produtividade em períodos de surto 
+(TEICH;  ARINELLI;  FAHHAM,  2018).  Nesse  contexto,  a  literatura  aponta  que  medidas 
+preventivas apresentam um maior custo benefício, podendo levar a uma redução em despesas 
+diretas, como os gastos em tratamentos, e indiretas, como aquelas associadas ao estresse do 
+sistema de saúde e à perda de produtividade. 
+2.1.2 Criadouros e proliferação da doença 
+A categorização e o estudo dos criadouros do mosquito Aedes aegypti é fundamental para o 
+controle da dengue, uma vez que esses ambientes são vitais para o ciclo reprodutivo desse 
+mosquito. Diferente de outros vetores que se limitam principalmente a ecossistemas naturais, 
+o  Aedes  aegypti  é  altamente  adaptado  ao  ambiente  urbano  e  explora  preferencialmente 
+recipientes artificiais que acumulam água limpa ou pouco poluída (Bezerra; Matos, 2023). 
+Estudos  de  vigilância  entomológica  apontam  que  mesmo  pequenos  recipientes,  como 
+tampinhas de garrafa, vasos de plantas ou ralos, podem gerar milhares de mosquitos ao longo 
+de  uma  temporada  de  reprodução  devido  à  elevada  taxa  de  sobrevivência  das  larvas 
+(Wermelinger  et  al.,  2012).  Além  disso,  recipientes  maiores,  como  caixas-d’água  mal 
+vedadas,  piscinas  sem  manutenção  e  calhas  entupidas,  apresentam  grande  potencial  de 
+proliferação por oferecerem condições estáveis e contínuas para o desenvolvimento do inseto. 
+Essa  diversidade  de  criadouros  torna  o  combate  ao  mosquito  um  desafio  constante.  A 
+eliminação  manual  de  focos,  embora  essencial,  depende  de  uma  mobilização  social 
+abrangente  e  contínua  complementada  pelo  trabalho  de  equipes  do  governo,  o  qual  ainda 
+carece  de  ferramentas  que  o  tornem  mais  eficiente.  É  nesse  contexto  que  se  percebe  o 
+potencial  impacto  de  tecnologias  de  fiscalização  automática,  como  a  ferramenta  de  visão 
+computacional  proposta  pelo  Previdengue,  no  combate  à  proliferação  da  doença  e  na 
+otimização do uso de recursos estatais. 
+2.1.3 Ciclo de reprodução do mosquito 
+O  ciclo  de  vida  do  Aedes  aegypti  (figura  2)  é  um  dos  principais  fatores  que  explicam  a 
+rapidez da disseminação da dengue. Ele se divide em quatro fases: ovo, larva, pupa e adulto, 
+podendo ser completado em apenas 7 a 10 dias em condições ambientais favoráveis de calor e 
+umidade (Ministério da Saúde, 2025). 
+ 
+17 
+Essa velocidade no ciclo reprodutivo somada à resistência dos ovos - que podem resistir por 
+meses em superfícies secas - representa um grande desafio para o controle da doença, uma 
+vez que um único recipiente com água parada pode, em poucos dias, se transformar em um 
+foco de centenas de mosquitos (Prefeitura de São Paulo, 2024). Dessa forma, o combate aos 
+criadouros deve ser completo a fim de não permitir que poucos repositórios de água levem a 
+uma endemia. 
+
+
+A capacidade de larvas sobreviverem até a fase adulta é especialmente relevante para a saúde 
+pública, uma vez que é apenas nesse estágio em que as fêmeas começam a buscar sangue para 
+maturar seus ovos. Como uma única fêmea pode contaminar dezenas de pessoas ao longo da 
+sua vida e uma única postura é capaz de resultar em dezenas de adultos, o ciclo de vida do 
+mosquito  o  torna  um  vetor  com alta capacidade infecciosa, amplificando a transmissão do 
+vírus da dengue. 
+ 
+Figura 2 – Ciclo de vida do mosquito Aedes aegypti 
+Fonte: Milenne Souza de Lima / CIEVS/RS 
+ 
+2.2 Inteligência artificial no combate à dengue 
+O emprego da Inteligência Artificial (IA) no combate à dengue apresenta um grande potencial 
+de  transformar  as  práticas  de  vigilância  epidemiológica  e  administração  frente  a  picos  de 
+casos, tornando possível o desenvolvimento de ferramentas e métodos mais eficientes do que 
+os  atuais.  Tradicionalmente,  a  prevenção  de  casos  de  dengue  conta  com  um  trabalho  de 
+ 
+18 
+eliminação  de  criadouros  realizado  por  agentes  de  saúde,  entretanto  essa  atividade   tem 
+caráter predominantemente remediativo: as equipes percorrem bairros, visitam residências de 
+porta em porta e eliminam manualmente os criadouros detectados apenas após a identificação 
+da região como um foco de proliferação devido a um aumento na ocorrência de casos. Esse 
+processo, além de dispendioso e demorado, resulta em múltiplas visitas a casas com poucos 
+ou  nenhum  criadouro,  levando  a  uma  baixa  cobertura  territorial  e  ineficiência,  o  que  é 
+principalmente problemático em momentos de maior incidência (OPAS, 2023). Além disso, a 
+imprevisibilidade  dos  surtos  da  doença  impede,  entre  outras  medidas,  que  as  equipes  de 
+remoção  de  criadouros  sejam  mobilizadas  antes  que  uma  região  se  torne  um  foco  de 
+proliferação do mosquito. 
+Com a utilização de IA, propõe-se uma abordagem proativa e automatizada, capaz de auxiliar 
+diretamente os agentes de saúde na priorização de áreas de risco, reduzindo desperdícios de 
+recursos e aumentando a efetividade das campanhas. Ao identificar possíveis criadouros em 
+imagens  aéreas,  a  IA  de  identificação  torna  viável  o  levantamento  de  áreas  propícias  à 
+proliferação do mosquito, eliminando a necessidade de esperar que um aumento do número de 
+casos as indique. Além disso, a previsão de futuros surtos pode destacar os momentos mais 
+urgentes para a remoção de criadouros, uma vez que um crescimento no número de casos das 
+próximas semanas pode ser fruto de um aumento na reprodução do mosquito na semana atual. 
+(ZHANG et al., 2020). 
+
+
+
+
+2.2.1 Visão Computacional para a detecção de criadouros 
+A  visão  computacional,  ramo da IA voltado à interpretação de imagens, tem sido aplicada 
+com  sucesso  na  identificação  de  criadouros  do  Aedes  aegypti. A partir de imagens aéreas 
+obtidas por drones ou satélites, algoritmos de detecção de objetos, como o algoritmo YOLO 
+(You Only Look Once), permitem localizar estruturas e objetos associadas à proliferação do 
+mosquito, como piscinas descobertas, caixas-d’água e depósitos de resíduos (Redmon et al., 
+2016). 
+A  velocidade  dessa  tecnologia  na  identificação  de  objetos  a  torna  ideal  para  trabalhos 
+relacionados  ao  levantamento  estatístico  de grandes conjuntos de imagens, sendo capaz de 
+descartar  fotos  que  não  contenham  objetos  de  interesse  e  destacar  estes  nas  fotos  que  os 
+contém. . Estudos demonstram que tais algoritmos alcançam alta precisão na classificação de 
+objetos, mesmo em conjuntos de dados complexos, como o de identificação de criadouros de 
+dengue  (Albawi; Mohammed; Al-Zawi, 2017). 
+ 
+19 
+2.2.2 Modelo de IA para a previsão de casos 
+Modelos  baseados  em  aprendizado de máquina e redes neurais recorrentes, como a LSTM 
+(Long  Short-Term  Memory),  têm  sido  utilizados  para  analisar  séries  temporais  de  casos 
+notificados,  incorporando  variáveis  ambientais  como  temperatura,  precipitação,  umidade  e 
+insolação (Hochreiter; Schmidhuber, 1997). 
+Pesquisas  recentes  evidenciam  que  modelos  preditivos  podem  antecipar  com  razoável 
+acurácia o aumento do número de casos de doenças em determinada localidade, permitindo 
+que órgãos de saúde mobilizem recursos preventivos antes da ocorrência de picos epidêmicos 
+(Zhang et al., 2020). Essa capacidade preditiva é essencial para garantir um combate eficiente 
+da dengue e evitar mortes. 
+ 
+ 
+20 
+3 DESENVOLVIMENTO E METODOLOGIA 
+3.1 Definição do tema e planejamento inicial 
+A escolha do tema partiu do interesse de alinhar o desenvolvimento de IAs  a um problema de 
+relevância  social  e  de impacto direto na saúde pública. Entre as diversas possibilidades de 
+aplicação da Inteligência Artificial, identificou-se o combate à proliferação da dengue como 
+objetivo  em  função  da  alta  incidência  dessa  doença  no  Brasil,  dos  prejuízos  humanos  e 
+econômicos  decorrentes  dos  surtos  e  do  alinhamento  dessa  meta  com  os  Objetivos  de 
+Desenvolvimento Sustentável (ODS). 
+
+
+O  desenvolvimento de um modelo de detecção de criadouros foi possibilitado por diversas 
+pesquisas  acadêmicas  anteriores  e  por  um  projeto  colaborativo  em  andamento  entre  a 
+Universidade Estadual de Campinas (Unicamp) e uma segunda instituição confidencial, que 
+investiga o uso de visão computacional para identificação de focos do Aedes aegypti a partir 
+de imagens aéreas urbanas. Esse projeto viabilizou a proposta ao fornecer acesso a imagens 
+aéreas  de  áreas  residenciais,  o  qual  foi  fundamental  para  o  treinamento  do  modelo  de 
+detecção. 
+Já o desenvolvimento do modelo de predição de casos de dengue foi possibilitado pelos dados 
+de incidência de dengue do DATASUS e pesquisas sobre a reprodução do mosquito. Essas 
+informações foram essenciais para a elaboração da IA, fornecendo os dados necessários para 
+treiná-la e embasando nossa análise sobre seu funcionamento. 
+Com  base  nessas  referências,  o  planejamento  inicial  foi  estruturado  em  duas  frentes 
+complementares: 
+1.  Detecção de potenciais criadouros em imagens aéreas utilizando algoritmos de visão 
+computacional; 
+2.  Previsão  de  casos  de  dengue  por  meio  de  modelos  de  aprendizado  de  máquina 
+aplicados a séries históricas epidemiológicas e variáveis climáticas. 
+A realização desse projeto foi orientada por um planejamento inicial, que identificou as etapas 
+necessárias  para  a  elaboração dos modelos e estipulou o cronograma para a conclusão dos 
+requerimentos do projeto.. A fim de escolher os modelos a serem utilizados, adotamos uma 
+abordagem que uniu a revisão da bibliografia à realização de testes empíricos com diferentes 
+algoritmos de visão computacional e modelos preditivos de séries temporais, avaliando sua 
+ 
+21 
+aplicabilidade ao problema. Também foram analisadas soluções já existentes para a vigilância 
+da dengue a fim de se basear na pesquisa já elaborada sobre o desenvolvimento de IAs para 
+esse fim e identificar como a nossa ferramenta poderia complementar o trabalho atualmente 
+realizado  pelas  equipes  de  combate  às  endemias.  Essa  abordagem  inicial  baseada  na 
+combinação  da  revisão  da  literatura  e  na  experimentação  prática  norteou  a  metodologia 
+aplicada ao resto do desenvolvimento do projeto. 
+3.2 Etapa de detecção de criadouros 
+3.2.1 Coleta e preparação das imagens 
+O conjunto inicial de dados foi composto por fotografias aéreas de quintais residenciais. Para 
+que essas imagens pudessem ser utilizadas em modelos de detecção de imagens, foi realizado 
+um  processo  de  rotulagem  manual  (labelling),  no  qual  cada  piscina,  caixa-d’água,  pneus, 
+entulhos  e  outros  elementos de interesse foram marcados e classificados com a ferramenta 
+makesense, como visto abaixo na figura 3. 
+ 
+Figura 3 - Interface de labelling dos criadouros 
+ 
+Como  a quantidade de imagens disponíveis era limitada, aplicaram-se técnicas de aumento 
+artificial  de  dados  (data  augmentation),  como  visto  na  figura  4,  que  consistem  em  criar 
+versões  modificadas  das  imagens originais a fim de ampliar a diversidade e o tamanho do 
+conjunto de dados. Foram utilizadas variações como ajuste de brilho e cor, adição de ruído, 
+borramento  e  alterações  de  contraste.  Esse  procedimento  é  amplamente  adotado  em visão 
+computacional  porque  ajuda  a  reduzir  o  risco  de que a rede “decore” apenas os exemplos 
+apresentados,  melhorando  assim  sua  capacidade  de  reconhecer  padrões em novas imagens 
+(Albawi; Mohammed; Al-Zawi, 2017). 
+ 
+Figura 4 - Exemplos de data augmentation 
+ 
+3.2.2 Treinamento e testes do sistema 
+Para  a  detecção  dos  criadouros,  foi  utilizado  o  modelo  YOLO,  conhecido  por  combinar 
+rapidez  e  precisão  na  identificação  de  objetos  em  imagens  (Redmon  et  al.,  2016).  O 
+treinamento do modelo foi realizado em um ambiente de nuvem no Google Colab, uma vez 
+que os recursos computacionais locais não seriam suficientes para essa tarefa. 
+Durante  o  treinamento,  aplicaram-se  técnicas  de  otimização,  como  o  early stopping,  que 
+consiste em interromper automaticamente o processo quando não há melhora significativa no 
+desempenho.  Isso  evita  que  a  rede  “exagere”  no  aprendizado  e  se  torne menos eficaz em 
+novos conjuntos de imagens (Goodfellow; Bengio; Courville, 2016). As fotos foram divididas 
+em duas partes: um conjunto para o aprendizado da rede (treinamento) e outro para verificar o 
+desempenho final (teste). 
+A avaliação do modelo foi feita com base em diferentes métricas de desempenho: precisão 
+(quantos dos objetos identificados estavam corretos), revocação (recall, proporção de objetos 
+que  o  modelo  conseguiu  encontrar)  e  mAP (mean Average Precision, uma média geral da 
+acurácia).  Essas  métricas  são  amplamente  utilizadas  na  área  de  visão  computacional  e 
+permitiram verificar não apenas a exatidão das previsões, mas também a viabilidade prática 
+da aplicação em cenários reais de monitoramento urbano (Zhang et al., 2020). 
+ 
+23 
+Além das otimizações mencionadas, foi implementada uma técnica de hard negative mining 
+(mineração  de  negativos  difíceis)  durante  a  etapa  de  ajuste  fino  do  modelo.  Ao longo do 
+desenvolvimento  do  modelo,  foi  identificado  que  objetos  normais  estavam  sendo 
+incorretamente  classificados  pelo  sistema  como  criadouros,  gerando  falsos  positivos.  Para 
+resolver esse problema, imagens específicas, que continham objetos ou fundos visualmente 
+semelhantes aos criadouros, foram incorporadas ao conjunto de treinamento. O objetivo dessa 
+realimentação foi aprimorar a capacidade de discernimento do modelo, forçando-o a aprender 
+características mais robustas e a reduzir significativamente a taxa de detecções incorretas, o 
+que é crucial para a precisão da aplicação em campo. 
+3.3 Etapa de previsão de casos 
+O objetivo desta etapa foi desenvolver um modelo preditivo capaz de estimar o número de 
+casos de dengue com um horizonte de seis semanas com base em dados históricos da doença e 
+informações climáticas. A proposta fundamenta-se em estudos que apontam a forte influência 
+de fatores ambientais sobre a dinâmica de transmissão da dengue e pesquisas prévias sobre a 
+aplicação  de  modelos  de  aprendizado  profundo  para  séries  temporais  (Hochreiter; 
+Schmidhuber, 1997; Guo et al., 2019).
+3.3.1 Uso de dados históricos e climáticos 
+A  base  de  dados  epidemiológicos  utilizada  foi  o  DATASUS,  por  meio  da  plataforma 
+TABNET,  que  reúne  registros  semanais de casos confirmados de dengue em todo o Brasil 
+desde  2014,  discriminados  por  município  de  infecção.  Esses  dados,  além de cobrirem um 
+período  longo  -  permitindo  a  análise  de  padrões  recorrentes  e  garantindo  uma  grande 
+quantidade  de dados -, possuem granularidade espacial e temporal adequada para subsidiar 
+modelos de previsão a um nível municipal.. 
+Como  complemento,  foram  incorporadas  variáveis  ambientais  provenientes  da  NASA 
+POWER API, que disponibiliza informações meteorológicas derivadas de satélites. Para cada 
+município,  com  base  em  suas  coordenadas  geográficas,  foram  coletados  indicadores  de 
+temperatura média, mínima e máxima; precipitação total; umidade relativa; e radiação solar 
+incidente. Como os fatores ambientais estão diretamente relacionados à taxa de reprodução do 
+mosquito,  a  presença  dessas  informações  no  dataset  é  essencial  para  garantir  uma  maior 
+precisão e confiabilidade na previsão dos casos.  
+ 
+24 
+Aqui está uma sugestão para o parágrafo, mantendo a coesão e o tom técnico dos anteriores: 
+Para viabilizar as previsões em nível estadual, foi necessário um processo de agregação dos 
+dados municipais. Para isso, os casos de dengue de cada cidade foram somados para obter o 
+total de seus estados, enquanto as variáveis ambientais foram tratadas por meio de uma média 
+ponderada pela população de cada município. Essa abordagem metodológica garante que as 
+condições  ambientais  de  municípios  mais  populosos,  que  concentram  a  maior  parte  da 
+população  e,  consequentemente,  influenciam  mais  fortemente  os registros epidemiológicos 
+estaduais, tenham um peso proporcionalmente adequado no conjunto de dados agregado. 
+ 
+3.3.2 Construção do modelo preditivo 
+O modelo de previsão foi desenvolvido com base em redes neurais recorrentes do tipo LSTM, 
+adequadas para lidar com dependências temporais de longo alcance. Para cada município, a 
+rede recebe como entrada os dados das semanas anteriores de casos e condições climáticas e 
+produz  como  saída a previsão para as seis semanas seguintes. Como os dados de casos de 
+dengue  do  DATASUS  tem  um  período  de  duas  semanas  com  informações  parcialmente 
+atualizadas,  é  necessário  descartar  essas semanas para que o modelo não seja influenciado 
+pela subnotificação.  Portanto, das seis semanas previstas, duas são de semanas já decorridas. 
+A função de perda utilizada foi uma versão modificada do erro quadrático médio, denominada 
+asymmetric_mse. Essa função penaliza de forma mais intensa os erros de subestimação, uma 
+vez que a subestimação dos casos pode acarretar em consequências mais graves do que falsos 
+alertas.. Além disso, foram implementados mecanismos de early stopping com base em uma 
+métrica ponderada por município (city_val_loss), que considerava o peso epidemiológico de 
+cada localidade no cálculo da perda. 
+O treinamento foi realizado em ambiente de nuvem no Google Colab, utilizando recursos de 
+GPU para lidar com a complexidade dos modelos e a grande quantidade de dados. O conjunto 
+de  séries  temporais  foi  dividido  em  treino  e  teste,  respeitando  a  ordem  cronológica  para 
+garantir condições realistas de previsão. A extração das métricas das IAs e a análise do seu 
+desempenho  foi  também  realizada  nessa  plataforma,  permitindo  averiguar  se  o  modelo 
+apresentava overfitting e garantir que ele atingisse uma boa precisão. 
+ 
+25 
+3.4 Construção do website 
+Com o objetivo de tornar os modelos desenvolvidos acessíveis e facilitar sua utilização por 
+gestores de saúde, pesquisadores e pela população geral, foi construída uma plataforma web. 
+Esta  aplicação  é  composta  por  um  website  (Figura  5)  publicamente  disponível  em 
+previdengue.vercel.app, que serve como interface frontend, e uma API dedicada, disponível 
+em previdengue-previdengueapi.hf.space, que funciona como o backend. A disponibilização 
+dessa API permite que o site integre as funcionalidades das IAs em uma interface intuitiva e 
+interativa. 
+ 
+Figura 5 - Página inicial do PreviDengue 
+3.4.1 Página de detecção 
+Na página de detecção, o usuário pode enviar imagens de quintais ou áreas urbanas para que o 
+sistema  as  analise  utilizando  o  modelo  de  visão  computacional  YOLO.  O  processamento 
+identifica potenciais criadouros do Aedes aegypti, como piscinas e caixas-d’água, marcando 
+os elementos diretamente sobre a imagem. O resultado é exibido em uma lista e desenhado 
+sobre a imagem fornecida, facilitando a sua análise (Figura 6). 
+
+Figura 6 - Página de detecção do PreviDengue 
+ 
+3.4.2 Página de previsão 
+Na  seção  de  previsão,  é  possível  selecionar  qualquer  município  brasileiro  e  visualizar  as 
+estimativas de casos de dengue para as semanas subsequentes. Os resultados são apresentados 
+em  gráficos  claros,  que  destacam  tendências  de  crescimento,  estabilidade  ou  queda  na 
+incidência.  Essa  funcionalidade  é  alimentada  pelo  modelo  LSTM  descrito anteriormente e 
+permite que mesmo usuários não especializados compreendam o comportamento esperado da 
+doença (Figura 7). 
+ 
+ 
+27 
+Figura 7 - Página de previsão do PreviDengue 
+3.4.3 Dashboard interativo 
+O  dashboard  representa  a  integração  das  principais  funcionalidades  em  um  único  painel, 
+fornecendo ao usuário uma visão abrangente da situação epidemiológica e ambiental. 
+A primeira parte do dashboard é o mapa de calor, que mostra espacialmente os pontos de risco 
+associados às imagens enviadas. Ao clicar em cada ponto, o usuário pode visualizar a foto 
+correspondente  e  a  intensidade  de  risco  estimada  pelo  sistema,  em  uma escala de 0 a 10, 
+conforme ilustrado na Figura 8. 
+ 
+Figura 8 - Mapa de calor do dashboard 
+Na sequência, o dashboard apresenta o painel de alertas e previsão, que reúne informações 
+interpretadas  pelo  modelo  de  IA,  como  a tendência de casos na região e a necessidade de 
+ações pelos agentes de saúde. Esse painel também contém os gráficos da previsão de casos de 
+dengue, que mostram a evolução histórica e a projeção para as semanas seguintes, conforme 
+pode ser observado na Figura 9. 
+ 
+28 
+ 
+Figura 9 - Painel de alertas e previsão de casos no dashboard 
+Por  fim,  há  a  funcionalidade  de emissão de relatórios, que organiza os dados em listas de 
+áreas prioritárias e sugere rotas para agentes de saúde. Esse recurso torna o sistema aplicável 
+de forma prática no planejamento das ações de vigilância ao traduzir as análises da IA em um 
+plano de ação direto, permitindo aos gestores alocar equipes de forma otimizada e focar os 
+esforços nas áreas de maior risco, conforme exemplificado na Figura 10. 
+ 
+Figura 10 - Relatório gerado pelo sistema 
+ 
+ 
+ 
+29 
+4 CONSIDERAÇÕES FINAIS 
+O objetivo geral deste projeto foi desenvolver ferramentas baseadas em Inteligência Artificial 
+para viabilizar medidas preventivas eficazes contra a dengue. Esse objetivo foi alcançado por 
+meio do desenvolvimento de modelos de identificação de criadouros em imagens aéreas e de 
+previsão de picos da doença. A disponibilização dessas ferramentas de maneira aberta em um 
+site  e  uma  API  permite  que  os  modelos  desenvolvidos sejam implementados e acessados, 
+possibilitando um impacto concreto imediato. O desenvolvimento da pesquisa exposta neste 
+documento  também  auxilia  o  avanço  do  campo  de  pesquisa  dedicado  ao  estudo  da 
+implementação de IAs na saúde pública. 
+
+4.1 Desempenho da ferramenta de detecção 
+A ferramenta de detecção de criadouros, baseada no modelo YOLO, demonstrou desempenho 
+satisfatório ao identificar elementos como piscinas, caixas-d’água e acúmulo de entulhos em 
+imagens  aéreas.  Esse  resultado  demonstra  que  sua  utilização  na  identificação  de  focos de 
+dengue para auxílio das das equipes de eliminação de criadouros pode ter impacto real. Ainda 
+que o conjunto inicial de imagens tenha sido limitado, o uso de técnicas de data augmentation 
+e early stopping contribuíram para aumentar a diversidade e reduzir o risco de overfitting. 
+Os  testes  evidenciaram  que  o  modelo  foi  capaz  de  generalizar  para  novas  imagens, 
+apresentando  valores  adequados  de  precisão,  revocação  e  mAP.  Conforme  apresentado  na 
+tabela  1,  esses  resultados  corroboram  a  literatura  sobre  a  aplicabilidade  de  redes 
+convolucionais  em  cenários de vigilância ambiental, confirmando o potencial do uso dessa 
+tecnologia para fins de fiscalização não só contidos à identificação de criadouros de dengue. 
+Considerando que houve uma limitação no tamanho do conjunto de dados para o treinamento 
+e  teste  do  modelo,  existe  ainda  uma  possibilidade  de  desenvolvimento  de  um  modelo  de 
+maior precisão e acurácia.. 
+Classe  Mean Precision  Mean Recall  MAP50  MAP50-95 
+Geral  0,792  0,683  0,773  0,562 
+Piscina limpa  0,555  0,786  0,795  0,65 
+Piscina suja  0,84  0,75  0,857  0,753 
+Lona  0,893  0,745  0,865  0,682 
+ 
+30 
+Monte de lixo  0,771  0,673  0,741  0,551 
+Reservatório de água  0,87  0,571  0,671  0,425 
+Pneu  0,826  0,828  0,872  0,493 
+Saco de lixo  0,789  0,427  0,608  0,376 
+Tabela 1: Métricas de desempenho do modelo de detecção de criadouros  
+4.2 Desempenho da ferramenta de previsão
+
+A ferramenta de previsão apresentou maior complexidade de desenvolvimento, sobretudo em 
+função da necessidade de formatar séries históricas extensas e de integrar variáveis climáticas 
+aos  registros  epidemiológicos.  Porém,  o  modelo  baseado  na  arquitetura  LSTM  conseguiu 
+antecipar tendências de crescimento e queda nos casos de dengue. 
+A adoção da função de perda assimétrica se mostrou adequada, pois reduziu a incidência de 
+subestimações, o que é crítico em cenários de saúde pública. Embora a previsão de surtos de 
+dengue seja um desafio reconhecido, os experimentos mostraram que o modelo foi capaz de 
+oferecer estimativas consistentes, com média de erros dentro de limites aceitáveis para uso em 
+estratégias preventivas, conforme visto na tabela 2. A integração dessa ferramenta ao website, 
+com atualização automática a partir de novas notificações e dados climáticos, permite que ela 
+já seja utilizada, garantindo seu impacto concreto. 
+Modelo  RMSE  MAE 
+Municipal  10,358  81,429 
+Estadual  706,295  4386,002 
+Tabela 2: Métricas de desempenho do modelo de previsão de casos  
+ 
+ 
+31 
+ 
+Figura 11 - Gráfico de previsão municipal de casos de Campinas 
+ 
+Figura 12 - Gráfico de previsão estadual de casos de São Paulo 
+4.3 Limitações e desafios enfrentados 
+O  desenvolvimento  contou  com  a  resolução  de  obstáculos  significativos.  Na  frente  de 
+detecção, a principal limitação foi a disponibilidade reduzida de imagens aéreas de ambientes 
+urbanos com qualidade suficiente para identificar a maioria dos criadouros, o que restringiu o 
+tamanho  do  conjunto  de  dados, limitando a precisão e capacidade de generalização da IA. 
+Ainda  assim,  as  técnicas de aumento de dados e a grande riqueza das imagens fornecidas, 
+tanto em número de criadouros por foto quanto em diversidade, minimizaram essa carência. 
+Na frente de previsão, os desafios foram ainda maiores. Além da necessidade de  organizar e 
+padronizar  os  dados  epidemiológicos  e  climáticos,  a  previsão  de  surtos  é  dificultada  pela 
+natureza  incerta  inerente  ao  próprio  fenômeno,  marcado  por  múltiplos  fatores  ambientais, 
+ 
+32 
+sociais e biológicos. Essa complexidade exigiu ajustes metodológicos contínuos, como o uso 
+de escalonadores globais e métricas de validação específicas por município. 
+Outro desafio foi a integração dos modelos ao website, que demandou atenção não apenas à 
+parte técnica, mas também à experiência do usuário. Tornar o sistema acessível, visualmente 
+claro e interativo foi essencial para garantir sua aplicabilidade em contextos de uso real.
+
+4.4 Conclusão e perspectivas de continuidade 
+Os  resultados  obtidos  demonstram  a  efetividade  das inteligências artificiais desenvolvidas, 
+validando  a  proposta  e  confirmando  que  os  modelos  são  capazes  tanto  de  identificar 
+criadouros de dengue em imagens aéreas quanto de estimar o surgimento de picos de casos da 
+doença. Esse desempenho consistente indica a solidez dos dados apresentados na plataforma 
+desenvolvida,  embasando  a  sua  utilização  no  combate  à  proliferação  do  mosquito  e  no 
+fornecimento de um aviso prévio sobre futuros picos de dengue. Além disso, a capacidade do 
+modelo  de  detecção  de  identificar  criadouros  garante  a  viabilidade  da  sua  utilização  por 
+prefeituras municipais, permitindo a elaboração de uma nova metodologia de eliminação de 
+focos  da  doença  de  grande  eficiência.  O  impacto  da  plataforma  é potencializado pela sua 
+arquitetura,  que  automaticamente  realiza  o  levantamento  das  regiões  mais  críticas  para  a 
+proliferação do mosquito da dengue e exibe a previsão do número de casos da região para que 
+se avalie a urgência da remoção dos criadouros.  
+A  efetividade  prática  dos  modelos  desenvolvidos  corrobora  a  pesquisa  já  preexistente  e 
+confirma  a  viabilidade  do  desenvolvimento  de  IAs  para  a  identificação  de  criadouros  em 
+imagens  aéreas  e  para  a  previsão  de  casos  a fim do preparo para surtos. Apesar dos bons 
+resultados  obtidos  por  este  trabalho,  aponta-se  a  possibilidade  de  aprimoramento  das  IAs 
+propostas. O modelo de identificação poderia se beneficiar da inclusão de classes específicas 
+para criadouro menores - como latinhas, garrafas PET e ralos - o que só seria possível com o 
+aumento da resolução das imagens. Já o modelo de previsão seria beneficiado pela expansão 
+do seu horizonte de previsão, o que auxiliaria a mobilização de ações preventivas antecipadas 
+e  de  maior  escala;  pelo  aumento  na  precisão do número de casos previstos, o que melhor 
+quantificaria  a  escala  dos  surtos  identificados;  e  pela  melhora  da  acurácia,  diminuindo  o 
+número  de  surtos  não  identificados  com  antecedência  e  levando  a  uma  redução  de  falsos 
+positivos,  que  ferem  a  confiança  na  IA,  fazendo  com  que  avisos  reais  sejam  ignorados. 
+Também seria interessante aplicar modelos explicativos na IA de previsão, o que permitiria 
+analisar  padrões  dos  casos  de  dengue  e  aferir  a confiabilidade da previsão. No quesito da 
+ 
+33 
+aplicação  dos  modelos  para  uso  prático,  projeta-se  que  a  UNICAMP  e a outra instituição 
+continuem  com  o  desenvolvimento  da  IA  de  identificação,  agregando  um  sistema  para 
+elaborar rotas para as equipes de combate às endemias priorizando os pontos mais críticos. 
+Além disso, essa ferramenta poderia contar com a delimitação das áreas de cada domicílio, 
+permitindo uma identificação mais precisa dos focos de dengue e auxiliando o processo de 
+visita das equipes.  
+ 
+ 
+ 
+ REFERÊNCIA 
+ 
+ABNT. Associação Brasileira de Normas e Técnicas. NBR 14724:2005. Rio de Janeiro. 2002 
+ALBAWI, S.; MOHAMMED, T. A.; AL-ZAWI, S. Understanding of a convolutional neural 
+network. 2017 International Conference on Engineering and Technology (ICET), Antalya, 
+2017. p. 1–6. DOI: 10.1109/ICEngTechnol.2017.8308186. 
+BEZERRA, T. M.; MATOS, C. C. Dengue no Brasil: fatores socioambientais associados à 
+prevalência de casos. Arquivos de Ciências da Saúde da UNIPAR, Umuarama, v. 27, n. 5, p. 
+2685–2698, 2023. 
+GOODFELLOW, I.; BENGIO, Y.; COURVILLE, A. Deep Learning. Cambridge: MIT Press, 
+2016. 
+HOCHREITER, S.; SCHMIDHUBER, J. Long short-term memory. Neural Computation, v. 
+9, n. 8, p. 1735–1780, 1997. 
+MINISTÉRIO DA SAÚDE (Brasil). Ciclo de vida de Aedes aegypti: do ovo ao adulto – 
+quanto tempo temos para agir? Brasília, 2025. 
+OPAS – ORGANIZAÇÃO PAN-AMERICANA DA SAÚDE. Alerta epidemiológico: 
+aumento de casos de dengue e outras arboviroses nas Américas. Washington, DC: OPAS, 
+2023. 
+PREFEITURA DE SÃO PAULO. Conheça as características do mosquito Aedes aegypti. São 
+Paulo, 2024. Disponível em: https://www.prefeitura.sp.gov.br. Acesso em: 17 set. 2025. 
+REDMON, J. et al. You Only Look Once: Unified, Real-Time Object Detection. Proceedings 
+of the IEEE Conference on Computer Vision and Pattern Recognition, Las Vegas, 2016. p. 
+779–788. DOI: 10.1109/CVPR.2016.91. 
+REVISTA FT. Epidemiologia da dengue e seus impactos na saúde pública: uma revisão 
+narrativa. Revista FT Saúde, São Paulo, v. 10, n. 2, 2023. 
+TEICH, Vanessa; ARINELLI, Roberta; FAHHAM, Lucas. Aedes aegypti e sociedade: o 
+impacto econômico das arboviroses no Brasil = Aedes aegypti and society: the economic 
+burden of arboviruses in Brazil. Journal of Business and Environmental Studies, v. 9, n. 3, p. 
+267–276, 2018. DOI: 10.21115/JBES.v9.n3.p267-76. 
+SEVERINO, Antonio Joaquim. Metodologia do trabalho científico. 23. ed. São Paulo: Cortez, 
+2007. 
+WERMELINGER, E. D. et al. Avaliação da produtividade dos criadouros do Aedes aegypti 
+(L.) e Aedes albopictus (Skuse) através dos dados da vigilância em Parati – RJ. 
+EntomoBrasilis, v. 5, n. 3, p. 223-236, 2012. 
+ZHANG, Y. et al. Application of artificial intelligence in the prediction of dengue fever 
+outbreaks: A systematic review. International Journal of Environmental Research and Public 
+Health, v. 17, n. 2, 2020. 
+ 
+35 
+GLOSSÁRIO 
+API:  conjunto  de  regras  que  permite  que  diferentes  softwares  se  comuniquem  entre  si, 
+trocando dados e funcionalidades de forma padronizada. 
+Backend:  componente  do  sistema  que  opera  no  servidor,  responsável  por  processar  as 
+requisições, executar a lógica de negócio (como os modelos de IA) e enviar os resultados para 
+o frontend. 
+Dashboard: painel interativo que apresenta dados de forma visual (gráficos, mapas, tabelas) 
+para facilitar a análise e tomada de decisão.  
+DATASUS: base oficial de dados de saúde pública do Brasil, que reúne informações sobre 
+doenças, internações, atendimentos e estatísticas do SUS. 
+Deep Learning (Aprendizado Profundo): subárea do aprendizado de máquina que utiliza 
+redes neurais artificiais com várias camadas, capaz de extrair automaticamente padrões 
+complexos de grandes volumes de dados. 
+Early Stopping: técnica que interrompe o treinamento da rede neural quando não há melhora 
+significativa no desempenho em dados de validação, evitando o overfitting. 
+Escalonadores globais: técnicas de normalização de dados que ajustam diferentes variáveis 
+para uma mesma escala numérica, permitindo que informações com magnitudes distintas 
+(como número de casos e temperatura) possam ser comparadas. 
+Frontend: componente do sistema referente à interface do usuário. É responsável por exibir 
+visualmente  os  dados  e  capturar  as  interações  do  usuário,  enviando  requisições  para  o 
+backend. 
+GPU:  processador  especializado  em  cálculos  matemáticos  complexos,  muito  usado  para 
+treinar modelos de inteligência artificial. 
+Hiperparâmetros: parâmetros definidos antes do treinamento de um modelo de aprendizado 
+de máquina (como taxa de aprendizado, número de camadas ou épocas), que influenciam 
+diretamente o desempenho e a precisão do modelo. 
+IoU: métrica usada em visão computacional que mede a sobreposição entre o objeto real e a 
+área detectada pelo modelo. 
+LSTM: tipo de rede neural artificial projetada para aprender e prever dados em sequência, 
+como séries temporais (ex.: evolução de casos de dengue ao longo do tempo). 
+ 
+36 
+Machine Learning (Aprendizado de Máquina): área da inteligência artificial que 
+desenvolve algoritmos capazes de aprender padrões a partir de dados e melhorar seu 
+desempenho sem programação explícita. 
+MAE: métrica que representa a média das diferenças entre os valores previstos e os reais. 
+mAP50-95: métrica de avaliação mais rigorosa que calcula a média da precisão (mAP) em 
+múltiplos níveis de exigência, com sobreposições (IoU) variando de 50% a 95%. 
+mAP50: métrica que avalia a precisão geral (mAP) de um modelo de detecção, considerando 
+um acerto quando a sobreposição (IoU) entre a previsão e o objeto real é de, no mínimo, 50%.  
+mAP:  métrica  que  avalia  a  precisão  geral  de  um  modelo  de  visão  computacional, 
+considerando a média de acertos em várias classes de objetos. 
+ODS:  conjunto  de  metas  globais  definidas  pela  ONU  para  promover  qualidade  de  vida, 
+sustentabilidade e justiça social até 2030. 
+Overfitting: quando o modelo de inteligência artificial aprende em excesso os detalhes e 
+ruídos do conjunto de treinamento, perdendo capacidade de generalizar para novos dados. 
+Recall (Revocação): métrica de proporção de acertos entre os casos positivos existentes. 
+Rede  Neural:  modelo  de  inteligência  artificial  inspirado  no  funcionamento  do  cérebro 
+humano, capaz de reconhecer padrões em dados (como imagens ou séries temporais). 
+RMSE: métrica que calcula a dispersão dos erros, dando mais peso a erros maiores. 
+TABNET: sistema  do  DATASUS  que  organiza  e  disponibiliza  dados de saúde em tabelas 
+dinâmicas, permitindo consultas detalhadas por local, período e tipo de doença. 
+YOLO: algoritmo de visão computacional que detecta objetos em imagens de forma rápida e 
+precisa, muito usado em aplicações de monitoramento. 
+ 
+ 

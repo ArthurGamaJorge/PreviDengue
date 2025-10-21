@@ -1,0 +1,35 @@
+<h1>Etapa de Detecção de Criadouros</h1>
+
+<h2>Coleta e Preparação das Imagens</h2>
+
+<p>
+O conjunto inicial de dados foi composto por fotografias aéreas de quintais residenciais. Para que essas imagens pudessem ser utilizadas em modelos de detecção de imagens, foi realizado um processo de rotulagem manual (labelling), no qual cada piscina, caixa-d'água, pneus, entulhos e outros elementos de interesse foram marcados e classificados com a ferramenta makesense, como visto abaixo na figura 3.
+</p>
+
+<img src="/images/relatorio/fig3.png" alt="Interface de labelling dos criadouros">
+<p><small><strong>Figura 3:</strong> Interface de labelling dos criadouros</small></p>
+
+<p>
+Como a quantidade de imagens disponíveis era limitada, aplicaram-se técnicas de aumento artificial de dados (data augmentation), como visto na figura 4, que consistem em criar versões modificadas das imagens originais a fim de ampliar a diversidade e o tamanho do conjunto de dados. Foram utilizadas variações como ajuste de brilho e cor, adição de ruído, borramento e alterações de contraste. Esse procedimento é amplamente adotado em visão computacional porque ajuda a reduzir o risco de que a rede "decore" apenas os exemplos apresentados, melhorando assim sua capacidade de reconhecer padrões em novas imagens (Albawi; Mohammed; Al-Zawi, 2017).
+</p>
+
+<img src="/images/relatorio/fig4.png" alt="Exemplos de data augmentation">
+<p><small><strong>Figura 4:</strong> Exemplos de data augmentation</small></p>
+
+<h2>Treinamento e Testes do Sistema</h2>
+
+<p>
+Para a detecção dos criadouros, foi utilizado o modelo YOLO, conhecido por combinar rapidez e precisão na identificação de objetos em imagens (Redmon et al., 2016). O treinamento do modelo foi realizado em um ambiente de nuvem no Google Colab, uma vez que os recursos computacionais locais não seriam suficientes para essa tarefa.
+</p>
+
+<p>
+Durante o treinamento, aplicaram-se técnicas de otimização, como o early stopping, que consiste em interromper automaticamente o processo quando não há melhora significativa no desempenho. Isso evita que a rede "exagere" no aprendizado e se torne menos eficaz em novos conjuntos de imagens (Goodfellow; Bengio; Courville, 2016). As fotos foram divididas em duas partes: um conjunto para o aprendizado da rede (treinamento) e outro para verificar o desempenho final (teste).
+</p>
+
+<p>
+A avaliação do modelo foi feita com base em diferentes métricas de desempenho: precisão (quantos dos objetos identificados estavam corretos), revocação (recall, proporção de objetos que o modelo conseguiu encontrar) e mAP (mean Average Precision, uma média geral da acurácia). Essas métricas são amplamente utilizadas na área de visão computacional e permitiram verificar não apenas a exatidão das previsões, mas também a viabilidade prática da aplicação em cenários reais de monitoramento urbano (Zhang et al., 2020).
+</p>
+
+<p>
+Além das otimizações mencionadas, foi implementada uma técnica de hard negative mining (mineração de negativos difíceis) durante a etapa de ajuste fino do modelo. Ao longo do desenvolvimento do modelo, foi identificado que objetos normais estavam sendo incorretamente classificados pelo sistema como criadouros, gerando falsos positivos. Para resolver esse problema, imagens específicas, que continham objetos ou fundos visualmente semelhantes aos criadouros, foram incorporadas ao conjunto de treinamento. O objetivo dessa realimentação foi aprimorar a capacidade de discernimento do modelo, forçando-o a aprender características mais robustas e a reduzir significativamente a taxa de detecções incorretas, o que é crucial para a precisão da aplicação em campo.
+</p>

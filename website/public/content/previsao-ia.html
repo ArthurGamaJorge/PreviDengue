@@ -1,0 +1,26 @@
+<h1>Construção do Website</h1>
+
+<p>
+Com o objetivo de tornar os modelos desenvolvidos acessíveis e facilitar sua utilização por gestores de saúde, pesquisadores e pela população geral, foi construída uma plataforma web. Esta aplicação é composta por um website (Figura 5) publicamente disponível em previdengue.vercel.app, que serve como interface frontend, e uma API dedicada, disponível em previdengue-previdengueapi.hf.space, que funciona como o backend. A disponibilização dessa API permite que o site integre as funcionalidades das IAs em uma interface intuitiva e interativa.
+</p>
+
+<img src="/images/relatorio/fig5.png" alt="Página inicial do PreviDengue">
+<p><small><strong>Figura 5:</strong> Página inicial do PreviDengue</small></p>
+
+<h2>Página de Detecção</h2>
+
+<p>
+Na página de detecção, o usuário pode enviar imagens de quintais ou áreas urbanas para que o sistema as analise utilizando o modelo de visão computacional YOLO. O processamento identifica potenciais criadouros do <i>Aedes aegypti</i>, como piscinas e caixas-d'água, marcando os elementos diretamente sobre a imagem. O resultado é exibido em uma lista e desenhado sobre a imagem fornecida, facilitando a sua análise (Figura 6).
+</p>
+
+<img src="/images/relatorio/fig6.png" alt="Página de detecção do PreviDengue">
+<p><small><strong>Figura 6:</strong> Página de detecção do PreviDengue</small></p>
+
+<h2>Página de Previsão</h2>
+
+<p>
+Na seção de previsão, é possível selecionar qualquer município brasileiro e visualizar as estimativas de casos de dengue para as semanas subsequentes. Os resultados são apresentados em gráficos claros, que destacam tendências de crescimento, estabilidade ou queda na incidência. Essa funcionalidade é alimentada pelo modelo LSTM descrito anteriormente e permite que mesmo usuários não especializados compreendam o comportamento esperado da doença (Figura 7).
+</p>
+
+<img src="/images/relatorio/fig7.png" alt="Página de previsão do PreviDengue">
+<p><small><strong>Figura 7:</strong> Página de previsão do PreviDengue</small></p>

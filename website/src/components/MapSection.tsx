@@ -147,6 +147,17 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
     }
   };
 
+  const UF_BY_CODE: Record<number, string> = useMemo(() => ({
+    11: 'RO', 12: 'AC', 13: 'AM', 14: 'RR', 15: 'PA', 16: 'AP', 17: 'TO',
+    21: 'MA', 22: 'PI', 23: 'CE', 24: 'RN', 25: 'PB', 26: 'PE', 27: 'AL', 28: 'SE', 29: 'BA',
+    31: 'MG', 32: 'ES', 33: 'RJ', 35: 'SP', 41: 'PR', 42: 'SC', 43: 'RS', 50: 'MS', 51: 'MT', 52: 'GO', 53: 'DF'
+  }), []);
+
+  const formatCityLabel = (city: Municipio) => {
+    const uf = UF_BY_CODE[city.codigo_uf];
+    return uf ? `${uf} - ${city.nome}` : city.nome;
+  };
+
   // Lógica de manipulação de dados para a seção do Mapa
   const handleMapClick = (e: [number, number]) => setSelectedCoords(e);
 
@@ -353,9 +364,19 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
     setImageFileNames(new Set());
   };
 
-  const totalIntensity = useMemo(() => dataPoints.reduce((sum, p) => sum + p.intensity, 0), [dataPoints]);
-  const averageIntensity = useMemo(() => dataPoints.length > 0 ? (totalIntensity / dataPoints.length).toFixed(2) : "0.00", [totalIntensity, dataPoints.length]);
-  const intensityData = useMemo(() => getIntensityData(dataPoints), [dataPoints]);
+  const maxIntensityRaw = useMemo(() => Math.max(0, ...dataPoints.map(p => Number(p.intensity ?? 0))), [dataPoints]);
+  const HEAT_GAMMA = 3.5;
+  const getScaledIntensity = (raw: number) => {
+    if (!maxIntensityRaw || maxIntensityRaw <= 0) return 0;
+    const norm = Math.max(0, raw) / maxIntensityRaw;
+    const boosted = Math.pow(norm, HEAT_GAMMA);
+    return Math.min(10, boosted * 10);
+  };
+  const scaledPoints = useMemo<DataPoint[]>(() => dataPoints.map(p => ({ ...p, intensity: getScaledIntensity(Number(p.intensity ?? 0)) })), [dataPoints, maxIntensityRaw]);
+
+  const totalIntensity = useMemo(() => scaledPoints.reduce((sum, p) => sum + p.intensity, 0), [scaledPoints]);
+  const averageIntensity = useMemo(() => scaledPoints.length > 0 ? (totalIntensity / scaledPoints.length).toFixed(2) : "0.00", [totalIntensity, scaledPoints.length]);
+  const intensityData = useMemo(() => getIntensityData(scaledPoints), [scaledPoints]);
 
   return (
     <>
@@ -387,7 +408,7 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
                       onClick={() => handleSelectCity(city)}
                       className="p-2 text-zinc-300 text-sm hover:bg-zinc-700 cursor-pointer rounded-lg transition-colors text-left"
                     >
-                      {city.nome}
+                      {formatCityLabel(city)}
                     </li>
                   ))}
                 </ul>
@@ -476,8 +497,12 @@ export default function MapSection({ dataPoints, onDataChange, selectedCity, onC
           <div className="flex-1 rounded-lg overflow-hidden shadow-xl border border-zinc-800 min-h-[600px] h-full">
             {isClient ? (
               <DynamicMap
-                points={dataPoints}
+                points={scaledPoints}
                 onMapClick={handleMapClick}
+                onMapBackgroundClick={() => {
+                  // Apenas fecha seleção atual, não abre novo formulário
+                  if (selectedCoords) setSelectedCoords(null);
+                }}
                 onRemovePoint={handleRemovePoint}
                 centerCoords={mapCenter}
               />

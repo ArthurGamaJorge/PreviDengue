@@ -7,8 +7,11 @@ import pandas as pd
 #csv_path = '../dadosClimaticos.csv'
 #parquet_path = '../dadosClimaticos.parquet'
 
-csv_path = '../inference_data.csv'
-parquet_path = '../inference_data.parquet'
+#csv_path = '../inference_data.csv'
+#parquet_path = '../inference_data.parquet'
+
+csv_path = '../inference_data_estadual.csv.csv'
+parquet_path = '../inference_data_estadual.csv.parquet'
 
 # Compactar
 #df = pd.read_csv(csv_path)
