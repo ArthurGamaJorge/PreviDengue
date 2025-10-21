@@ -17,3 +17,18 @@ Como complemento, foram incorporadas variáveis ambientais provenientes da NASA 
 <p>
 Para viabilizar as previsões em nível estadual, foi necessário um processo de agregação dos dados municipais. Para isso, os casos de dengue de cada cidade foram somados para obter o total de seus estados, enquanto as variáveis ambientais foram tratadas por meio de uma média ponderada pela população de cada município. Essa abordagem metodológica garante que as condições ambientais de municípios mais populosos, que concentram a maior parte da população e, consequentemente, influenciam mais fortemente os registros epidemiológicos estaduais, tenham um peso proporcionalmente adequado no conjunto de dados agregado.
 </p>
+
+
+<h1>Construção do Modelo Preditivo</h1>
+
+<p>
+O modelo de previsão foi desenvolvido com base em redes neurais recorrentes do tipo LSTM, adequadas para lidar com dependências temporais de longo alcance. Para cada município, a rede recebe como entrada os dados das semanas anteriores de casos e condições climáticas e produz como saída a previsão para as seis semanas seguintes. Como os dados de casos de dengue do DATASUS tem um período de duas semanas com informações parcialmente atualizadas, é necessário descartar essas semanas para que o modelo não seja influenciado pela subnotificação. Portanto, das seis semanas previstas, duas são de semanas já decorridas.
+</p>
+
+<p>
+A função de perda utilizada foi uma versão modificada do erro quadrático médio, denominada asymmetric_mse. Essa função penaliza de forma mais intensa os erros de subestimação, uma vez que a subestimação dos casos pode acarretar em consequências mais graves do que falsos alertas. Além disso, foram implementados mecanismos de early stopping com base em uma métrica ponderada por município (city_val_loss), que considerava o peso epidemiológico de cada localidade no cálculo da perda.
+</p>
+
+<p>
+O treinamento foi realizado em ambiente de nuvem no Google Colab, utilizando recursos de GPU para lidar com a complexidade dos modelos e a grande quantidade de dados. O conjunto de séries temporais foi dividido em treino e teste, respeitando a ordem cronológica para garantir condições realistas de previsão. A extração das métricas das IAs e a análise do seu desempenho foi também realizada nessa plataforma, permitindo averiguar se o modelo apresentava overfitting e garantir que ele atingisse uma boa precisão.
+</p>
