@@ -50,6 +50,8 @@ async def startup_event():
         )
     except Exception as e:
         print("[WARN] DenguePredictor (municipal) não inicializado:", str(e))
+        # print full traceback to help debugging (was previously only printing str(e))
+        traceback.print_exc()
         predictor = None
     try:
         state_predictor = StatePredictor(
@@ -58,6 +60,7 @@ async def startup_event():
         )
     except Exception as e:
         print("[WARN] StatePredictor não inicializado:", str(e))
+        traceback.print_exc()
         state_predictor = None
     print("Módulos de IA carregados com sucesso. API pronta. Modo:", "online" if ONLINE else "offline")
 

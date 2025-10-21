@@ -151,7 +151,7 @@ export default function About() {
         <h4 className="text-2xl font-semibold text-green-300 mb-3">Previsão de Surtos</h4>
         <p className="text-zinc-300 leading-relaxed">Um modelo preditivo que projeta a evolução de surtos de dengue a nível municipal.</p>
       </div>
-      <span className="mt-6 text-sm font-semibold text-green-400 group-hover:text-green-300 transition-colors">Acessar ferramenta</span>
+      <span className="mt-6 text-sm font-semibold text-green-400 group-hover:text-green-300 transition-colors" id="underline">Acessar ferramenta</span>
     </Link>
 
     <span className="hidden md:block text-5xl text-white font-light mx-4 animate-fade-in-up delay-100">+</span>
@@ -164,7 +164,7 @@ export default function About() {
         <h4 className="text-2xl font-semibold text-blue-300 mb-3">Detecção de Focos</h4>
         <p className="text-zinc-300 leading-relaxed">Nossa IA identifica potenciais criadouros do Aedes aegypti em imagens aéreas.</p>
       </div>
-      <span className="mt-6 text-sm font-semibold text-blue-400 group-hover:text-blue-300 transition-colors">Acessar ferramenta</span>
+      <span className="mt-6 text-sm font-semibold text-blue-400 group-hover:text-blue-300 transition-colors" id="underline">Acessar ferramenta</span>
     </Link>
 
     <span className="hidden md:block text-5xl text-white font-light mx-4 animate-fade-in-up delay-300">=</span>
@@ -190,7 +190,7 @@ export default function About() {
         <h4 className="text-2xl font-semibold text-indigo-300 mb-3">Painel de Análise</h4>
         <p className="text-zinc-300 leading-relaxed">Visualize insights dos modelos de previsão e detecção para guiar a tomada de decisão e o planejamento.</p>
       </div>
-      <span className="mt-6 text-sm font-semibold text-indigo-400 group-hover:text-indigo-300 transition-colors">Explorar o painel</span>
+      <span className="mt-6 text-sm font-semibold text-indigo-400 group-hover:text-indigo-300 transition-colors" id="underline">Explorar o painel</span>
     </Link>
   </div>
 </section>
@@ -371,28 +371,6 @@ export default function About() {
   </div>
 </section>
 
-
-        <hr className="border-zinc-800 mb-24" />
-        
-        {/* --- 7. Seção de Imagem de Destaque --- */}
-        <section className="max-w-6xl mx-auto mb-24 text-center animate-fade-in-up">
-          <h3 className="text-4xl font-bold text-white mb-4">Detecção de Focos</h3>
-          <p className="text-zinc-300 text-lg mb-10 max-w-3xl mx-auto">
-            A visão computacional permite analisar vastas áreas, identificando potenciais criadouros. Veja um exemplo de como a IA processa uma imagem aérea.
-          </p>
-          <div className="relative w-full h-130 rounded-2xl overflow-hidden shadow-2xl border border-zinc-700">
-            <Image
-              src="/images/detected1.png"
-              alt="Exemplo de imagem aérea com focos de dengue detectados pela IA"
-              width={1200}
-              height={130}
-              className="object-cover"
-            />
-          </div>
-          <p className="text-zinc-500 text-sm mt-4">
-            *Imagem ilustrativa de uma área de análise hipotética.
-          </p>
-        </section>
 
         <hr className="border-zinc-800 mb-24" />
 

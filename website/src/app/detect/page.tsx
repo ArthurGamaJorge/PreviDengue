@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useEffect, useState, useRef } from "react";
-import type React from "react";
 import * as Slider from "@radix-ui/react-slider";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -10,8 +9,18 @@ import { FileImage, X, MapPin, Box, ChevronsLeft, ChevronsRight } from "lucide-r
 import { API_URL } from "@/lib/config";
 
 export default function Detectar() {
+  type RiskLevel = "low" | "medium" | "high" | "unknown";
   const [images, setImages] = useState<
-    { name: string; url: string; result?: any; loading: boolean }[]
+    {
+      name: string;
+      url: string;
+      result?: any;
+      loading: boolean;
+      originalIndex?: number;
+      riskScore?: number;
+      riskLevel?: RiskLevel;
+      riskPercent?: number;
+    }[]
   >([]);
   const [sliderValue, setSliderValue] = useState([0.5]);
   const [showDetection, setShowDetection] = useState(true);
@@ -27,34 +36,13 @@ export default function Detectar() {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const imageRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const transformRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [rightOpen, setRightOpen] = useState(true);
-  const [sortByRisk, setSortByRisk] = useState(false);
-  // Zoom & pan state por imagem
-  const [zoomScales, setZoomScales] = useState<number[]>([]);
-  const [panOffsets, setPanOffsets] = useState<{x:number;y:number}[]>([]);
-  const [isPanning, setIsPanning] = useState<boolean[]>([]);
-  const [panStart, setPanStart] = useState<{x:number;y:number} | null>(null);
+  const [sortMode, setSortMode] = useState<"original" | "highest" | "lowest">("original");
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth < 1024) {
       setRightOpen(false);
     }
-  }, []);
-
-  // Evita scroll da página enquanto faz zoom com a roda do mouse sobre o container
-  useEffect(() => {
-    const handler = (e: WheelEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      // Se estiver dentro de um container de imagem (group zoom container), bloqueia scroll da página
-      const zoomContainer = target.closest('[data-zoom-container="true"]');
-      if (zoomContainer) {
-        e.preventDefault();
-      }
-    };
-    window.addEventListener('wheel', handler, { passive: false });
-    return () => window.removeEventListener('wheel', handler as EventListener);
   }, []);
 
   // Variável movida para um escopo global no componente
@@ -67,18 +55,16 @@ const cores_por_classe: { [key: string]: string } = {
   pneu: "rgb(220, 20, 60)",              
   saco_de_lixo: "rgb(128, 0, 128)"       
 };
-
-// Nomes amigáveis para exibição
-const nomes_por_classe: { [key: string]: string } = {
-  piscina_limpa: "Piscina limpa",
-  piscina_suja: "Piscina suja",
-  lona: "Lona",
-  monte_de_lixo: "Monte de lixo",
-  reservatorio_de_agua: "Reservatório de água",
-  pneu: "Pneu",
-  saco_de_lixo: "Saco de lixo",
+// Risk weight per class (used to compute image-level risk)
+const risco_por_classe: { [key: string]: number } = {
+  piscina_limpa: 0.5,
+  piscina_suja: 2.5,
+  lona: 1.0,
+  monte_de_lixo: 5.0,
+  reservatorio_de_agua: 5.0,
+  pneu: 3.5,
+  saco_de_lixo: 3.5,
 };
-const displayNome = (key: string) => nomes_por_classe[key] ?? key.replace(/_/g, " ");
 
   const handleDrop = async (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
@@ -120,12 +106,20 @@ const displayNome = (key: string) => nomes_por_classe[key] ?? key.replace(/_/g, 
   };
 
   const processFiles = async (files: File[]) => {
-    const newImages = files.map(file => ({
-      name: file.name,
-      url: URL.createObjectURL(file),
-      loading: true,
-    }));
-    setImages(prev => [...prev, ...newImages]);
+    setImages((prev) => {
+      const startIndex = prev.length;
+      const newImages = files.map((file, i) => ({
+        name: file.name,
+        url: URL.createObjectURL(file),
+        loading: true,
+        originalIndex: startIndex + i,
+        // risk fields will be filled after detection
+        riskScore: 0,
+        riskLevel: "unknown" as RiskLevel,
+        riskPercent: 0,
+      }));
+      return [...prev, ...newImages];
+    });
 
     for (const file of files) {
       const formData = new FormData();
@@ -143,9 +137,30 @@ const displayNome = (key: string) => nomes_por_classe[key] ?? key.replace(/_/g, 
 
         const result = await response.json();
 
+        // compute risk score from result.objetos
+        const objetos = Array.isArray(result?.objetos) ? result.objetos : [];
+        let score = 0;
+        let weightSum = 0;
+        objetos.forEach((o: any) => {
+          const w = risco_por_classe[o.class] ?? 1;
+          const conf = typeof o.confidence === 'number' ? o.confidence : parseFloat(o.confidence || 0) || 0;
+          score += conf * w;
+          weightSum += w;
+        });
+        // normalize score to a 0-1-ish range by dividing by (weightSum) if any, else keep 0
+        const normalized = weightSum > 0 ? score / (weightSum) : 0;
+        const percent = Math.min(100, Math.round(normalized * 100));
+        let level: "low" | "medium" | "high" | "unknown" = "unknown";
+        if (weightSum === 0) level = objetos.length > 0 ? "low" : "unknown";
+        else if (normalized >= 0.6) level = "high";
+        else if (normalized >= 0.25) level = "medium";
+        else level = "low";
+
         setImages(prev =>
           prev.map(img =>
-            img.name === file.name && img.loading ? { ...img, result, loading: false } : img
+            img.name === file.name && img.loading
+              ? { ...img, result, loading: false, riskScore: normalized, riskLevel: level, riskPercent: percent }
+              : img
           )
         );
       } catch (error) {
@@ -157,6 +172,22 @@ const displayNome = (key: string) => nomes_por_classe[key] ?? key.replace(/_/g, 
         );
       }
     }
+  };
+
+  // function to sort images state in-place by selected mode
+  const applySortMode = (mode: "original" | "highest" | "lowest") => {
+    setSortMode(mode);
+    setImages(prev => {
+      const copy = [...prev];
+      if (mode === "original") {
+        copy.sort((a, b) => (a.originalIndex ?? 0) - (b.originalIndex ?? 0));
+      } else if (mode === "highest") {
+        copy.sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0));
+      } else if (mode === "lowest") {
+        copy.sort((a, b) => (a.riskScore ?? 0) - (b.riskScore ?? 0));
+      }
+      return copy;
+    });
   };
 
   const handleClassFilterChange = (className: string) => {
@@ -185,66 +216,6 @@ const displayNome = (key: string) => nomes_por_classe[key] ?? key.replace(/_/g, 
     } else if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
-  };
-
-  // Escala de intensidade: maior score da API vira 10
-  const maxIntensityRaw = Math.max(0, ...images.map(im => Number(im.result?.intensity_score ?? 0)));
-  const getScaledIntensity = (raw: number) => (maxIntensityRaw > 0 ? Math.min(10, (raw / maxIntensityRaw) * 10) : 0);
-
-  // Inicializa arrays auxiliares quando imagens mudam
-  useEffect(() => {
-    setZoomScales((prev) => images.map((_, i) => prev[i] ?? 1));
-    setPanOffsets((prev) => images.map((_, i) => prev[i] ?? {x:0,y:0}));
-    setIsPanning((prev) => images.map((_, i) => prev[i] ?? false));
-  }, [images.length]);
-
-  const onWheelZoom = (idx: number, e: React.WheelEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const el = transformRefs.current[idx];
-    const rect = el?.getBoundingClientRect();
-    const currentScale = zoomScales[idx] ?? 1;
-    const delta = -e.deltaY;
-    const rawFactor = delta > 0 ? 1.1 : 0.9;
-    const newScale = Math.min(6, Math.max(1, currentScale * rawFactor));
-    const factor = newScale / currentScale;
-
-    if (!rect) {
-      setZoomScales((zs) => zs.map((z, i) => (i === idx ? newScale : z)));
-      return;
-    }
-
-    // posição do cursor dentro do elemento transformado (após transform)
-    const qx = e.clientX - rect.left;
-    const qy = e.clientY - rect.top;
-
-    setZoomScales((zs) => zs.map((z, i) => (i === idx ? newScale : z)));
-    setPanOffsets((po) => po.map((p, i) => {
-      if (i !== idx) return p;
-      const tx = p?.x ?? 0;
-      const ty = p?.y ?? 0;
-      return { x: tx - qx * (factor - 1), y: ty - qy * (factor - 1) };
-    }));
-  };
-  const onMouseDown = (idx: number, e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsPanning((p) => p.map((v, i) => i === idx ? true : v));
-    setPanStart({ x: e.clientX, y: e.clientY });
-  };
-  const onMouseMove = (idx: number, e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isPanning[idx] || !panStart) return;
-    const dx = e.clientX - panStart.x;
-    const dy = e.clientY - panStart.y;
-    setPanOffsets((po) => po.map((v, i) => i === idx ? { x: v.x + dx, y: v.y + dy } : v));
-    setPanStart({ x: e.clientX, y: e.clientY });
-  };
-  const onMouseUpLeave = (idx: number) => {
-    setIsPanning((p) => p.map((v, i) => i === idx ? false : v));
-    setPanStart(null);
-  };
-
-  const resetView = (idx: number) => {
-    setZoomScales((zs) => zs.map((z, i) => (i === idx ? 1 : z)));
-    setPanOffsets((po) => po.map((o, i) => (i === idx ? { x: 0, y: 0 } : o)));
   };
 
   return (
@@ -319,6 +290,30 @@ const displayNome = (key: string) => nomes_por_classe[key] ?? key.replace(/_/g, 
                 Limpar imagens
               </button>
             </div>
+            {/* Sort control */}
+            <div className="pt-2">
+              <label className="text-zinc-300 text-sm">Ordenar imagens</label>
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={() => applySortMode("original")}
+                  className={`px-3 py-1 rounded ${sortMode === "original" ? "bg-blue-600 text-white" : "bg-zinc-800 text-zinc-300"}`}
+                >
+                  Original
+                </button>
+                <button
+                  onClick={() => applySortMode("highest")}
+                  className={`px-3 py-1 rounded ${sortMode === "highest" ? "bg-red-600 text-white" : "bg-zinc-800 text-zinc-300"}`}
+                >
+                  Maior risco
+                </button>
+                <button
+                  onClick={() => applySortMode("lowest")}
+                  className={`px-3 py-1 rounded ${sortMode === "lowest" ? "bg-green-600 text-white" : "bg-zinc-800 text-zinc-300"}`}
+                >
+                  Menor risco
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Filtro de Classes */}
@@ -338,7 +333,7 @@ const displayNome = (key: string) => nomes_por_classe[key] ?? key.replace(/_/g, 
                     onChange={() => handleClassFilterChange(className)}
                     className="accent-blue-500 w-5 h-5 border-2 border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
-                  <span className="text-zinc-200">{displayNome(className)}</span>
+                  <span className="text-zinc-200">{className}</span>
                 </label>
               ))}
             </div>
@@ -365,82 +360,20 @@ const displayNome = (key: string) => nomes_por_classe[key] ?? key.replace(/_/g, 
             className="flex flex-col gap-6 relative bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700 rounded-2xl p-6 shadow-xl"
           >
                         {/* Imagem e as caixas de detecção */}
-                        <div
-                          data-zoom-container="true"
-                          className={`relative w-full group overflow-hidden rounded-xl bg-black/20 select-none overscroll-none touch-none ${isPanning[index] ? "cursor-grabbing" : "cursor-grab"}`}
-                          onWheel={(e) => onWheelZoom(index, e)}
-                          onMouseDown={(e) => onMouseDown(index, e)}
-                          onMouseMove={(e) => onMouseMove(index, e)}
-                          onMouseUp={() => onMouseUpLeave(index)}
-                          onMouseLeave={() => onMouseUpLeave(index)}
-                        >
-                          <div className="w-full h-full flex items-center justify-center">
-                            <div
-                              ref={(el) => { transformRefs.current[index] = el; }}
-                              className="relative inline-block"
-                              style={{
-                                transform: `translate(${panOffsets[index]?.x ?? 0}px, ${panOffsets[index]?.y ?? 0}px) scale(${zoomScales[index] ?? 1})`,
-                                transformOrigin: '0 0',
-                                transition: 'none',
-                              }}
-                            >
-                              <Image
+                        <div className="relative w-full group">
+                            {/* Risk badge */}
+                            <div className="absolute left-3 top-3 z-20">
+                              <div className={`px-2 py-1 rounded-md text-xs font-semibold ${img.riskLevel === 'high' ? 'bg-red-600 text-white' : img.riskLevel === 'medium' ? 'bg-yellow-500 text-black' : img.riskLevel === 'low' ? 'bg-green-600 text-white' : 'bg-zinc-700 text-zinc-200'}`}>
+                                {img.riskLevel === 'unknown' ? 'Risco: ?' : `Risco: ${img.riskPercent ?? 0}%`}
+                              </div>
+                            </div>
+                            <Image
                                 src={img.url}
                                 alt="Imagem para detecção"
                                 width={750}
                                 height={400}
-                                className="block max-w-full h-auto select-none pointer-events-none"
-                                draggable={false}
-                              />
-                              {/* Overlay de caixas dentro do mesmo contexto transformado */}
-                              <div className="absolute inset-0 pointer-events-none select-none">
-                                {img.result?.objetos
-                                  ?.filter(
-                                    (det: any) =>
-                                      det.confidence >= sliderValue[0] &&
-                                      selectedClasses.includes(det.class)
-                                  )
-                                  .map((det: any, i: number) => {
-                                    const box = det.box;
-                                    const confidence = (det.confidence * 100).toFixed(1);
-                                    const label = `${displayNome(det.class)} (${confidence}%)`;
-
-                                    const originalWidth = box.original_width || 1000;
-                                    const originalHeight = box.original_height || 600;
-
-                                    const leftPercent = (box.x1 / originalWidth) * 100;
-                                    const topPercent = (box.y1 / originalHeight) * 100;
-                                    const widthPercent = ((box.x2 - box.x1) / originalWidth) * 100;
-                                    const heightPercent = ((box.y2 - box.y1) / originalHeight) * 100;
-
-                                    const corBox = cores_por_classe[det.class] || "rgb(255, 0, 0)";
-
-                                    return (
-                                      <div
-                                        key={i}
-                                        className="absolute border-2 animate-fade-in"
-                                        style={{
-                                          left: `${leftPercent}%`,
-                                          top: `${topPercent}%`,
-                                          width: `${widthPercent}%`,
-                                          height: `${heightPercent}%`,
-                                          borderColor: corBox,
-                                        }}
-                                      >
-                                        {showDetection && (
-                                          <span
-                                            className="absolute top-0 left-0 text-white text-xs px-1 rounded-br"
-                                            style={{ backgroundColor: corBox }}
-                                          >
-                                            {label}
-                                          </span>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                              </div>
-                            </div>
-                          </div>
+                                className="rounded-xl object-contain w-full h-auto"
+                            />
 
                             <button
                                 onClick={() => handleRemoveImage(index)}
@@ -449,13 +382,53 @@ const displayNome = (key: string) => nomes_por_classe[key] ?? key.replace(/_/g, 
                             >
                                 <X size={20} />
                             </button>
-                                <button
-                                  onClick={() => resetView(index)}
-                                  className="absolute top-2 right-12 bg-zinc-800/80 text-white rounded-full px-2 h-8 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-zinc-700 shadow-md border border-zinc-600 text-xs"
-                                  title="Reiniciar zoom"
-                                >
-                                  Fit
-                                </button>
+                            
+                            {img.result?.objetos
+                                ?.filter(
+                                    (det: any) =>
+                                        det.confidence >= sliderValue[0] &&
+                                        selectedClasses.includes(det.class)
+                                )
+                                .map((det: any, i: number) => {
+                                    const box = det.box;
+                                    const confidence = (det.confidence * 100).toFixed(1);
+                                    const label = `${det.class} (${confidence}%)`;
+
+                                    const originalWidth = box.original_width || 1000;
+                                    const originalHeight = box.original_height || 600;
+
+                                    const leftPercent = (box.x1 / originalWidth) * 100;
+                                    const topPercent = (box.y1 / originalHeight) * 100;
+                                    const widthPercent =
+                                        ((box.x2 - box.x1) / originalWidth) * 100;
+                                    const heightPercent =
+                                        ((box.y2 - box.y1) / originalHeight) * 100;
+
+                                    const corBox = cores_por_classe[det.class] || "rgb(255, 0, 0)";
+
+                                    return (
+                                        <div
+                                            key={i}
+                                            className="absolute border-2 animate-fade-in"
+                                            style={{
+                                                left: `${leftPercent}%`,
+                                                top: `${topPercent}%`,
+                                                width: `${widthPercent}%`,
+                                                height: `${heightPercent}%`,
+                                                borderColor: corBox,
+                                            }}
+                                        >
+                                            {showDetection && (
+                                                <span
+                                                    className="absolute top-0 left-0 text-white text-xs px-1 rounded-br"
+                                                    style={{ backgroundColor: corBox }}
+                                                >
+                                                    {label}
+                                                </span>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                         </div>
 
                         {/* Resultados da API (Agora abaixo da imagem) */}
@@ -471,23 +444,6 @@ const displayNome = (key: string) => nomes_por_classe[key] ?? key.replace(/_/g, 
                                         <Box size={20} className="text-blue-400" />
                                         <span>Resultado da Detecção</span>
                                     </h5>
-                                    {(() => {
-                                      const raw = Number(img.result?.intensity_score ?? 0);
-                                      const scaled = getScaledIntensity(raw);
-                                      const pct = Math.max(0, Math.min(100, (scaled / 10) * 100));
-                                      const barColor = scaled >= 7.5 ? "bg-red-500" : scaled >= 4 ? "bg-yellow-500" : "bg-green-500";
-                                      return (
-                                        <div className="mb-4">
-                                          <div className="flex items-center justify-between mb-1">
-                                            <span className="text-zinc-300">Intensidade estimada</span>
-                                            <span className="text-zinc-200 font-semibold">{scaled.toFixed(1)} / 10</span>
-                                          </div>
-                                          <div className="h-2 w-full bg-zinc-800 rounded">
-                                            <div className={`h-2 rounded ${barColor}`} style={{ width: `${pct}%` }} />
-                                          </div>
-                                        </div>
-                                      );
-                                    })()}
                                     {(() => {
                                         const objetosFiltrados = img.result.objetos.filter(
                                             (o: any) =>
@@ -510,7 +466,7 @@ const displayNome = (key: string) => nomes_por_classe[key] ?? key.replace(/_/g, 
                                                     {Object.entries(contagemFiltrada).map(([classe, quantidade], i) => (
                                                       <div key={i} className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 px-3 py-1 rounded-full text-zinc-200">
                                                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cores_por_classe[classe] }}></span>
-                                                        <span className="font-semibold">{displayNome(classe)}: {quantidade}</span>
+                                                        <span className="font-semibold">{classe}: {quantidade}</span>
                                                       </div>
                                                     ))}
                                                 </div>
@@ -530,77 +486,85 @@ const displayNome = (key: string) => nomes_por_classe[key] ?? key.replace(/_/g, 
         {rightOpen && (
           <aside className="w-[320px] hidden lg:block flex-shrink-0 sticky top-24 self-start">
             <div className="bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700 rounded-xl p-6 shadow-lg">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="text-zinc-300 font-semibold text-lg">Navegação</h3>
-                <button
-                  onClick={() => setRightOpen(false)}
-                  className="p-2 rounded border border-zinc-600 hover:border-white text-zinc-300 hover:text-white"
-                  title="Fechar painel"
-                >
-                  <ChevronsRight size={18} />
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <button
-                  onClick={scrollToTop}
-                  className="text-xs px-2 py-2 rounded border border-zinc-600 hover:border-white text-zinc-300 hover:text-white w-full"
-                  title="Voltar ao topo"
-                >
-                  Topo
-                </button>
-                <button
-                  onClick={() => setSortByRisk(v => !v)}
-                  className="text-xs px-2 py-2 rounded border border-zinc-600 hover:border-white text-zinc-300 hover:text-white w-full"
-                  title="Ordenar por maior risco"
-                >
-                  {sortByRisk ? "Ordem original" : "Ordenar por risco"}
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                      onClick={scrollToTop}
+                      className="text-xs px-2 py-1 rounded border border-zinc-600 hover:border-white text-zinc-300 hover:text-white"
+                      title="Voltar ao topo"
+                    >
+                      Topo
+                    </button>
+                    {/* Sort controls moved to right panel header */}
+                    <div className="flex items-center gap-2 ml-2">
+                      <button
+                        onClick={() => applySortMode("original")}
+                        className={`text-xs px-2 py-1 rounded ${sortMode === "original" ? "bg-blue-600 text-white" : "border border-zinc-600 text-zinc-300"}`}
+                        title="Ordenar: Original"
+                      >
+                        Orig
+                      </button>
+                      <button
+                        onClick={() => applySortMode("highest")}
+                        className={`text-xs px-2 py-1 rounded ${sortMode === "highest" ? "bg-red-600 text-white" : "border border-zinc-600 text-zinc-300"}`}
+                        title="Ordenar: Maior risco"
+                      >
+                        ↑ Risco
+                      </button>
+                      <button
+                        onClick={() => applySortMode("lowest")}
+                        className={`text-xs px-2 py-1 rounded ${sortMode === "lowest" ? "bg-green-600 text-white" : "border border-zinc-600 text-zinc-300"}`}
+                        title="Ordenar: Menor risco"
+                      >
+                        ↓ Risco
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => setRightOpen(false)}
+                      className="p-2 rounded border border-zinc-600 hover:border-white text-zinc-300 hover:text-white"
+                      title="Fechar painel"
+                    >
+                      <ChevronsRight size={18} />
+                    </button>
+                  </div>
               </div>
               {images.length === 0 ? (
                 <p className="text-zinc-500 text-sm">Nenhuma imagem enviada.</p>
               ) : (
                 <ul className="space-y-3 max-h-[60vh] overflow-auto pr-1">
-                  {(() => {
-                    const items = images.map((img, idx) => {
-                      const raw = Number(img.result?.intensity_score ?? 0);
-                      const scaled = getScaledIntensity(raw);
-                      return { idx, img, raw, scaled };
-                    });
-                    const ordered = sortByRisk ? [...items].sort((a, b) => b.scaled - a.scaled) : items;
-                    return ordered.map(({ idx, img, scaled }) => (
-                      <li key={idx}>
-                        <button
-                          onClick={() => imageRefs.current[idx]?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                          className="w-full flex items-center gap-3 p-2 rounded-lg border border-zinc-700 hover:border-blue-500 text-left bg-zinc-800 group"
-                          title={img.name}
-                        >
-                          <img
-                            src={img.url}
-                            alt={img.name}
-                            className="w-12 h-12 object-cover rounded-md border border-zinc-700"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm text-zinc-200 truncate">
-                              <span className="font-mono text-xs text-zinc-400 mr-2">#{idx + 1}</span>
-                              {img.name}
-                            </div>
-                            {img.loading ? (
-                              <div className="text-xs text-zinc-500">processando…</div>
-                            ) : (
-                              <div className="text-xs text-zinc-500 flex items-center">
-                                <span>{img.result?.objetos?.length ?? 0} objetos</span>
-                                <span className={`ml-auto px-2 py-0.5 rounded-full border ${
-                                  scaled >= 7.5 ? "border-red-500 text-red-400" : scaled >= 4 ? "border-yellow-500 text-yellow-400" : "border-green-500 text-green-400"
-                                }`}>
-                                  Int {scaled.toFixed(1)} / 10
-                                </span>
-                              </div>
-                            )}
+                  {images.map((img, idx) => {
+                    const bgClass = img.riskLevel === 'high' ? 'bg-red-700' : img.riskLevel === 'medium' ? 'bg-yellow-600' : img.riskLevel === 'low' ? 'bg-green-700' : 'bg-zinc-800';
+                    return (
+                    <li key={idx}>
+                      <button
+                        onClick={() => imageRefs.current[idx]?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                        className={`w-full flex items-center gap-3 p-2 rounded-lg border hover:border-blue-500 text-left ${bgClass} group`}
+                        title={img.name}
+                      >
+                        <img
+                          src={img.url}
+                          alt={img.name}
+                          className="w-12 h-12 object-cover rounded-md border border-zinc-700"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-white truncate">
+                            <span className="font-mono text-xs text-zinc-200 mr-2">#{idx + 1}</span>
+                            {img.name}
                           </div>
-                        </button>
-                      </li>
-                    ));
-                  })()}
+                          {img.loading ? (
+                            <div className="text-xs text-zinc-200">processando…</div>
+                          ) : (
+                            <div className="flex items-center justify-between">
+                              <div className="text-xs text-zinc-200">{img.result?.objetos?.length ?? 0} objetos</div>
+                              <div className="text-xs font-semibold" style={{ minWidth: 48 }}>{img.riskLevel === 'unknown' ? '—' : `${img.riskPercent ?? 0}%`}</div>
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    </li>
+                    )
+                  })}
                 </ul>
               )}
             </div>

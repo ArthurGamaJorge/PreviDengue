@@ -11,7 +11,7 @@ from huggingface_hub import hf_hub_download
 
 @register_keras_serializable(package="Custom", name="asymmetric_mse")
 def asymmetric_mse(y_true, y_pred):
-    penalty_factor = 10.0
+    penalty_factor = 5.0
     error = y_true - y_pred
     denom = tf.maximum(tf.abs(y_true), 1.0)
     rel = tf.abs(error) / denom
@@ -27,7 +27,7 @@ class StatePredictor:
         self.sequence_length = 12
         self.horizon = 6
         self.dynamic_features = [
-            "casos_norm_log",
+            "casos_soma",
             "casos_velocidade", "casos_aceleracao", "casos_mm_4_semanas",
             "T2M_mean","T2M_std","PRECTOTCORR_mean","PRECTOTCORR_std",
             "RH2M_mean","RH2M_std","ALLSKY_SFC_SW_DWN_mean","ALLSKY_SFC_SW_DWN_std",
@@ -44,7 +44,6 @@ class StatePredictor:
         state_map_path = models_dir / "state_to_idx.json"
         state_peak_path = models_dir / "state_peak.json"
 
-        # scalers
         dyn_state = scalers_dir / "scaler_dyn_global_state.pkl"
         static_state = scalers_dir / "scaler_static_global_state.pkl"
         target_state = scalers_dir / "scaler_target_global_state.pkl"
@@ -54,28 +53,24 @@ class StatePredictor:
         self.scaler_static = joblib.load(static_state)
         self.scaler_target = joblib.load(target_state)
 
-        # mappings
         if state_map_path.exists():
             with open(state_map_path, "r", encoding="utf-8") as fh:
                 self.state_to_idx = json.load(fh)
         else:
             self.state_to_idx = {}
+
         if state_peak_path.exists():
             with open(state_peak_path, "r", encoding="utf-8") as fh:
                 self.state_peak_map = json.load(fh)
         else:
             self.state_peak_map = {}
 
-        # inference dataset: HF online or local offline (.parquet only)
         if self.offline:
-            # Somente .parquet é aceito no modo offline
             candidate_paths = []
             if self.local_inference_path:
                 candidate_paths.append(self.local_inference_path)
-            # Candidatos comuns no diretório de modelos
             candidate_paths.append(models_dir / "inference_data_state.parquet")
             candidate_paths.append(models_dir / "inference_data_estadual.parquet")
-
             found = None
             for p in candidate_paths:
                 try:
@@ -86,12 +81,10 @@ class StatePredictor:
                     continue
             if not found:
                 raise FileNotFoundError(
-                    "Offline mode enabled but no local Parquet state dataset found. "
-                    "Place 'inference_data_state.parquet' or 'inference_data_estadual.parquet' under models/ or pass a valid 'local_inference_path' (.parquet)."
+                    "Offline mode enabled but no local Parquet state dataset found."
                 )
             df = pd.read_parquet(found)
         else:
-            # Tenta baixar do HF; se falhar, tenta arquivo local como fallback
             df = None
             try:
                 inference_path = hf_hub_download(
@@ -101,19 +94,19 @@ class StatePredictor:
                 )
                 df = pd.read_parquet(inference_path)
             except Exception:
-                # Fallback local
                 for p in [models_dir / "inference_data_state.parquet", models_dir / "inference_data_estadual.parquet"]:
                     if p.exists():
                         df = pd.read_parquet(p)
                         break
                 if df is None:
                     raise FileNotFoundError(
-                        "Online state dataset not available from HF and no local fallback found. "
-                        "Place 'inference_data_estadual.parquet' under models/ or switch APP_MODE to 'offline'."
+                        "Online state dataset not available and no local fallback found."
                     )
+
         required = ["estado_sigla", "year", "week", "casos_soma"]
         if any(col not in df.columns for col in required):
             raise ValueError("State dataset missing required columns: ['estado_sigla','year','week','casos_soma']")
+
         df["estado_sigla"] = df["estado_sigla"].astype(str)
         df = df.sort_values(["estado_sigla", "year", "week"]).reset_index(drop=True)
         if "date" not in df.columns:
@@ -131,23 +124,19 @@ class StatePredictor:
         df["notificacao"] = df["year"].isin([2021, 2022]).astype(float)
 
         self.df_state = df
+
         if not model_path.exists():
             raise FileNotFoundError(str(model_path) + " not found")
         self.model = tf.keras.models.load_model(model_path, custom_objects={"asymmetric_mse": asymmetric_mse}, compile=False)
         self._loaded = True
 
-    def _prepare_state_sequence(self, df_st: pd.DataFrame, state_sigla: str):
+    def _prepare_state_sequence(self, df_st: pd.DataFrame):
         df_st = df_st.copy()
         df_st['casos_velocidade'] = df_st['casos_soma'].diff().fillna(0)
         df_st['casos_aceleracao'] = df_st['casos_velocidade'].diff().fillna(0)
         df_st['casos_mm_4_semanas'] = df_st['casos_soma'].rolling(4, min_periods=1).mean()
         if "notificacao" not in df_st.columns:
             df_st["notificacao"] = df_st["year"].isin([2021, 2022]).astype(float)
-        peak = float(self.state_peak_map.get(state_sigla, 1.0))
-        if peak <= 0:
-            peak = 1.0
-        df_st["casos_norm"] = df_st["casos_soma"] / peak
-        df_st["casos_norm_log"] = np.log1p(df_st["casos_norm"])
         return df_st
 
     def predict(self, state_sigla: str, year: int = None, week: int = None, display_history_weeks: int | None = None):
@@ -157,7 +146,7 @@ class StatePredictor:
         df_st = self.df_state[self.df_state["estado_sigla"] == st].copy().sort_values(["year","week"]).reset_index(drop=True)
         if df_st.empty or len(df_st) < self.sequence_length:
             raise ValueError(f"No data or insufficient history for state {st}")
-        df_st = self._prepare_state_sequence(df_st, st)
+        df_st = self._prepare_state_sequence(df_st)
         if year is not None and week is not None:
             idx_list = df_st.index[(df_st['year'] == int(year)) & (df_st['week'] == int(week))].tolist()
             if not idx_list:
@@ -173,11 +162,11 @@ class StatePredictor:
         for col in self.static_features:
             if col not in input_seq.columns:
                 input_seq[col] = 0.0
-        static_raw = input_seq[self.static_features].iloc[0].values.reshape(1, -1)
         missing_dyn = [c for c in self.dynamic_features if c not in input_seq.columns]
         if missing_dyn:
             raise ValueError(f"Missing dynamic state features: {missing_dyn}")
         dyn_raw = input_seq[self.dynamic_features].values
+        static_raw = input_seq[self.static_features].iloc[0].values.reshape(1, -1)
         if hasattr(self.scaler_dyn, "n_features_in_") and self.scaler_dyn.n_features_in_ != len(self.dynamic_features):
             raise ValueError(
                 f"State dynamic scaler expects {self.scaler_dyn.n_features_in_} features, got {len(self.dynamic_features)}."
@@ -188,15 +177,11 @@ class StatePredictor:
         state_input = np.array([[state_idx]], dtype=np.int32)
         y_pred = self.model.predict([dyn_scaled, static_scaled, state_input], verbose=0)
         y_pred_reg = y_pred[0] if isinstance(y_pred, (list, tuple)) else y_pred
-        y_pred_log_norm = self.scaler_target.inverse_transform(y_pred_reg.reshape(-1,1)).reshape(y_pred_reg.shape)
-        y_pred_norm = np.expm1(y_pred_log_norm)
-        peak = float(self.state_peak_map.get(st, 1.0))
-        if peak <= 0:
-            peak = 1.0
-        prediction_counts = np.maximum(y_pred_norm.flatten() * peak, 0.0)
+        y_pred_real_matrix = self.scaler_target.inverse_transform(y_pred_reg.reshape(-1,1)).reshape(y_pred_reg.shape)
+        y_pred_real_matrix = np.maximum(y_pred_real_matrix, 0.0)
         last_known_date = df_st.iloc[last_known_idx]['date'] if 'date' in df_st.columns and last_known_idx < len(df_st) else None
         predicted_data = []
-        for i, val in enumerate(prediction_counts):
+        for i, val in enumerate(y_pred_real_matrix.flatten()):
             if pd.notna(last_known_date):
                 pred_date = (last_known_date + timedelta(weeks=i+1)).strftime("%Y-%m-%d")
             else:
