@@ -171,65 +171,72 @@ function PopupContent({
     };
   }, [map]);
 
-  return (
-    <Popup
-      ref={(ref) => {
-        if (ref) popupRef.current = ref;
+return (
+  <Popup
+    ref={(ref) => {
+      if (ref) popupRef.current = ref;
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
       }}
     >
-      <div
+      {imageBase64 && (
+        <img
+          src={imageBase64}
+          alt="Imagem do ponto"
+          style={{ maxWidth: 200, borderRadius: 8 }}
+          onLoad={onImageLoad}
+        />
+      )}
+      <span style={{ textAlign: "center", marginTop: 4, fontSize: 13 }}>
+        Intensidade: {(rawIntensity ?? intensity).toFixed(1)}
+      </span>
+      {typeof normalizedIntensity === 'number' && (
+        <span style={{ textAlign: "center", fontSize: 13 }}>
+          Normalizada: {normalizedIntensity.toFixed(1)}/10
+        </span>
+      )}
+      {Object.entries(detectedObjects).length > 0 && (
+        <div style={{ marginTop: 8, fontSize: 13, textAlign: "center" }}>
+          <strong>Detectados:</strong>
+          <ul style={{ paddingLeft: 0, margin: "4px 0 0 0", listStylePosition: "inside" }}>
+            {Object.entries(detectedObjects).map(([obj, count]) => (
+              <li key={obj}>
+                {obj
+                  .split("_")
+                  .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                  .join(" ")}
+                : {count}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove();
+        }}
         style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 8,
+          marginTop: 10,
+          padding: "6px 12px",
+          backgroundColor: "#dc2626",
+          border: "none",
+          borderRadius: 6,
+          color: "white",
+          cursor: "pointer",
         }}
       >
-        {imageBase64 && (
-          <img
-            src={imageBase64}
-            alt="Imagem do ponto"
-            style={{ maxWidth: 200, borderRadius: 8 }}
-            onLoad={onImageLoad}
-          />
-        )}
-        <span>Intensidade: {(rawIntensity ?? intensity).toFixed(1)}</span>
-        {typeof normalizedIntensity === 'number' && (
-          <span>Normalizada: {normalizedIntensity.toFixed(1)} / 10</span>
-        )}
-        {Object.entries(detectedObjects).length > 0 && (
-          <div style={{ marginTop: 8, fontSize: 14 }}>
-            <strong>Detectados:</strong>
-            <ul style={{ paddingLeft: 16, margin: 4 }}>
-              {Object.entries(detectedObjects).map(([obj, count]) => (
-                <li key={obj}>
-                  {obj}: {count}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-          style={{
-            marginTop: 10,
-            padding: "6px 12px",
-            backgroundColor: "#dc2626",
-            border: "none",
-            borderRadius: 6,
-            color: "white",
-            cursor: "pointer",
-          }}
-        >
-          Excluir ponto
-        </button>
-      </div>
-    </Popup>
-  );
+        Excluir ponto
+      </button>
+    </div>
+  </Popup>
+);
 }
 
 function MapFlyToHandler({ centerCoords }: { centerCoords: [number, number] }) {
