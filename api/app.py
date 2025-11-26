@@ -28,7 +28,7 @@ predictor: DenguePredictor | None = None
 state_predictor: StatePredictor | None = None
 
 # Se api irá utilizar datasets baixados do hugging face ou os locais
-ONLINE: bool = False
+ONLINE: bool = True
 
 app = FastAPI()
 
