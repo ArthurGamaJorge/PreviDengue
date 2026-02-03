@@ -51,6 +51,40 @@ jobs:
         working-directory: ./ai_predict/data/pipeline_scripts
         run: python master_update.py
 
+      - name: Calcula flags epidemiológicas para commit do CSV
+        run: |
+          python - <<'PY' > env.txt
+          from datetime import date
+          from epiweeks import Week
+          tw = Week.fromdate(date.today()) - 3
+          is_last = int((tw + 1).year != tw.year)
+
+          # a cada 6 semanas ou na última semana
+          should_commit = int((tw.week % 6 == 0) or is_last)
+
+          target_year = tw.year
+          print(f"TARGET_YEAR={target_year}")
+          print(f"EPI_WEEK={tw.week}")
+          print(f"IS_LAST_EPI_WEEK={is_last}")
+          print(f"SHOULD_COMMIT={should_commit}")
+          print(f"TARGET_FILENAME=ai_predict/data/casos/mun{target_year}.csv")
+          PY
+          cat env.txt >> $GITHUB_ENV
+          rm env.txt
+
+      - name: Commit do CSV do ano 
+        if: env.SHOULD_COMMIT == '1'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -f "${{ env.TARGET_FILENAME }}" ]; then
+            git add "${{ env.TARGET_FILENAME }}"
+            git diff --staged --quiet || git commit -m "chore(data): versionar CSV anual (ano ${{ env.TARGET_YEAR }}, epiweek ${{ env.EPI_WEEK }})"
+            git push
+          else
+            echo "Arquivo não encontrado: ${{ env.TARGET_FILENAME }}. Pulando commit."
+          fi
+
       - name: Upload dos dados climáticos atualizados para o Hugging Face
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
