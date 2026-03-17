@@ -33,6 +33,7 @@ class DenguePredictor:
         self.local_inference_path = Path(local_inference_path) if local_inference_path else None
         self.sequence_length = 12
         self.horizon = 6
+        self.anchor_lag_weeks = 2
         self.year_min_train = 2014
         self.year_max_train = 2025
         self.dynamic_features = [
@@ -52,7 +53,11 @@ class DenguePredictor:
     def load_assets(self):
         models_dir = self.project_root / "models"
         scalers_dir = models_dir / "scalers"
-        model_path = models_dir / "model.keras"
+        candidate_model_paths = [
+            models_dir / "model_checkpoint_best_city.keras",
+            models_dir / "model.keras",
+        ]
+        model_path = next((p for p in candidate_model_paths if p.exists()), None)
         city_map_path = models_dir / "city_to_idx.json"
 
         if not scalers_dir.exists():
@@ -106,7 +111,7 @@ class DenguePredictor:
         except Exception:
             df["date"] = pd.NaT
 
-        df = df.sort_values(by=["codigo_ibge", "date"]).reset_index(drop=True)
+        df = df.sort_values(by=["codigo_ibge", "ano", "semana"]).reset_index(drop=True)
         df["week_sin"] = np.sin(2 * np.pi * df["semana"] / 52)
         df["week_cos"] = np.cos(2 * np.pi * df["semana"] / 52)
         df["year_norm"] = (df["ano"] - self.year_min_train) / (self.year_max_train - self.year_min_train)
@@ -115,8 +120,11 @@ class DenguePredictor:
         self.df_master = df
         self.municipios = df[["codigo_ibge", "municipio"]].drop_duplicates().sort_values("codigo_ibge")
 
-        if not model_path.exists():
-            raise FileNotFoundError(str(model_path) + " not found")
+        if model_path is None:
+            raise FileNotFoundError(
+                "No municipal model checkpoint found. Expected one of: "
+                + ", ".join(str(p) for p in candidate_model_paths)
+            )
 
         self.model = tf.keras.models.load_model(model_path, custom_objects={"asymmetric_mse": asymmetric_mse}, compile=False)
         self._loaded = True
@@ -129,19 +137,21 @@ class DenguePredictor:
         plt.close(fig)
         return img_str
 
-    def _prepare_sequence(self, df_mun):
-        df_seq = df_mun.tail(self.sequence_length).copy()
-        df_seq["casos_velocidade"] = df_seq["numero_casos"].diff().fillna(0)
-        df_seq["casos_aceleracao"] = df_seq["casos_velocidade"].diff().fillna(0)
-        df_seq["casos_mm_4_semanas"] = df_seq["numero_casos"].rolling(4, min_periods=1).mean()
-        df_seq["week_sin"] = np.sin(2 * np.pi * df_seq["semana"] / 52)
-        df_seq["week_cos"] = np.cos(2 * np.pi * df_seq["semana"] / 52)
-        df_seq["year_norm"] = (df_seq["ano"] - self.year_min_train) / (self.year_max_train - self.year_min_train)
-        if "notificacao" not in df_seq.columns:
-            df_seq["notificacao"] = df_seq["ano"].isin([2021, 2022]).astype(float)
-        else:
-            df_seq["notificacao"] = df_seq["notificacao"].astype(float)
-        return df_seq
+    def _prepare_sequence(self, df_mun, end_idx=None):
+        df_all = df_mun.copy()
+        df_all["notificacao"] = df_all["ano"].isin([2021, 2022]).astype(float)
+        df_all["week_sin"] = np.sin(2 * np.pi * df_all["semana"] / 52)
+        df_all["week_cos"] = np.cos(2 * np.pi * df_all["semana"] / 52)
+        df_all["year_norm"] = (df_all["ano"] - self.year_min_train) / (self.year_max_train - self.year_min_train)
+        df_all["casos_velocidade"] = df_all["numero_casos"].diff().fillna(0)
+        df_all["casos_aceleracao"] = df_all["casos_velocidade"].diff().fillna(0)
+        df_all["casos_mm_4_semanas"] = df_all["numero_casos"].rolling(4, min_periods=1).mean()
+        if end_idx is None:
+            end_idx = len(df_all) - 1
+        start_idx = end_idx - self.sequence_length + 1
+        if start_idx < 0:
+            return df_all.iloc[0:0].copy()
+        return df_all.iloc[start_idx:end_idx + 1].copy()
 
     def predict(self, ibge_code: int, show_plot=False, display_history_weeks=None):
         if not self._loaded:
@@ -154,16 +164,17 @@ class DenguePredictor:
         municipio_row = self.municipios[self.municipios["codigo_ibge"] == int(ibge_code)]
         municipality_name = municipio_row.iloc[0]["municipio"] if not municipio_row.empty else str(ibge_code)
 
-        df_mun_clean = df_mun.dropna(subset=["numero_casos"]).reset_index(drop=True)
-        if len(df_mun_clean) < self.sequence_length:
-            raise ValueError(f"Insufficient known-case history for {ibge_code}")
+        pred_point_idx = len(df_mun) - self.anchor_lag_weeks
+        last_known_idx = pred_point_idx - 1
+        if last_known_idx < self.sequence_length - 1:
+            raise ValueError(f"Insufficient sequence window before forecast point for {ibge_code}")
 
-        seq_df = self._prepare_sequence(df_mun_clean)
+        seq_df = self._prepare_sequence(df_mun, end_idx=last_known_idx)
         if len(seq_df) < self.sequence_length:
             raise ValueError(f"Insufficient sequence length for {ibge_code}")
 
         dynamic_raw = seq_df[self.dynamic_features].values
-        static_raw = seq_df[self.static_features].iloc[-1].values.reshape(1, -1)
+        static_raw = seq_df[self.static_features].iloc[0].values.reshape(1, -1)
 
         missing_feats = [c for c in self.dynamic_features if c not in seq_df.columns]
         if missing_feats:
@@ -198,10 +209,11 @@ class DenguePredictor:
             predicted_data.append({"date": pred_date, "predicted_cases": int(round(float(val)))})
 
         # Histórico: por padrão retorna tudo; se display_history_weeks > 0, limita a janela
+        hist_base = df_mun.iloc[:last_known_idx + 1].copy()
         if display_history_weeks is None or (isinstance(display_history_weeks, (int, float)) and display_history_weeks <= 0):
-            hist_tail = df_mun.copy()
+            hist_tail = hist_base
         else:
-            hist_tail = df_mun.tail(min(len(df_mun), int(display_history_weeks))).copy()
+            hist_tail = hist_base.tail(min(len(hist_base), int(display_history_weeks))).copy()
         historic_data = []
         for _, row in hist_tail.iterrows():
             historic_data.append({
@@ -220,7 +232,7 @@ class DenguePredictor:
         return {
             "municipality_name": municipality_name,
             "ibge": int(ibge_code),
-            "last_known_index": int(df_mun.index[-1]),
+            "last_known_index": int(last_known_idx),
             "historic_data": historic_data,
             "predicted_data": predicted_data,
             "insights": insights,
