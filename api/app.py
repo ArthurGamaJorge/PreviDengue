@@ -40,7 +40,6 @@ async def startup_event():
 
     offline_flag = (not ONLINE)
     local_city_inf = None
-    local_state_inf = None
 
     detector = DengueDetector()
     try:
@@ -53,15 +52,7 @@ async def startup_event():
         # print full traceback to help debugging (was previously only printing str(e))
         traceback.print_exc()
         predictor = None
-    try:
-        state_predictor = StatePredictor(
-            offline=offline_flag,
-            local_inference_path=local_state_inf,
-        )
-    except Exception as e:
-        print("[WARN] StatePredictor não inicializado:", str(e))
-        traceback.print_exc()
-        state_predictor = None
+    state_predictor = None
     print("Módulos de IA carregados com sucesso. API pronta. Modo:", "online" if ONLINE else "offline")
 
 
@@ -108,6 +99,13 @@ async def predict_dengue_route(payload: dict = Body(...)):
         ibge_code_str = payload.get("ibge_code")
         if ibge_code_str is None:
             raise ValueError("O campo 'ibge_code' é obrigatório.")
+        year = payload.get("year")
+        week = payload.get("week")
+        if year is not None or week is not None:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "A rota municipal /predict/ prevê apenas a partir da última semana disponível e não aceita 'year'/'week'."},
+            )
 
         ibge_code = int(ibge_code_str)
         result = predictor.predict(ibge_code)
